@@ -1,0 +1,35 @@
+1. always_comb vs. assign:
+no real difference.
+assign is just much lower level and doesn't permit assignment of more than one wire.
+Standard verilog used to use always@(*) instead of always_comb
+
+Verdict: Just use always_comb.
+
+2. logic vs. reg vs. wire:
+Verilog used wire mostly for wires and reg mostly for registers. SVerilog replaces almost everything with a logic type
+
+Verdict: Just use the logic keyword (multi-point nets alone need a wire
+keyword: http://www.verilogpro.com/verilog-reg-verilog-wire-systemverilog-logic/, but
+just don't use multi-point nets).
+
+3. Use input and output specifiers to specify direction of a particular logic type.
+
+4. General structure of SystemVerilog code:
+
+module (....) // declaration of module's interfaces
+
+parameters ... // constant declarations
+
+input logic .... // input wires
+
+logic ...        // flip flops (or intermediate wires)
+
+output logic .... // output wires
+
+functions ....   // convenience functions
+
+always_comb // combinational logic
+
+always_ff   // sequential logic
+
+endmodule  // end of module
