@@ -1,0 +1,11 @@
+A few ways to design a DSL for processor+FPGA systems (or for anything else):
+1. Create a new grammar. Use a parser generator like ANTLR to generate a parser.
+   Our experience with ANTLR was quite reasonable with Marple.
+2. Create a new grammar. Hand write a parser in a language like rust/C++/Haskell,
+   whatever is most pleasant.
+3. Reuse an existing language's grammar and attribute new meaning to different
+   syntax constructs. This is what we did for Domino, although C + the clang library
+   wasn't very pleasant. Partially because C has all kinds of strange language
+   constructs and parly because the clang library wasn't too well documented.
+
+I think 1 or 2 is the way to go.
