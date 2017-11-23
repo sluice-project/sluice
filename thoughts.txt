@@ -9,3 +9,6 @@ A few ways to design a DSL for processor+FPGA systems (or for anything else):
    constructs and parly because the clang library wasn't too well documented.
 
 I think 1 or 2 is the way to go.
+More convinced that 1/2 is the way to go because we are eventually spitting out
+Verilog, not compiling to a simulator that (for ease of implementation) runs C
+code directly like we did in Domino.
