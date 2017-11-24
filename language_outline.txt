@@ -1,0 +1,26 @@
+1. Snippets: input, output, and code that transforms input to output
+2. Datapath: connection between the snippets
+
+Snippets:
+================
+Syntax:
+function_name(inputs) {
+ ...
+ ...
+}
+
+Datapath:
+================
+Syntax:
+(a, b)
+(b, c)
+(c, d)
+
+Output of the simulation:
+================
+1. Verilog code for the datapath.
+2. Simulator for the datapath.
+
+Question:
+================
+How do we seamlessly express refinements in this world?
