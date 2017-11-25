@@ -5,7 +5,12 @@ use regex::Regex;
 extern crate lazy_static;
 
 lazy_static! {
-  static ref KEYWORDS : Regex = Regex::new("^(k1|k2|k3)$").unwrap();
+  static ref KEYWORDS    : Regex = Regex::new("^(if|else|and|or|xor|pow|true|false)$").unwrap();
+  static ref VALUES      : Regex = Regex::new("^([0-9]+)$").unwrap();
+  static ref IDENTIFIERS : Regex = Regex::new("^[A-Za-z$_][A-Za-z0-9$_]*$").unwrap();
+  static ref REL_OPS     : Regex = Regex::new("^(==|!=|>=|<=|>|<)$").unwrap();
+  static ref ARITH_OPS   : Regex = Regex::new("^(+|-|/|%)$").unwrap();
+  static ref OTHER_OPS   : Regex = Regex::new("^(=|{|}|;)$").unwrap();
 }
 
 fn main() {
