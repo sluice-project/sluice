@@ -10,7 +10,8 @@ lazy_static! {
   static ref IDENTIFIERS : Regex = Regex::new(r"^[A-Za-z$_][A-Za-z0-9$_]*$").unwrap();
   static ref REL_OPS     : Regex = Regex::new(r"^(==|!=|>=|<=|>|<)$").unwrap();
   static ref ARITH_OPS   : Regex = Regex::new(r"^(+|-|/|\*|%)$").unwrap();
-  static ref OTHER_OPS   : Regex = Regex::new(r"^(=|{|}|;|\(|\)|\.|\[|\])$").unwrap();
+  static ref GROUPING_OPS: Regex = Regex::new(r"^({|}\(|\)|\[|\])$").unwrap();
+  static ref OTHER_OPS   : Regex = Regex::new(r"^(=|;|\.|)$").unwrap();
 }
 
 fn main() {
