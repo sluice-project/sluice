@@ -1,0 +1,28 @@
+Informal grammar for sculpt:
+=================
+
+prog -> snippets datapath
+
+snippets -> snippet snippets
+snippets -> empty
+snippets -> "snippet" ID "(" ID_LIST ")" "{" initializers statements "}"
+
+datapath -> connections datapath
+connections -> empty
+connections -> "(" ID "," ID ")" connections
+
+ID_LIST -> ID "," ID_LIST
+ID_LIST -> empty
+
+initializers -> initializer initializers
+initializer  -> "static" ID "=" NUM ";"
+
+statements -> statement statements
+statement  -> ID "=" expr ";"
+
+operand -> ID
+operand -> NUM
+expr_right -> BINOP operand
+expr_right -> empty
+expr_right -> "?" operand ':' operand
+expr    -> operand expr_right

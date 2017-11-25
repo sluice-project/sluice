@@ -1,0 +1,7 @@
+1. All tokens are separated by a whitespace.
+2. There is only one data type 32-bit signed integers. Booleans are integers
+with values of 0 and 1 alone, but no one checks this.
+3. You can't nest expressions.
+4. There are no if-else statements: it's straight line code.
+5. There are no loops.
+6. There are no parentheses statements allowed either.
