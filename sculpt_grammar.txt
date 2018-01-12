@@ -1,3 +1,4 @@
+# Make sure it's LL(1)
 Informal grammar for sculpt:
 =================
 
@@ -5,7 +6,7 @@ prog -> snippets datapath
 
 snippets -> snippet snippets
 snippets -> empty
-snippets -> "snippet" ID "(" ID_LIST ")" "{" initializers statements "}"
+snippet  -> "snippet" ID "(" ID_LIST ")" "{" initializers statements "}"
 
 datapath -> connections datapath
 connections -> empty
