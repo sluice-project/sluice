@@ -8,7 +8,63 @@ lazy_static! {
   static ref VALUES      : Regex = Regex::new(r"^([0-9]+)$").unwrap();
 }
 
-pub fn run_lexer(input_program : &str) {
+enum Token {
+  // Variants that take an argument
+  Identifier(String),
+  Values(String),
+
+  // Keywords: static and snippet
+  Static,
+  Snippet,
+
+  // Separators
+  Colon,
+  SemiColon,
+  Period,
+  Comma,
+
+  // Grouping operators
+  SqBktLeft,
+  SqBktRight,
+  ParenLeft,
+  ParenRight,
+  BraceLeft,
+  BraceRight,
+
+  // Binary arithmetic operators + conditional operator
+  Plus,
+  Minus,
+  Mul,
+  Div,
+  Cond,
+  Modulo,
+
+  // Boolean operators
+  And,
+  Or,
+  Not,
+  Xor,
+
+  // Comparison operators
+  Equal,
+  NotEqual,
+  LessThan,
+  GreaterThan,
+  LTEQOp,
+  GTEQOp,
+
+  // Assignment
+  Assign,
+
+  // Bit-wise operators
+  BitWiseOr,
+  BitWiseAnd,
+  BitWiseXor,
+  LeftShift,
+  RightShift
+}
+
+pub fn get_tokens(input_program : &str) {
   // Split string into tokens at whitespaces
   // TODO: Fix this to remove this assumption of tokens being separated by whitespaces.
   for cap in TOKENS.captures_iter(input_program) {
@@ -36,7 +92,7 @@ fn test_lexer_with_spaces() {
                             m == 5 ;
                           }
                         }";
-  run_lexer(input_program);
+  get_tokens(input_program);
 }
 
 #[test]
@@ -50,5 +106,5 @@ fn test_lexer_wo_spaces() {
                             m == 5;
                           }
                         }";
-  run_lexer(input_program);
+  get_tokens(input_program);
 }
