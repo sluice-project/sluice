@@ -1,13 +1,13 @@
 // Make sure the grammar is LL(1)
 enum Program {
-  Program{
+  Program {
     Vec<Snippets>,
     Datapath
   }
 }
 
 enum Snippet {
-  Snippet{
+  Snippet {
     snippet_id : String,
     argument_list : Vec<String>,
     initializers : Vec<Initializer>,
@@ -20,7 +20,7 @@ enum Datapath {
 }
 
 enum Connection {
-  Connection{
+  Connection {
     from_id : String,
     to_id   : String
   }
