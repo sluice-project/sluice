@@ -1,3 +1,6 @@
-// LL(1) parser for sculpt grammar
+// TODO: LL(1) parser for sculpt grammar
 
-fn parse_prog(token_vector : Vec<Token>) -> Prog  
+use tokens::Tokens;
+pub fn parse_prog(token_vector : Vec<Tokens>)  {
+  println!("Within parser, doing nothing");
+}

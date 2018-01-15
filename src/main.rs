@@ -1,7 +1,10 @@
 #[macro_use]
 extern crate lazy_static;
 
+mod tokens;
 mod lexer;
+mod parser;
+
 fn main() {
   let input_program = r"snippet fun(a, b, c, x, y) {
                           static x = 0;
@@ -12,5 +15,5 @@ fn main() {
                             m == 5;
                           }
                         }";
-  println!("{:?}", lexer::get_tokens(input_program));
+  parser::parse_prog(lexer::get_tokens(input_program));
 }

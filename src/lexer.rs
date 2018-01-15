@@ -9,62 +9,16 @@ lazy_static! {
   static ref VALUES      : Regex = Regex::new(r"^([0-9]+)$").unwrap();
 }
 
-#[derive(Debug)]
-pub enum Token {
-  // Variants that take an argument
-  Identifier(String),
-  Values(String),
-
-  // Keywords: static, snippet, and, or, not
-  Static,
-  Snippet,
-  And,
-  Or,
-  Not,
-
-  // Separators
-  Colon,
-  SemiColon,
-  Period,
-  Comma,
-
-  // Grouping operators
-  SqBktLeft,
-  SqBktRight,
-  ParenLeft,
-  ParenRight,
-  BraceLeft,
-  BraceRight,
-
-  // Binary arithmetic operators + conditional operator
-  Plus,
-  Minus,
-  Mul,
-  Div,
-  Cond,
-  Modulo,
-
-  // Comparison operators
-  Equal,
-  NotEqual,
-  LTEQOp,
-  GTEQOp,
-  LessThan,
-  GreaterThan,
-
-  // Assignment
-  Assign,
-}
-
-pub fn get_single_token(token : &str) -> Token {
-  use self::Token::*;
+use tokens::Tokens;
+pub fn get_single_token(token : &str) -> Tokens {
+  use tokens::Tokens::*;
   if KEYWORDS.is_match(token) {
     return match token {
      "static" => Static,
      "snippet"=> Snippet,
-     "and"    => And,
-     "or"     => Or,
-     "not"    => Not,
+     "and"    => BooleanAnd,
+     "or"     => BooleanOr,
+     "not"    => BooleanNot,
      _        => panic!("Unrecognized token: {}", token)
     }
   } else if IDENTIFIERS.is_match(token) {
@@ -105,7 +59,7 @@ pub fn get_single_token(token : &str) -> Token {
   }
 }
 
-pub fn get_tokens(input_program : &str) -> Vec<Token> {
+pub fn get_tokens(input_program : &str) -> Vec<Tokens> {
   let mut token_array = Vec::new();
   for cap in TOKENS.captures_iter(input_program) {
     let ref token = cap[0];
