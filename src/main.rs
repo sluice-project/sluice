@@ -12,5 +12,5 @@ fn main() {
                             m == 5;
                           }
                         }";
-  lexer::run_lexer(input_program);
+  println!("{:?}", lexer::get_tokens(input_program));
 }

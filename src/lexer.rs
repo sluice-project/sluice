@@ -1,21 +1,26 @@
 extern crate regex;
 use self::regex::Regex;
+use std::str::FromStr;
 
 lazy_static! {
-  static ref TOKENS      : Regex = Regex::new(r"[0-9]+|[A-Za-z_][A-Za-z0-9_]*|&&|\|\||!|&|\||\^|>>|<<|==|!=|>=|<=|>|<|\+|-|/|\*|%|\{|\}|\(|\)|\[|\]|=|;|\.|,|\?|:|\S+").unwrap();
-  static ref KEYWORDS    : Regex = Regex::new(r"^(static|snippet)$").unwrap();
+  static ref TOKENS      : Regex = Regex::new(r"[0-9]+|[A-Za-z_][A-Za-z0-9_]*|==|!=|>=|<=|>|<|\+|-|/|\*|%|\{|\}|\(|\)|\[|\]|=|;|\.|,|\?|:|\S+").unwrap();
+  static ref KEYWORDS    : Regex = Regex::new(r"^(static|snippet|and|or|not)$").unwrap();
   static ref IDENTIFIERS : Regex = Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").unwrap();
   static ref VALUES      : Regex = Regex::new(r"^([0-9]+)$").unwrap();
 }
 
-enum Token {
+#[derive(Debug)]
+pub enum Token {
   // Variants that take an argument
   Identifier(String),
   Values(String),
 
-  // Keywords: static and snippet
+  // Keywords: static, snippet, and, or, not
   Static,
   Snippet,
+  And,
+  Or,
+  Not,
 
   // Separators
   Colon,
@@ -39,46 +44,74 @@ enum Token {
   Cond,
   Modulo,
 
-  // Boolean operators
-  And,
-  Or,
-  Not,
-  Xor,
-
   // Comparison operators
   Equal,
   NotEqual,
-  LessThan,
-  GreaterThan,
   LTEQOp,
   GTEQOp,
+  LessThan,
+  GreaterThan,
 
   // Assignment
   Assign,
-
-  // Bit-wise operators
-  BitWiseOr,
-  BitWiseAnd,
-  BitWiseXor,
-  LeftShift,
-  RightShift
 }
 
-pub fn get_tokens(input_program : &str) {
-  // Split string into tokens at whitespaces
-  // TODO: Fix this to remove this assumption of tokens being separated by whitespaces.
-  for cap in TOKENS.captures_iter(input_program) {
-    let ref token = cap[0];
-    if KEYWORDS.is_match(token) {
-      println!("Found a keyword {}", token);
-    } else if IDENTIFIERS.is_match(token) {
-      println!("Found an identifier {}", token);
-    } else if VALUES.is_match(token) {
-      println!("Found a value {}", token);
-    } else {
-      println!("Found operator token {}", token);
+pub fn get_single_token(token : &str) -> Token {
+  use self::Token::*;
+  if KEYWORDS.is_match(token) {
+    return match token {
+     "static" => Static,
+     "snippet"=> Snippet,
+     "and"    => And,
+     "or"     => Or,
+     "not"    => Not,
+     _        => panic!("Unrecognized token: {}", token)
+    }
+  } else if IDENTIFIERS.is_match(token) {
+    return Identifier(String::from_str(token).unwrap());
+  } else if VALUES.is_match(token) {
+    return Values(String::from_str(token).unwrap());
+  } else {
+    return match token {
+      ":" => Colon,
+      ";" => SemiColon,
+      "." => Period,
+      "," => Comma,
+
+      "[" => SqBktLeft,
+      "]" => SqBktRight,
+      "(" => ParenLeft,
+      ")" => ParenRight,
+      "{" => BraceLeft,
+      "}" => BraceRight,
+
+      "+" => Plus,
+      "-" => Minus,
+      "*" => Mul,
+      "/" => Div,
+      "?" => Cond,
+      "%" => Modulo,
+
+      "=="=> Equal,
+      "!="=> NotEqual,
+      "<="=> LTEQOp,
+      ">="=> GTEQOp,
+      "<" => LessThan,
+      ">" => GreaterThan,
+
+      "=" => Assign, 
+      _   => panic!("Unrecognized token: {}", token)
     }
   }
+}
+
+pub fn get_tokens(input_program : &str) -> Vec<Token> {
+  let mut token_array = Vec::new();
+  for cap in TOKENS.captures_iter(input_program) {
+    let ref token = cap[0];
+    token_array.push(get_single_token(token));
+  }
+  return token_array;
 }
 
 #[test]
@@ -92,7 +125,7 @@ fn test_lexer_with_spaces() {
                             m == 5 ;
                           }
                         }";
-  get_tokens(input_program);
+  println!("{:?}", get_tokens(input_program));
 }
 
 #[test]
@@ -106,5 +139,5 @@ fn test_lexer_wo_spaces() {
                             m == 5;
                           }
                         }";
-  get_tokens(input_program);
+  println!("{:?}", get_tokens(input_program));
 }
