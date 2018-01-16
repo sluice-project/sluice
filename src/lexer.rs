@@ -92,6 +92,12 @@ fn test_lexer_wo_spaces() {
                           } elif (c >= d) {
                             m == 5;
                           }
-                        }";
+                        }
+                        snippet foo(a, b, c) {
+                          static x = 1;
+                          x = 5;
+                        }
+                        (foo, fun) 
+                        ";
   println!("{:?}", get_tokens(input_program));
 }
