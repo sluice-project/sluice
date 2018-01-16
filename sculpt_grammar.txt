@@ -27,7 +27,7 @@ statement  -> ID "=" expr ";"
 operand -> ID
 operand -> NUM
 
-expr_right -> BINOP operand
+expr_right -> BINOP operand expr_right
 expr_right -> empty
 expr_right -> "?" operand ':' operand
 expr    -> operand expr_right
