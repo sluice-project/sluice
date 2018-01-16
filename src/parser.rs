@@ -17,6 +17,17 @@ pub enum BinOpType {
   Modulo
 }
 
+pub fn get_bin_op(t : Tokens) -> BinOpType {
+  match t {
+    Tokens::Plus  => BinOpType::Plus,
+    Tokens::Minus => BinOpType::Minus,
+    Tokens::Mul   => BinOpType::Mul,
+    Tokens::Div   => BinOpType::Div,
+    Tokens::Modulo=> BinOpType::Modulo,
+    _             => panic!("Invalid BinOpType")
+  }
+}
+
 #[derive(Debug)]
 pub enum ExprRight {
   BinOp(BinOpType, Operand, Box<ExprRight>),
@@ -41,7 +52,6 @@ pub fn parse_operand(mut token_vector : Vec<Tokens>) -> Result<Operand, &'static
 }
 
 pub fn parse_expr_right(mut token_vector : Vec<Tokens>) -> Result<ExprRight, &'static str> {
-  use tokens::Tokens::*;
   if token_vector.len() == 0 {
     return Ok(ExprRight::Empty());
   }
@@ -53,12 +63,12 @@ pub fn parse_expr_right(mut token_vector : Vec<Tokens>) -> Result<ExprRight, &'s
   let op_type = token_vector.remove(0);
   let operand = token_vector.remove(0);
   return match op_type {
-    Plus   => Ok(ExprRight::BinOp(BinOpType::Plus,  parse_operand(vec!(operand)).unwrap(), Box::new(parse_expr_right(token_vector).unwrap()) )),
-    Minus  => Ok(ExprRight::BinOp(BinOpType::Minus, parse_operand(vec!(operand)).unwrap(), Box::new(parse_expr_right(token_vector).unwrap()) )),
-    Mul    => Ok(ExprRight::BinOp(BinOpType::Mul,   parse_operand(vec!(operand)).unwrap(), Box::new(parse_expr_right(token_vector).unwrap()) )),
-    Div    => Ok(ExprRight::BinOp(BinOpType::Div,   parse_operand(vec!(operand)).unwrap(), Box::new(parse_expr_right(token_vector).unwrap()) )),
-    Modulo => Ok(ExprRight::BinOp(BinOpType::Modulo,parse_operand(vec!(operand)).unwrap(), Box::new(parse_expr_right(token_vector).unwrap()) )),
-    _      => Err("invalid expr_right") 
+    e @ Tokens::Plus  |
+    e @ Tokens::Minus |
+    e @ Tokens::Mul   |
+    e @ Tokens::Div   |
+    e @ Tokens::Modulo => Ok(ExprRight::BinOp(get_bin_op(e), parse_operand(vec!(operand)).unwrap(), Box::new(parse_expr_right(token_vector).unwrap()))),
+    _          => Err("invalid operation type in expr_right") 
   }
 }
 
