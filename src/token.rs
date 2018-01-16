@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub enum Tokens {
+pub enum Token {
   // Variants that take an argument
   Identifier(String),
   Values(String),

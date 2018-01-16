@@ -9,56 +9,56 @@ lazy_static! {
   static ref VALUES      : Regex = Regex::new(r"^([0-9]+)$").unwrap();
 }
 
-use tokens::Tokens;
-pub fn get_single_token(token : &str) -> Tokens {
+use token::Token;
+pub fn get_single_token(token : &str) -> Token {
   if KEYWORDS.is_match(token) {
     return match token {
-     "static" => Tokens::Static,
-     "snippet"=> Tokens::Snippet,
-     "and"    => Tokens::BooleanAnd,
-     "or"     => Tokens::BooleanOr,
-     "not"    => Tokens::BooleanNot,
+     "static" => Token::Static,
+     "snippet"=> Token::Snippet,
+     "and"    => Token::BooleanAnd,
+     "or"     => Token::BooleanOr,
+     "not"    => Token::BooleanNot,
      _        => panic!("Unrecognized token: {}", token)
     }
   } else if IDENTIFIERS.is_match(token) {
-    return Tokens::Identifier(String::from_str(token).unwrap());
+    return Token::Identifier(String::from_str(token).unwrap());
   } else if VALUES.is_match(token) {
-    return Tokens::Values(String::from_str(token).unwrap());
+    return Token::Values(String::from_str(token).unwrap());
   } else {
     return match token {
-      ":" => Tokens::Colon,
-      ";" => Tokens::SemiColon,
-      "." => Tokens::Period,
-      "," => Tokens::Comma,
+      ":" => Token::Colon,
+      ";" => Token::SemiColon,
+      "." => Token::Period,
+      "," => Token::Comma,
 
-      "[" => Tokens::SqBktLeft,
-      "]" => Tokens::SqBktRight,
-      "(" => Tokens::ParenLeft,
-      ")" => Tokens::ParenRight,
-      "{" => Tokens::BraceLeft,
-      "}" => Tokens::BraceRight,
+      "[" => Token::SqBktLeft,
+      "]" => Token::SqBktRight,
+      "(" => Token::ParenLeft,
+      ")" => Token::ParenRight,
+      "{" => Token::BraceLeft,
+      "}" => Token::BraceRight,
 
-      "+" => Tokens::Plus,
-      "-" => Tokens::Minus,
-      "*" => Tokens::Mul,
-      "/" => Tokens::Div,
-      "?" => Tokens::Cond,
-      "%" => Tokens::Modulo,
+      "+" => Token::Plus,
+      "-" => Token::Minus,
+      "*" => Token::Mul,
+      "/" => Token::Div,
+      "?" => Token::Cond,
+      "%" => Token::Modulo,
 
-      "=="=> Tokens::Equal,
-      "!="=> Tokens::NotEqual,
-      "<="=> Tokens::LTEQOp,
-      ">="=> Tokens::GTEQOp,
-      "<" => Tokens::LessThan,
-      ">" => Tokens::GreaterThan,
+      "=="=> Token::Equal,
+      "!="=> Token::NotEqual,
+      "<="=> Token::LTEQOp,
+      ">="=> Token::GTEQOp,
+      "<" => Token::LessThan,
+      ">" => Token::GreaterThan,
 
-      "=" => Tokens::Assign, 
+      "=" => Token::Assign, 
       _   => panic!("Unrecognized token: {}", token)
     }
   }
 }
 
-pub fn get_tokens(input_program : &str) -> Vec<Tokens> {
+pub fn get_tokens(input_program : &str) -> Vec<Token> {
   let mut token_array = Vec::new();
   for cap in TOKENS.captures_iter(input_program) {
     let ref token = cap[0];
