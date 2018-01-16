@@ -3,7 +3,10 @@ extern crate lazy_static;
 
 mod token;
 mod lexer;
+mod lexer_tests;
 mod parser;
+mod parser_impl;
+mod parser_tests;
 
 fn main() {
   let input_program = r"snippet fun(a, b, c, x, y) {
