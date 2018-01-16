@@ -11,49 +11,48 @@ lazy_static! {
 
 use tokens::Tokens;
 pub fn get_single_token(token : &str) -> Tokens {
-  use tokens::Tokens::*;
   if KEYWORDS.is_match(token) {
     return match token {
-     "static" => Static,
-     "snippet"=> Snippet,
-     "and"    => BooleanAnd,
-     "or"     => BooleanOr,
-     "not"    => BooleanNot,
+     "static" => Tokens::Static,
+     "snippet"=> Tokens::Snippet,
+     "and"    => Tokens::BooleanAnd,
+     "or"     => Tokens::BooleanOr,
+     "not"    => Tokens::BooleanNot,
      _        => panic!("Unrecognized token: {}", token)
     }
   } else if IDENTIFIERS.is_match(token) {
-    return Identifier(String::from_str(token).unwrap());
+    return Tokens::Identifier(String::from_str(token).unwrap());
   } else if VALUES.is_match(token) {
-    return Values(String::from_str(token).unwrap());
+    return Tokens::Values(String::from_str(token).unwrap());
   } else {
     return match token {
-      ":" => Colon,
-      ";" => SemiColon,
-      "." => Period,
-      "," => Comma,
+      ":" => Tokens::Colon,
+      ";" => Tokens::SemiColon,
+      "." => Tokens::Period,
+      "," => Tokens::Comma,
 
-      "[" => SqBktLeft,
-      "]" => SqBktRight,
-      "(" => ParenLeft,
-      ")" => ParenRight,
-      "{" => BraceLeft,
-      "}" => BraceRight,
+      "[" => Tokens::SqBktLeft,
+      "]" => Tokens::SqBktRight,
+      "(" => Tokens::ParenLeft,
+      ")" => Tokens::ParenRight,
+      "{" => Tokens::BraceLeft,
+      "}" => Tokens::BraceRight,
 
-      "+" => Plus,
-      "-" => Minus,
-      "*" => Mul,
-      "/" => Div,
-      "?" => Cond,
-      "%" => Modulo,
+      "+" => Tokens::Plus,
+      "-" => Tokens::Minus,
+      "*" => Tokens::Mul,
+      "/" => Tokens::Div,
+      "?" => Tokens::Cond,
+      "%" => Tokens::Modulo,
 
-      "=="=> Equal,
-      "!="=> NotEqual,
-      "<="=> LTEQOp,
-      ">="=> GTEQOp,
-      "<" => LessThan,
-      ">" => GreaterThan,
+      "=="=> Tokens::Equal,
+      "!="=> Tokens::NotEqual,
+      "<="=> Tokens::LTEQOp,
+      ">="=> Tokens::GTEQOp,
+      "<" => Tokens::LessThan,
+      ">" => Tokens::GreaterThan,
 
-      "=" => Assign, 
+      "=" => Tokens::Assign, 
       _   => panic!("Unrecognized token: {}", token)
     }
   }

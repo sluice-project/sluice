@@ -41,12 +41,11 @@ pub enum Expr {
 }
 
 pub fn parse_operand(mut token_vector : Vec<Tokens>) -> Result<Operand, &'static str> {
-  use tokens::Tokens::*;
   assert_eq!(token_vector.len(), 1, "token_vector too long for parse_operand");
   let operand_token = token_vector.remove(0);
   match operand_token {
-    Identifier(i) => return Ok(Operand::Identifier(i)),
-    Values(v)     => return Ok(Operand::Values(v)),
+    Tokens::Identifier(i) => return Ok(Operand::Identifier(i)),
+    Tokens::Values(v)     => return Ok(Operand::Values(v)),
     _             => return Err("invalid operand")
   }
 }
