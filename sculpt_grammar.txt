@@ -8,13 +8,16 @@ snippets -> snippet snippets
 snippets -> empty
 snippet  -> "snippet" ID "(" ID_LIST ")" "{" initializers statements "}"
 
+datapath -> empty
 datapath -> connections datapath
+
 connections -> empty
 connections -> "(" ID "," ID ")" connections
 
 ID_LIST -> ID "," ID_LIST
 ID_LIST -> empty
 
+initializers -> empty
 initializers -> initializer initializers
 initializer  -> "static" ID "=" NUM ";"
 
@@ -23,6 +26,7 @@ statement  -> ID "=" expr ";"
 
 operand -> ID
 operand -> NUM
+
 expr_right -> BINOP operand
 expr_right -> empty
 expr_right -> "?" operand ':' operand
