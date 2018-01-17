@@ -8,9 +8,6 @@ snippets -> snippet snippets
 snippets -> empty
 snippet  -> "snippet" ID "(" ID_LIST ")" "{" initializers statements "}"
 
-datapath -> empty
-datapath -> connections datapath
-
 connections -> empty
 connections -> "(" ID "," ID ")" connections
 
@@ -21,6 +18,7 @@ initializers -> empty
 initializers -> initializer initializers
 initializer  -> "static" ID "=" NUM ";"
 
+statements -> empty
 statements -> statement statements
 statement  -> ID "=" expr ";"
 

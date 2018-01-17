@@ -1,10 +1,13 @@
-// TODO: LL(1) parser for sculpt grammar
-
 use token::Token;
 
 #[derive(Debug)]
 pub enum Identifier {
   Identifier(String),
+}
+
+#[derive(Debug)]
+pub enum Value {
+  Value(String)
 }
 
 #[derive(Debug)]
@@ -45,12 +48,54 @@ pub enum Expr {
   Expr(Operand, ExprRight)
 }
 
+#[derive(Debug)]
 pub enum Statement {
   Statement(Identifier, Expr)
 }
 
+#[derive(Debug)]
 pub enum Statements {
-  Statements(Statement, Box<Statements>)
+  Statements(Statement, Box<Statements>),
+  Empty()
+}
+
+#[derive(Debug)]
+pub enum Initializer {
+  Initializer(Identifier, Value)
+}
+
+#[derive(Debug)]
+pub enum Initializers {
+  Initializers(Initializer, Box<Initializers>),
+  Empty()
+}
+
+#[derive(Debug)]
+pub enum IdList {
+  IdList(Identifier, Box<IdList>),
+  Empty()
+}
+
+#[derive(Debug)]
+pub enum Connections {
+  Connections(Identifier, Identifier, Box<Connections>),
+  Empty()
+}
+
+#[derive(Debug)]
+pub enum Snippet {
+  Snippet(Identifier, IdList, Initializers, Statements) 
+}
+
+#[derive(Debug)]
+pub enum Snippets {
+  Snippets(Snippet, Box<Snippets>),
+  Empty()
+}
+
+#[derive(Debug)]
+pub enum Prog {
+  Prog(Snippets, Connections)
 }
 
 pub fn parse_prog(token_vector : Vec<Token>)  {
