@@ -1,4 +1,5 @@
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum Token {
   // Variants that take an argument
   Identifier(String),
@@ -43,4 +44,32 @@ pub enum Token {
 
   // Assignment
   Assign,
+}
+
+pub fn is_ident(token : Option<& Token>) -> bool {
+  match token {
+    Some(& Token::Identifier(_)) => true,
+    _                            => false,
+  }
+}
+
+pub fn is_bin_op(token : Option<& Token>) -> bool {
+  match token {
+    Some(& Token::Plus) | Some(& Token::Minus) | Some(& Token::Mul) | Some(& Token::Div) | Some(& Token::Modulo)  => true,
+    _                            => false,
+  }
+}
+
+pub fn is_static(token : Option<& Token>) -> bool {
+  match token {
+    Some(& Token::Static) => true,
+    _                     => false,
+  }
+}
+
+pub fn is_snippet(token : Option<& Token>) -> bool {
+  match token {
+    Some(& Token::Snippet)=> true,
+    _                     => false,
+  }
 }

@@ -10,22 +10,22 @@ lazy_static! {
 }
 
 use token::Token;
-pub fn get_single_token(token : &str) -> Token {
-  if KEYWORDS.is_match(token) {
-    return match token {
+pub fn get_single_token(tok_str : &str) -> Token {
+  if KEYWORDS.is_match(tok_str) {
+    return match tok_str {
      "static" => Token::Static,
      "snippet"=> Token::Snippet,
      "and"    => Token::BooleanAnd,
      "or"     => Token::BooleanOr,
      "not"    => Token::BooleanNot,
-     _        => panic!("Unrecognized token: {}", token)
+     _        => panic!("Unrecognized token string: {}", tok_str)
     }
-  } else if IDENTIFIERS.is_match(token) {
-    return Token::Identifier(String::from_str(token).unwrap());
-  } else if VALUES.is_match(token) {
-    return Token::Value(String::from_str(token).unwrap());
+  } else if IDENTIFIERS.is_match(tok_str) {
+    return Token::Identifier(String::from_str(tok_str).unwrap());
+  } else if VALUES.is_match(tok_str) {
+    return Token::Value(String::from_str(tok_str).unwrap());
   } else {
-    return match token {
+    return match tok_str {
       ":" => Token::Colon,
       ";" => Token::SemiColon,
       "." => Token::Period,
@@ -53,7 +53,7 @@ pub fn get_single_token(token : &str) -> Token {
       ">" => Token::GreaterThan,
 
       "=" => Token::Assign, 
-      _   => panic!("Unrecognized token: {}", token)
+      _   => panic!("Unrecognized token string: {}", tok_str)
     }
   }
 }
