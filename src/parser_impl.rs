@@ -26,7 +26,7 @@ impl Parsing for Operand {
     let operand_token = token_vector.remove(0);
     match operand_token {
       Token::Identifier(i) => return Ok(Operand::Identifier(i)),
-      Token::Values(v)     => return Ok(Operand::Values(v)),
+      Token::Value(v)     => return Ok(Operand::Value(v)),
       _                    => return Err("invalid operand")
     }
   }
@@ -67,4 +67,8 @@ impl Parsing for Expr {
     return Ok(Expr::Expr(Parsing::parse(operand_token).unwrap(),
                          Parsing::parse(expr_right_tokens).unwrap()));
   }
+}
+
+pub fn parse_prog(token_vector : Vec<Token>)  {
+  println!("Within parser, doing nothing");
 }

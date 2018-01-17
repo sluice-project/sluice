@@ -2,7 +2,7 @@
 pub enum Token {
   // Variants that take an argument
   Identifier(String),
-  Values(String),
+  Value(String),
 
   // Keywords: static, snippet, and, or, not
   Static,

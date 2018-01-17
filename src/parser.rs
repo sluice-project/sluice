@@ -1,19 +1,65 @@
 use token::Token;
 
 #[derive(Debug)]
-pub enum Identifier {
-  Identifier(String),
+pub enum Prog {
+  Prog(Snippets, Connections)
 }
 
 #[derive(Debug)]
-pub enum Value {
-  Value(String)
+pub enum Snippets {
+  Snippets(Snippet, Box<Snippets>),
+  Empty()
 }
 
 #[derive(Debug)]
-pub enum Operand {
-  Identifier(String),
-  Values(String),
+pub enum Snippet {
+  Snippet(Identifier, IdList, Initializers, Statements) 
+}
+
+#[derive(Debug)]
+pub enum Connections {
+  Connections(Identifier, Identifier, Box<Connections>),
+  Empty()
+}
+
+#[derive(Debug)]
+pub enum IdList {
+  IdList(Identifier, Box<IdList>),
+  Empty()
+}
+
+#[derive(Debug)]
+pub enum Initializers {
+  Initializers(Initializer, Box<Initializers>),
+  Empty()
+}
+
+#[derive(Debug)]
+pub enum Initializer {
+  Initializer(Identifier, Value)
+}
+
+#[derive(Debug)]
+pub enum Statements {
+  Statements(Statement, Box<Statements>),
+  Empty()
+}
+
+#[derive(Debug)]
+pub enum Statement {
+  Statement(Identifier, Expr)
+}
+
+#[derive(Debug)]
+pub enum Expr {
+  Expr(Operand, ExprRight)
+}
+
+#[derive(Debug)]
+pub enum ExprRight {
+  BinOp(BinOpType, Operand, Box<ExprRight>),
+  Empty()
+  // TODO: Ignoring conditionals for now
 }
 
 #[derive(Debug)]
@@ -37,67 +83,17 @@ pub fn get_bin_op(t : Token) -> BinOpType {
 }
 
 #[derive(Debug)]
-pub enum ExprRight {
-  BinOp(BinOpType, Operand, Box<ExprRight>),
-  Empty()
-  // TODO: Ignoring conditionals for now
+pub enum Identifier {
+  Identifier(String),
 }
 
 #[derive(Debug)]
-pub enum Expr {
-  Expr(Operand, ExprRight)
+pub enum Value {
+  Value(String)
 }
 
 #[derive(Debug)]
-pub enum Statement {
-  Statement(Identifier, Expr)
-}
-
-#[derive(Debug)]
-pub enum Statements {
-  Statements(Statement, Box<Statements>),
-  Empty()
-}
-
-#[derive(Debug)]
-pub enum Initializer {
-  Initializer(Identifier, Value)
-}
-
-#[derive(Debug)]
-pub enum Initializers {
-  Initializers(Initializer, Box<Initializers>),
-  Empty()
-}
-
-#[derive(Debug)]
-pub enum IdList {
-  IdList(Identifier, Box<IdList>),
-  Empty()
-}
-
-#[derive(Debug)]
-pub enum Connections {
-  Connections(Identifier, Identifier, Box<Connections>),
-  Empty()
-}
-
-#[derive(Debug)]
-pub enum Snippet {
-  Snippet(Identifier, IdList, Initializers, Statements) 
-}
-
-#[derive(Debug)]
-pub enum Snippets {
-  Snippets(Snippet, Box<Snippets>),
-  Empty()
-}
-
-#[derive(Debug)]
-pub enum Prog {
-  Prog(Snippets, Connections)
-}
-
-pub fn parse_prog(token_vector : Vec<Token>)  {
-  println!("Within parser, doing nothing");
+pub enum Operand {
+  Identifier(String),
+  Value(String),
 }

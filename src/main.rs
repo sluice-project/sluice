@@ -18,5 +18,5 @@ fn main() {
                             m == 5;
                           }
                         }";
-  parser::parse_prog(lexer::get_tokens(input_program));
+  parser_impl::parse_prog(lexer::get_tokens(input_program));
 }
