@@ -144,10 +144,9 @@ impl Parsing for Expr {
     if token_vector.is_empty() {
       panic!("Insufficient tokens in call to parse_expr");
     }
-    let operand    = token_vector.remove(0);
-    let expr_right = token_vector;
-    return Expr::Expr(Parsing::parse(&mut vec!(operand)),
-                      Parsing::parse(expr_right));
+    let operand    = Parsing::parse(token_vector);
+    let expr_right = Parsing::parse(token_vector);
+    return Expr::Expr(operand, expr_right);
   }
 }
 
@@ -162,10 +161,9 @@ impl Parsing for ExprRight {
       e @ Token::Minus |
       e @ Token::Mul   |
       e @ Token::Div   |
-      e @ Token::Modulo => { let operand = token_vector.remove(0); // This has to be an operand or it's an error
-                             ExprRight::BinOp(get_bin_op(e),
-                                              Parsing::parse(&mut vec!(operand)),
-                                              Box::new(Parsing::parse(token_vector))) },
+      e @ Token::Modulo => { let operand   = Parsing::parse(token_vector); // Must be an operand or it's an error
+                             let expr_right= Parsing::parse(token_vector);
+                             ExprRight::BinOp(get_bin_op(e), operand, Box::new(expr_right))},
       _          => { assert!(false, "Cannot get here!"); ExprRight::Empty()}
     }
   }
