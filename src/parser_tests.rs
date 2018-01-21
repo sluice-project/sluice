@@ -111,6 +111,7 @@ mod tests{
                             a = t1 ? x : a;
                             b = t1 ? y : b;
                             t2 = c >= d;
+                            t3 = t2 and t1;
                             e = t2 ? m : 5;
                           }
                           snippet foo(a, b, c,) {
