@@ -22,7 +22,7 @@ mod tests{
   
   #[test]
   fn test_parse_expr() {
-    let input = r"7%5-5+6";
+    let input = r"7%5";
     let tokens = & mut get_tokens(input);
     println!("{:?}", Expr::parse(tokens));
     assert!(tokens.is_empty(), "tokens is not empty");
@@ -30,7 +30,7 @@ mod tests{
   
   #[test]
   fn test_parse_stmt() {
-    let input = r"x=6+5+4;";
+    let input = r"x=6+5;";
     let tokens = & mut get_tokens(input);
     println!("{:?}", Statement::parse(tokens));
     assert!(tokens.is_empty(), "tokens is not empty");
@@ -38,7 +38,7 @@ mod tests{
   
   #[test]
   fn test_parse_stmts() {
-    let input = r"x=6+5+4;y=7*8%5;";
+    let input = r"x=6+5;y=7*8;";
     let tokens = & mut get_tokens(input);
     println!("{:?}", Statements::parse(tokens));
     assert!(tokens.is_empty(), "tokens is not empty");
