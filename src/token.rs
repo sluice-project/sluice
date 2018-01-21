@@ -10,7 +10,7 @@ pub enum Token {
   Snippet,
   BooleanAnd,
   BooleanOr,
-  BooleanNot, // XXX: Not handled by parser yet
+  BooleanNot, // XXX: Not used in language yet
 
   // Separators
   Colon,
