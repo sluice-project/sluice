@@ -3,31 +3,16 @@ mod tests{
   use super::super::lexer::get_tokens;
   
   #[test]
-  fn test_lexer_with_spaces() {
-    let input_program = r"snippet fun ( a , b , c , x , y ) {
+  fn test_lexer_full_prog() {
+    let input_program = r"snippet fun ( a , b , c , x , y, ) {
                             static x = 0 ;
-                            if ( a >= b ) {
-                              a = x ;
-                              b = y ;
-                            } elif ( c >= d ) {
-                              m == 5 ;
-                            }
-                          }";
-    println!("{:?}", get_tokens(input_program));
-  }
-  
-  #[test]
-  fn test_lexer_wo_spaces() {
-    let input_program = r"snippet fun(a, b, c, x, y) {
-                            static x = 0;
-                            if (a >= b) {
-                              a = x;
-                              b = y;
-                            } elif (c >= d) {
-                              m == 5;
-                            }
+                            t1 = a >= b;
+                            a = t1 ? x : a;
+                            b = t1 ? y : b;
+                            t2 = c >= d;
+                            e = t2 ? m : 5;
                           }
-                          snippet foo(a, b, c) {
+                          snippet foo(a, b, c,) {
                             static x = 1;
                             x = 5;
                           }

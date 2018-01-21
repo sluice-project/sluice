@@ -102,4 +102,26 @@ mod tests{
     println!("{:?}", Prog::parse(tokens));
     assert!(tokens.is_empty(), "tokens is not empty");
   }
+
+  #[test]
+  fn test_parse_prog2() {
+    let input_program = r"snippet fun ( a , b , c , x , y, ) {
+                            static x = 0 ;
+                            t1 = a >= b;
+                            a = t1 ? x : a;
+                            b = t1 ? y : b;
+                            t2 = c >= d;
+                            e = t2 ? m : 5;
+                          }
+                          snippet foo(a, b, c,) {
+                            static x = 1;
+                            x = 5;
+                          }
+                          (foo, fun)
+                          ";
+    let tokens = & mut get_tokens(input_program);
+    println!("{:?}", Prog::parse(tokens));
+    assert!(tokens.is_empty(), "tokens is not empty");
+  }
+
 }

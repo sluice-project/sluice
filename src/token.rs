@@ -10,17 +10,17 @@ pub enum Token {
   Snippet,
   BooleanAnd,
   BooleanOr,
-  BooleanNot,
+  BooleanNot, // XXX: Not handled by parser yet
 
   // Separators
   Colon,
   SemiColon,
-  Period,
+  Period,     // XXX: Not used in language yet
   Comma,
 
   // Grouping operators
-  SqBktLeft,
-  SqBktRight,
+  SqBktLeft,  // XXX: Not used in language yet
+  SqBktRight, // XXX: Not used in language yet
   ParenLeft,
   ParenRight,
   BraceLeft,
@@ -55,7 +55,21 @@ pub fn is_ident(token : Option<& Token>) -> bool {
 
 pub fn is_operator(token : Option<& Token>) -> bool {
   match token {
-    Some(& Token::Plus) | Some(& Token::Minus) | Some(& Token::Mul) | Some(& Token::Div) | Some(& Token::Modulo) | Some(& Token::Cond) => true,
+    Some(& Token::BooleanAnd) |
+    Some(& Token::BooleanOr)  |
+    Some(& Token::BooleanNot) |
+    Some(& Token::Plus)       |
+    Some(& Token::Minus)      |
+    Some(& Token::Mul)        |
+    Some(& Token::Div)        |
+    Some(& Token::Modulo)     |
+    Some(& Token::Equal)      |
+    Some(& Token::NotEqual)   |
+    Some(& Token::LTEQOp)     |
+    Some(& Token::GTEQOp)     |
+    Some(& Token::LessThan)   |
+    Some(& Token::GreaterThan)|
+    Some(& Token::Cond)          => true,
     _                            => false,
   }
 }

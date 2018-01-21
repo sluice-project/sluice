@@ -157,17 +157,25 @@ impl Parsing for ExprRight {
     }
     let op_type = token_vector.remove(0);
     return match op_type {
+      e @ Token::BooleanAnd |
+      e @ Token::BooleanOr |
       e @ Token::Plus  |
       e @ Token::Minus |
       e @ Token::Mul   |
       e @ Token::Div   |
-      e @ Token::Modulo => { let operand   = Parsing::parse(token_vector); // Must be an operand or it's an error
-                             ExprRight::BinOp(get_bin_op(e), operand)},
-      Token::Cond       => { let operand_true = Parsing::parse(token_vector); // Must be an operand
-                             match_token(token_vector, Token::Colon, "Colon should separate halves of conditional.");
-                             let operand_false = Parsing::parse(token_vector);
-                             ExprRight::Cond(operand_true, operand_false)},
-      _                 => { assert!(false, "Cannot get here!"); ExprRight::Empty()}
+      e @ Token::Modulo|
+      e @ Token::Equal |
+      e @ Token::NotEqual|
+      e @ Token::LTEQOp|
+      e @ Token::GTEQOp|
+      e @ Token::LessThan|
+      e @ Token::GreaterThan => { let operand   = Parsing::parse(token_vector); // Must be an operand
+                                  ExprRight::BinOp(get_bin_op(e), operand)},
+      Token::Cond            => { let operand_true = Parsing::parse(token_vector); // Must be an operand
+                                  match_token(token_vector, Token::Colon, "Colon must separate conditional halves.");
+                                  let operand_false = Parsing::parse(token_vector);
+                                  ExprRight::Cond(operand_true, operand_false)},
+      _                      => { assert!(false, "Cannot get here!"); ExprRight::Empty()}
     }
   }
 }
