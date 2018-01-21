@@ -46,13 +46,6 @@ pub enum Token {
   Assign,
 }
 
-pub fn is_ident(token : Option<& Token>) -> bool {
-  match token {
-    Some(& Token::Identifier(_)) => true,
-    _                            => false,
-  }
-}
-
 pub fn is_operator(token : Option<& Token>) -> bool {
   match token {
     Some(& Token::BooleanAnd) |
@@ -71,19 +64,5 @@ pub fn is_operator(token : Option<& Token>) -> bool {
     Some(& Token::GreaterThan)|
     Some(& Token::Cond)          => true,
     _                            => false,
-  }
-}
-
-pub fn is_static(token : Option<& Token>) -> bool {
-  match token {
-    Some(& Token::Static) => true,
-    _                     => false,
-  }
-}
-
-pub fn is_snippet(token : Option<& Token>) -> bool {
-  match token {
-    Some(& Token::Snippet)=> true,
-    _                     => false,
   }
 }

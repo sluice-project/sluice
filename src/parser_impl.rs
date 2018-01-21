@@ -4,10 +4,7 @@
 
 use super::parser::*;
 use super::token::Token;
-use super::token::is_ident;
 use super::token::is_operator;
-use super::token::is_static;
-use super::token::is_snippet;
 
 // Helper function to consume next token and match it against a specified token
 // Throw an error if either:
@@ -40,6 +37,12 @@ impl Parsing for Prog {
 
 impl Parsing for Snippets {
   fn parse(token_vector : & mut Vec<Token>) -> Snippets {
+    fn is_snippet(token : Option<& Token>) -> bool {
+        match token {
+          Some(& Token::Snippet)=> true,
+          _                     => false,
+        }
+    }
     if token_vector.is_empty() || (!is_snippet(token_vector.first())) {
       return Snippets::Empty();
     } else {
@@ -83,6 +86,12 @@ impl Parsing for Connections {
 
 impl Parsing for IdList {
   fn parse(token_vector : & mut Vec<Token>) -> IdList {
+    fn is_ident(token : Option<& Token>) -> bool {
+      match token {
+        Some(& Token::Identifier(_)) => true,
+        _                            => false,
+      }
+    }
     if token_vector.is_empty() || (!is_ident(token_vector.first())) {
       return IdList::Empty();
     } else {
@@ -96,6 +105,12 @@ impl Parsing for IdList {
 
 impl Parsing for Initializers {
   fn parse(token_vector : & mut Vec<Token>) -> Initializers {
+    fn is_static(token : Option<& Token>) -> bool {
+      match token {
+        Some(& Token::Static) => true,
+        _                     => false,
+      }
+    }
     if token_vector.is_empty() || (!is_static(token_vector.first())) {
       return Initializers::Empty();
     } else {
@@ -119,6 +134,12 @@ impl Parsing for Initializer {
 
 impl Parsing for Statements {
   fn parse(token_vector : & mut Vec<Token>) -> Statements {
+    fn is_ident(token : Option<& Token>) -> bool {
+      match token {
+        Some(& Token::Identifier(_)) => true,
+        _                            => false,
+      }
+    }
     if token_vector.is_empty() || (!is_ident(token_vector.first())) {
       return Statements::Empty();
     } else {
