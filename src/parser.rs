@@ -76,7 +76,7 @@ pub enum BinOpType {
   LTEQOp,
   GTEQOp,
   LessThan,
-  GreaterThan
+  GreaterThan,
 }
 
 pub fn get_bin_op(t : Token) -> BinOpType {
