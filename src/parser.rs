@@ -1,5 +1,3 @@
-use token::Token;
-
 #[derive(Debug)]
 pub enum Prog {
   Prog(Snippets, Connections)
@@ -55,47 +53,15 @@ pub enum Expr {
   Expr(Operand, ExprRight)
 }
 
+// XXX: The use ... is ugly, but required.
+// This is because BinOpType is generated
+// in the parser_impl.rs module by a macro.
+use parser_impl::BinOpType;
 #[derive(Debug)]
 pub enum ExprRight {
   BinOp(BinOpType, Operand),
   Cond(Operand, Operand),
   Empty()
-}
-
-#[derive(Debug)]
-pub enum BinOpType {
-  BooleanAnd,
-  BooleanOr,
-  Plus,
-  Minus,
-  Mul,
-  Div,
-  Modulo,
-  Equal,
-  NotEqual,
-  LTEQOp,
-  GTEQOp,
-  LessThan,
-  GreaterThan,
-}
-
-pub fn get_bin_op(t : Token) -> BinOpType {
-  match t {
-    Token::BooleanAnd  => BinOpType::BooleanAnd,
-    Token::BooleanOr   => BinOpType::BooleanOr,
-    Token::Plus        => BinOpType::Plus,
-    Token::Minus       => BinOpType::Minus,
-    Token::Mul         => BinOpType::Mul,
-    Token::Div         => BinOpType::Div,
-    Token::Modulo      => BinOpType::Modulo,
-    Token::Equal       => BinOpType::Equal,
-    Token::NotEqual    => BinOpType::NotEqual,
-    Token::LTEQOp      => BinOpType::LTEQOp,
-    Token::GTEQOp      => BinOpType::GTEQOp,
-    Token::LessThan    => BinOpType::LessThan,
-    Token::GreaterThan => BinOpType::GreaterThan,
-    _                  => panic!("Invalid BinOpType")
-  }
 }
 
 #[derive(Debug)]

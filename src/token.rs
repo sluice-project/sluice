@@ -45,24 +45,3 @@ pub enum Token {
   // Assignment
   Assign,
 }
-
-pub fn is_operator(token : Option<& Token>) -> bool {
-  match token {
-    Some(& Token::BooleanAnd) |
-    Some(& Token::BooleanOr)  |
-    Some(& Token::BooleanNot) |
-    Some(& Token::Plus)       |
-    Some(& Token::Minus)      |
-    Some(& Token::Mul)        |
-    Some(& Token::Div)        |
-    Some(& Token::Modulo)     |
-    Some(& Token::Equal)      |
-    Some(& Token::NotEqual)   |
-    Some(& Token::LTEQOp)     |
-    Some(& Token::GTEQOp)     |
-    Some(& Token::LessThan)   |
-    Some(& Token::GreaterThan)|
-    Some(& Token::Cond)          => true,
-    _                            => false,
-  }
-}

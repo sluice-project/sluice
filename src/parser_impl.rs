@@ -4,7 +4,6 @@
 
 use super::parser::*;
 use super::token::Token;
-use super::token::is_operator;
 
 // Helper function to consume next token and match it against a specified token
 // Throw an error if either:
@@ -171,35 +170,56 @@ impl Parsing for Expr {
   }
 }
 
-impl Parsing for ExprRight {
-  fn parse(token_vector : & mut Vec<Token>) -> ExprRight {
-    if token_vector.is_empty() || (!is_operator(token_vector.first())) {
-      return ExprRight::Empty();
+// Macro to generate parser for ExprRight given a list of binary operations
+macro_rules! expr_right_parser {
+  ($($x:ident),*) => {
+    // generate enum of binary operation types
+    // this must be public (I think)
+    #[derive(Debug)]
+    pub enum BinOpType {
+      $($x,)*
     }
-    let op_type = token_vector.remove(0);
-    return match op_type {
-      e @ Token::BooleanAnd |
-      e @ Token::BooleanOr |
-      e @ Token::Plus  |
-      e @ Token::Minus |
-      e @ Token::Mul   |
-      e @ Token::Div   |
-      e @ Token::Modulo|
-      e @ Token::Equal |
-      e @ Token::NotEqual|
-      e @ Token::LTEQOp|
-      e @ Token::GTEQOp|
-      e @ Token::LessThan|
-      e @ Token::GreaterThan => { let operand   = Parsing::parse(token_vector); // Must be an operand
-                                  ExprRight::BinOp(get_bin_op(e), operand)},
-      Token::Cond            => { let operand_true = Parsing::parse(token_vector); // Must be an operand
-                                  match_token(token_vector, Token::Colon, "Colon must separate conditional halves.");
-                                  let operand_false = Parsing::parse(token_vector);
-                                  ExprRight::Cond(operand_true, operand_false)},
-      _                      => { assert!(false, "Cannot get here!"); ExprRight::Empty()}
+
+    impl Parsing for ExprRight {
+      fn parse(token_vector : & mut Vec<Token>) -> ExprRight {
+        // generate is_operator helper function
+        fn is_operator(token : Option<& Token>) -> bool {
+          match token {
+            $(Some(& Token::$x)|)*
+            Some(& Token::Cond) => true,
+            _                   => false,
+          }
+        }
+
+        // generate get_bin_op helper function
+        fn get_bin_op(t : Token) -> BinOpType {
+          match t {
+            $(Token::$x=>BinOpType::$x,)*
+            _ => panic!("Invalid BinOpType")
+          }
+        }
+
+        // use it in parse implementation
+        if token_vector.is_empty() || (!is_operator(token_vector.first())) {
+          return ExprRight::Empty();
+        }
+        let op_type = token_vector.remove(0);
+        return match op_type {
+          $(e @ Token::$x     => { let operand   = Parsing::parse(token_vector); // Must be an operand
+                                   ExprRight::BinOp(get_bin_op(e), operand)},)*
+          Token::Cond         => { let operand_true = Parsing::parse(token_vector); // Must be an operand
+                                   match_token(token_vector, Token::Colon, "Colon must separate conditional halves.");
+                                   let operand_false = Parsing::parse(token_vector);
+                                   ExprRight::Cond(operand_true, operand_false)},
+          _                   => { assert!(false, "Cannot get here!"); ExprRight::Empty()}
+        }
+      }
     }
-  }
+  };
 }
+
+// generate parser using macro
+expr_right_parser!(BooleanAnd, BooleanOr, Plus, Minus, Mul, Div, Modulo, Equal, NotEqual, LTEQOp, GTEQOp, LessThan, GreaterThan);
 
 impl Parsing for Identifier {
   fn parse(token_vector : & mut Vec<Token>) -> Identifier {
