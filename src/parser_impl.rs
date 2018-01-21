@@ -5,7 +5,7 @@
 use super::parser::*;
 use super::token::Token;
 use super::token::is_ident;
-use super::token::is_bin_op;
+use super::token::is_operator;
 use super::token::is_static;
 use super::token::is_snippet;
 
@@ -119,7 +119,7 @@ impl Parsing for Initializer {
 
 impl Parsing for Statements {
   fn parse(token_vector : & mut Vec<Token>) -> Statements {
-    if token_vector.is_empty() || (! is_ident(token_vector.first())) {
+    if token_vector.is_empty() || (!is_ident(token_vector.first())) {
       return Statements::Empty();
     } else {
       let stmt : Statement  = Parsing::parse(token_vector);
@@ -152,7 +152,7 @@ impl Parsing for Expr {
 
 impl Parsing for ExprRight {
   fn parse(token_vector : & mut Vec<Token>) -> ExprRight {
-    if token_vector.is_empty() || (! is_bin_op(token_vector.first())) {
+    if token_vector.is_empty() || (!is_operator(token_vector.first())) {
       return ExprRight::Empty();
     }
     let op_type = token_vector.remove(0);
@@ -162,9 +162,12 @@ impl Parsing for ExprRight {
       e @ Token::Mul   |
       e @ Token::Div   |
       e @ Token::Modulo => { let operand   = Parsing::parse(token_vector); // Must be an operand or it's an error
-                             let expr_right= Parsing::parse(token_vector);
-                             ExprRight::BinOp(get_bin_op(e), operand, Box::new(expr_right))},
-      _          => { assert!(false, "Cannot get here!"); ExprRight::Empty()}
+                             ExprRight::BinOp(get_bin_op(e), operand)},
+      Token::Cond       => { let operand_true = Parsing::parse(token_vector); // Must be an operand
+                             match_token(token_vector, Token::Colon, "Colon should separate halves of conditional.");
+                             let operand_false = Parsing::parse(token_vector);
+                             ExprRight::Cond(operand_true, operand_false)},
+      _                 => { assert!(false, "Cannot get here!"); ExprRight::Empty()}
     }
   }
 }

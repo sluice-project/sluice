@@ -57,9 +57,9 @@ pub enum Expr {
 
 #[derive(Debug)]
 pub enum ExprRight {
-  BinOp(BinOpType, Operand, Box<ExprRight>),
+  BinOp(BinOpType, Operand),
+  Cond(Operand, Operand),
   Empty()
-  // TODO: Ignoring conditionals for now
 }
 
 #[derive(Debug)]

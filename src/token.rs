@@ -31,8 +31,8 @@ pub enum Token {
   Minus,
   Mul,
   Div,
-  Cond,
   Modulo,
+  Cond,
 
   // Comparison operators
   Equal,
@@ -53,9 +53,9 @@ pub fn is_ident(token : Option<& Token>) -> bool {
   }
 }
 
-pub fn is_bin_op(token : Option<& Token>) -> bool {
+pub fn is_operator(token : Option<& Token>) -> bool {
   match token {
-    Some(& Token::Plus) | Some(& Token::Minus) | Some(& Token::Mul) | Some(& Token::Div) | Some(& Token::Modulo)  => true,
+    Some(& Token::Plus) | Some(& Token::Minus) | Some(& Token::Mul) | Some(& Token::Div) | Some(& Token::Modulo) | Some(& Token::Cond) => true,
     _                            => false,
   }
 }
