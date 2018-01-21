@@ -201,7 +201,3 @@ impl Parsing for Value {
    }
   }
 }
-
-pub fn parse_prog(token_vector : Vec<Token>) {
-  println!("Within parser, doing nothing");
-}

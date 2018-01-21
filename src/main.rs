@@ -7,16 +7,22 @@ mod lexer_tests;
 mod parser;
 mod parser_impl;
 mod parser_tests;
+use parser_impl::Parsing;
 
 fn main() {
-  let input_program = r"snippet fun(a, b, c, x, y) {
+  let input_program = r"snippet fun(a, b, c, x, y, ) {
                           static x = 0;
-                          if (a >= b) {
-                            a = x;
-                            b = y;
-                          } elif (c >= d) {
-                            m == 5;
-                          }
-                        }";
-  parser_impl::parse_prog(lexer::get_tokens(input_program));
+                          a = x;
+                          b = y;
+                          m = 5;
+                        }
+                        snippet foo(a, b, c, ) {
+                          static x = 1;
+                          x = 5;
+                        }
+                        (foo, fun)
+                        ";
+  let tokens = & mut lexer::get_tokens(input_program);
+  parser::Prog::parse(tokens);
+  assert!(tokens.is_empty(), "tokens is not empty");
 }
