@@ -23,6 +23,7 @@ fn main() {
                         (foo, fun)
                         ";
   let tokens = & mut lexer::get_tokens(input_program);
-  parser::Prog::parse(tokens);
+  let parse_tree = parser::Prog::parse(tokens);
   assert!(tokens.is_empty(), "tokens is not empty");
+  println!("Parse tree: {:?}", parse_tree);
 }
