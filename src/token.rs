@@ -15,12 +15,9 @@ pub enum Token {
   // Separators
   Colon,
   SemiColon,
-  Period,     // XXX: Not used in language yet
   Comma,
 
   // Grouping operators
-  SqBktLeft,  // XXX: Not used in language yet
-  SqBktRight, // XXX: Not used in language yet
   ParenLeft,
   ParenRight,
   BraceLeft,

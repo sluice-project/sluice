@@ -72,7 +72,7 @@ impl Parsing for Connections {
     if token_vector.is_empty() {
       return Connections::Empty();
     } else {
-      match_token(token_vector, Token::ParenLeft, "Connection must start with a left parenthesis");
+      match_token(token_vector, Token::ParenLeft, "Connection must start with a left parenthesis.");
       let id1   : Identifier = Parsing::parse(token_vector);
       match_token(token_vector, Token::Comma, "Need a comma between snippets that are being connected.");
       let id2   : Identifier = Parsing::parse(token_vector);
@@ -122,11 +122,11 @@ impl Parsing for Initializers {
 
 impl Parsing for Initializer {
   fn parse(token_vector : & mut Vec<Token>) -> Initializer {
-    match_token(token_vector, Token::Static, "First token in an initializer must be the keyword static");
+    match_token(token_vector, Token::Static, "First token in an initializer must be the keyword static.");
     let identifier : Identifier = Parsing::parse(token_vector);
-    match_token(token_vector, Token::Assign, "Must separate identifier and value by an assignment symbol");
+    match_token(token_vector, Token::Assign, "Must separate identifier and value by an assignment symbol.");
     let value      : Value      = Parsing::parse(token_vector);
-    match_token(token_vector, Token::SemiColon, "Last token in an initializer must be a semicolon");
+    match_token(token_vector, Token::SemiColon, "Last token in an initializer must be a semicolon.");
     return Initializer::Initializer(identifier, value);
   }
 }
@@ -152,9 +152,9 @@ impl Parsing for Statements {
 impl Parsing for Statement {
   fn parse(token_vector : & mut Vec<Token>) -> Statement {
     let identifier : Identifier = Parsing::parse(token_vector);
-    match_token(token_vector, Token::Assign, "Must separate identifier and expression by an assignment symbol");
+    match_token(token_vector, Token::Assign, "Must separate identifier and expression by an assignment symbol.");
     let expr      : Expr     = Parsing::parse(token_vector);
-    match_token(token_vector, Token::SemiColon, "Last token in an initializer must be a semicolon");
+    match_token(token_vector, Token::SemiColon, "Last token in an initializer must be a semicolon.");
     return Statement::Statement(identifier, expr);
   }
 }
@@ -162,7 +162,7 @@ impl Parsing for Statement {
 impl Parsing for Expr {
   fn parse(token_vector : & mut Vec<Token>) -> Expr {
     if token_vector.is_empty() {
-      panic!("Insufficient tokens in call to parse_expr");
+      panic!("Insufficient tokens in call to parse_expr.");
     }
     let operand    = Parsing::parse(token_vector);
     let expr_right = Parsing::parse(token_vector);

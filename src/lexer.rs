@@ -28,11 +28,8 @@ pub fn get_single_token(tok_str : &str) -> Token {
     return match tok_str {
       ":" => Token::Colon,
       ";" => Token::SemiColon,
-      "." => Token::Period,
       "," => Token::Comma,
 
-      "[" => Token::SqBktLeft,
-      "]" => Token::SqBktRight,
       "(" => Token::ParenLeft,
       ")" => Token::ParenRight,
       "{" => Token::BraceLeft,
