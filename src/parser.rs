@@ -69,13 +69,49 @@ pub enum Identifier {
   Identifier(String),
 }
 
+impl Identifier {
+  pub fn get_string(&self) -> &String{
+    let &Identifier::Identifier(ref s) = self;
+    return s;
+  }
+}
+
 #[derive(Debug)]
 pub enum Value {
   Value(String)
 }
 
+impl Value {
+  pub fn get_string(&self) -> &String {
+    let &Value::Value(ref s) = self;
+    return s;
+  }
+}
+
 #[derive(Debug)]
 pub enum Operand {
-  Identifier(String),
-  Value(String),
+  Identifier(Identifier),
+  Value(Value),
+}
+
+impl Operand{
+  pub fn is_id(&self) -> bool {
+    match self {
+      &Operand::Identifier(_)     => true,
+      _                           => false
+    }
+  }
+  pub fn is_val(&self) -> bool { !self.is_id() }
+  pub fn get_id(&self) -> &String {
+    match self {
+      &Operand::Identifier(ref id) => id.get_string(),
+      _                            => panic!("Can't call get_id if operand isn't an identifier.") // TODO: Should use assert
+    }
+  }
+  pub fn get_val(&self) -> &String {
+    match self {
+      &Operand::Value(ref val) => val.get_string(),
+      _                        => panic!("Can't call get_val if operand isn't a value.") // TODO: Should use assert
+    }
+  }
 }

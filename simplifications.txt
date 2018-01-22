@@ -1,6 +1,0 @@
-1. There is only one data type 32-bit signed integers. Booleans are integers
-with values of 0 and 1 alone, but no one checks this.
-2. You can't nest expressions.
-3. There are no if-else statements: it's straight line code.
-4. There are no loops.
-5. There are no parentheses in the grammar.

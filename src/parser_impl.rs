@@ -235,8 +235,8 @@ impl Parsing for Operand {
   fn parse(token_vector : & mut Vec<Token>) -> Operand {
     let operand_token = token_vector.remove(0);
     match operand_token {
-      Token::Identifier(i) => return Operand::Identifier(i),
-      Token::Value(v)      => return Operand::Value(v),
+      Token::Identifier(i) => return Operand::Identifier(Identifier::Identifier(i)),
+      Token::Value(v)      => return Operand::Value(Value::Value(v)),
       _                    => panic!("Invalid token: {:?}, expected Token::Identifier or Token::Value", operand_token)
     }
   }
