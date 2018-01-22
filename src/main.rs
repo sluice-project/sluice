@@ -9,6 +9,8 @@ mod parser_impl;
 mod parser_tests;
 use parser_impl::Parsing;
 
+// Main compiler binary
+// Takes an input sculpt program and produces a refined program
 fn main() {
   let input_program = r"snippet fun(a, b, c, x, y, ) {
                           static x = 0;
@@ -24,6 +26,6 @@ fn main() {
                         ";
   let tokens = & mut lexer::get_tokens(input_program);
   let parse_tree = parser::Prog::parse(tokens);
-  assert!(tokens.is_empty(), "tokens is not empty");
+  assert!(tokens.is_empty(), "Tokens is not empty.");
   println!("Parse tree: {:?}", parse_tree);
 }
