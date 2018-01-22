@@ -1,8 +1,0 @@
-The current plan:
-
-1. Hand-write a parser for a simple imperative language.
-
-2. I am not using ANTLR because Java is an extremely verbose language AND
-I want to try hand-writing a parser in a functional language.
-
-3. The key is to pick a simple enough language.
