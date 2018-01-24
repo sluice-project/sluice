@@ -21,6 +21,7 @@ use std::collections::HashSet;
 fn main() {
   let input_program = r"snippet fun(a, b, c, x, y, ) {
                           static x = 0;
+                          y = 5;
                           a = x;
                           b = y;
                           m = 5;
