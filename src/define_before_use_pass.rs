@@ -17,6 +17,14 @@ impl TreeFold<HashSet<String>> for DefineBeforeUsePass {
     collector.insert(id_string.clone());
   }
 
+  fn visit_snippet(tree : & Snippet, collector: &mut HashSet<String>) {
+    let &Snippet::Snippet(ref id, ref id_list, ref inits, ref stmts) = tree;
+    collector.insert(id.get_string().clone());
+    Self::visit_idlist(id_list, collector);
+    Self::visit_initializers(inits, collector);
+    Self::visit_statements(stmts, collector);
+  }
+
   // Add definitions from statements
   fn visit_statement(tree : &Statement, collector : &mut HashSet<String>) {
     let &Statement::Statement(ref identifier, ref expr) = tree;
