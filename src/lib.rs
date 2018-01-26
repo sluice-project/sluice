@@ -8,4 +8,5 @@ pub mod parser_impl; // TODO: Need to refactor; these should be private
 pub mod tree_fold;
 pub mod lexer;
 pub mod parser;
-pub mod semantic_checker;
+pub mod define_before_use_pass;
+pub mod symbol_table_pass;

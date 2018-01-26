@@ -2,11 +2,10 @@ extern crate sculpt;
 
 use sculpt::lexer;
 use sculpt::parser;
-use sculpt::semantic_checker::SymbolTablePass;
-use sculpt::semantic_checker::DefineBeforeUsePass;
+use sculpt::symbol_table_pass::SymbolTablePass;
+use sculpt::define_before_use_pass::DefineBeforeUsePass;
 use sculpt::parser_impl::Parsing;
 use sculpt::tree_fold::TreeFold;
-
 use std::collections::HashSet;
 
 #[test]
