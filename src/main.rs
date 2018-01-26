@@ -1,19 +1,11 @@
-#[macro_use]
-extern crate lazy_static;
+extern crate sculpt;
 
-mod token;
-mod lexer;
-mod lexer_tests;
-mod parser;
-mod parser_impl;
-mod parser_tests;
-mod tree_fold;
-mod semantic_checker;
-
-use semantic_checker::SymbolTablePass;
-use semantic_checker::DefineBeforeUsePass;
-use tree_fold::TreeFold;
-use parser_impl::Parsing;
+use sculpt::lexer;
+use sculpt::parser;
+use sculpt::semantic_checker::SymbolTablePass;
+use sculpt::semantic_checker::DefineBeforeUsePass;
+use sculpt::parser_impl::Parsing;
+use sculpt::tree_fold::TreeFold;
 use std::collections::HashSet;
 
 // Main compiler binary
