@@ -12,15 +12,14 @@ use std::collections::HashSet;
 // Takes an input sculpt program and produces a refined program
 fn main() {
   let input_program = r"snippet fun(a, b, c, x, y, ) {
-                          static x = 0;
                           y = 5;
                           a = x;
                           b = y;
                           m = 5;
                         }
                         snippet foo(a, b, c, ) {
-                          static x = 1;
-                          x = 5;
+                          static p = 1;
+                          q = 5;
                         }
                         (foo, fun)
                         ";
