@@ -1,7 +1,4 @@
-// Check if:
-// (2) snippets are connected before being defined.
 // (3) static variables are redefined as local variables.
-
 use super::parser::*;
 use std::collections::HashSet;
 use tree_fold::TreeFold;
@@ -9,12 +6,20 @@ use tree_fold::TreeFold;
 // Compiler pass to check that identifiers are defined before being used
 pub struct DefineBeforeUsePass;
 
+// Add definitions from initializers, idlist, snippet names, and statements
+// Check use of these definitions in visit_expr and visit_connections
 impl TreeFold<HashSet<String>> for DefineBeforeUsePass {
-  // Add definitions from initializers
   fn visit_initializer(tree : & Initializer, collector : &mut HashSet<String>) {
     let &Initializer::Initializer(ref identifier, _) = tree;
     let &Identifier::Identifier(ref id_string) = identifier;
     collector.insert(id_string.clone());
+  }
+
+  fn visit_idlist(tree : & IdList, collector : &mut HashSet<String>) {
+    if let &IdList::IdList(ref identifier, ref rest_of_list) = tree {
+      collector.insert(identifier.get_string().clone());
+      Self::visit_idlist(rest_of_list, collector);
+    }
   }
 
   fn visit_snippet(tree : & Snippet, collector: &mut HashSet<String>) {
@@ -25,12 +30,19 @@ impl TreeFold<HashSet<String>> for DefineBeforeUsePass {
     Self::visit_statements(stmts, collector);
   }
 
-  // Add definitions from statements
   fn visit_statement(tree : &Statement, collector : &mut HashSet<String>) {
     let &Statement::Statement(ref identifier, ref expr) = tree;
     let &Identifier::Identifier(ref id_string) = identifier;
     collector.insert(id_string.clone());
     Self::visit_expr(expr, collector);
+  }
+
+  fn visit_connections(tree : & Connections, collector: & mut HashSet<String>) {
+    if let &Connections::Connections(ref s1, ref s2, ref the_rest) = tree {
+      if collector.get(s1.get_string()) == None { panic!("{} connected, but not defined", s1.get_string()); }
+      if collector.get(s2.get_string()) == None { panic!("{} connected, but not defined", s2.get_string()); }
+      Self::visit_connections(the_rest, collector);
+    }
   }
 
   fn visit_expr(tree : &Expr, collector : &mut HashSet<String>) {
