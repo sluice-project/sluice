@@ -1,4 +1,3 @@
-// (3) static variables are redefined as local variables.
 use super::parser::*;
 use std::collections::HashSet;
 use tree_fold::TreeFold;
@@ -12,6 +11,7 @@ impl TreeFold<HashSet<String>> for DefineBeforeUsePass {
   fn visit_initializer(tree : & Initializer, collector : &mut HashSet<String>) {
     let &Initializer::Initializer(ref identifier, _) = tree;
     let &Identifier::Identifier(ref id_string) = identifier;
+    if collector.get(id_string) != None { panic!("Can't initialize {} that is already defined", id_string); }
     collector.insert(id_string.clone());
   }
 

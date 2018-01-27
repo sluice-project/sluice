@@ -29,7 +29,7 @@ fn run_def_use(input_program : &str) {
 
 #[test]
 #[should_panic(expected="y used before definition")]
-fn test_def_before_use_undefined(){
+fn test_du_undefined(){
   let input_program = r"snippet fun(x, ) {
                           b = y;
                           m = 5;
@@ -39,14 +39,37 @@ fn test_def_before_use_undefined(){
 }
 
 #[test]
-fn test_def_before_use_defined(){
+fn test_du_defined_in_arg_list(){
+  let input_program = r"snippet foo(a, b, c, ) {
+                          x = a;
+                        }
+                        ";
+  run_def_use(input_program);
+}
+
+#[test]
+fn test_du_defined_in_prog(){
+  let input_program = r"snippet foo(a, b, c, ) {
+                          d = 1;
+                          x = d;
+                        }
+                        ";
+  run_def_use(input_program);
+}
+
+#[test]
+#[should_panic(expected="Can't initialize x that is already defined")]
+fn test_du_redefined(){
   let input_program = r"snippet fun(a, b, c, x, y, ) {
                           static x = 0;
                         }
-                        snippet foo(a, b, c, ) {
-                          x = a;
-                        }
-                        (foo, fun)
                         ";
+  run_def_use(input_program);
+}
+
+#[test]
+#[should_panic(expected="foo connected, but not defined")]
+fn test_du_undefined_snippet() {
+  let input_program = r"(foo, fun)";
   run_def_use(input_program);
 }
