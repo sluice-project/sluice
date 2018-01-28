@@ -5,8 +5,7 @@ pub enum Prog {
 
 #[derive(Debug)]
 pub enum Snippets {
-  Snippets(Snippet, Box<Snippets>),
-  Empty()
+  Snippets(Vec<Snippet>),
 }
 
 #[derive(Debug)]

@@ -43,12 +43,15 @@ impl Parsing for Snippets {
           _                     => false,
         }
     }
-    if token_vector.is_empty() || (!is_snippet(token_vector.first())) {
-      return Snippets::Empty();
-    } else {
-      let snippet : Snippet = Parsing::parse(token_vector);
-      let snippets: Snippets = Parsing::parse(token_vector);
-      return Snippets::Snippets(snippet, Box::new(snippets));
+
+    let mut snippet_vector = Vec::<Snippet>::new();
+    loop {
+      if token_vector.is_empty() || (!is_snippet(token_vector.first())) {
+        return Snippets::Snippets(snippet_vector);
+      } else {
+        let snippet : Snippet = Parsing::parse(token_vector);
+        snippet_vector.push(snippet);
+      }
     }
   }
 }

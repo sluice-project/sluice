@@ -17,11 +17,9 @@ pub trait TreeFold<Acc> {
 
   fn visit_snippets(tree : &Snippets, collector : &mut Acc) {
     match tree {
-      &Snippets::Snippets(ref snippet, ref snippets) => {
-        Self::visit_snippet(snippet, collector);
-        Self::visit_snippets(snippets, collector);
+      &Snippets::Snippets(ref snippet_vector) => {
+        for snippet in snippet_vector { Self::visit_snippet(snippet, collector); }
       },
-      _                                              => ()
     }
   }
   
