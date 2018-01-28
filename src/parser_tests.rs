@@ -125,4 +125,15 @@ mod tests{
     assert!(tokens.is_empty(), "tokens is not empty");
   }
 
+  #[test]
+  fn test_parse_huge_prog() {
+    let input_program = r"snippet foo(a, b, c, ) {
+                          d = 1;
+                          x = d;
+                        }
+                        ".repeat(10000);
+    let tokens = & mut get_tokens(&input_program);
+    println!("{:?}", Prog::parse(tokens));
+    assert!(tokens.is_empty(), "tokens is not empty");
+  }
 }

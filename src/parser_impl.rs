@@ -36,6 +36,7 @@ impl Parsing for Prog {
 
 impl Parsing for Snippets {
   fn parse(token_vector : & mut Vec<Token>) -> Snippets {
+    // Internal helper function to check if it's a snippet or not
     fn is_snippet(token : Option<& Token>) -> bool {
         match token {
           Some(& Token::Snippet)=> true,
