@@ -16,13 +16,10 @@ pub trait TreeFold<Acc> {
   }
 
   fn visit_snippets(tree : &Snippets, collector : &mut Acc) {
-    match tree {
-      &Snippets::Snippets(ref snippet_vector) => {
-        for snippet in snippet_vector { Self::visit_snippet(snippet, collector); }
-      },
-    }
+    let &Snippets::Snippets(ref snippet_vector) = tree;
+    for snippet in snippet_vector { Self::visit_snippet(snippet, collector); }
   }
-  
+ 
   fn visit_snippet(tree : &Snippet, collector : &mut Acc) {
     match tree {
       &Snippet::Snippet(ref id, ref id_list, ref inits, ref statements) => {
@@ -46,25 +43,15 @@ pub trait TreeFold<Acc> {
   }
   
   fn visit_idlist(tree : &IdList, collector : &mut Acc) {
-    match tree {
-      &IdList::IdList(ref identifier, ref id_list) => {
-        Self::visit_identifier(identifier, collector);
-        Self::visit_idlist(id_list, collector);
-      },
-      &IdList::Empty() => ()
-    }
+    let &IdList::IdList(ref id_vector) = tree;
+    for id in id_vector { Self::visit_identifier(id, collector); }
   }
   
   fn visit_initializers(tree : &Initializers, collector : &mut Acc ) {
-    match tree {
-      &Initializers::Initializers(ref initializer, ref initializers) => {
-        Self::visit_initializer(initializer, collector);
-        Self::visit_initializers(initializers, collector);
-      },
-      &Initializers::Empty() => ()
-    }
+    let &Initializers::Initializers(ref init_vector) = tree;
+    for init in init_vector { Self::visit_initializer(init, collector); }
   }
-  
+
   fn visit_initializer(tree : &Initializer, collector : &mut Acc) {
     match tree {
       &Initializer::Initializer(ref identifier, ref value) => {
@@ -75,13 +62,8 @@ pub trait TreeFold<Acc> {
   }
   
   fn visit_statements(tree : &Statements, collector : &mut Acc) {
-    match tree {
-      &Statements::Statements(ref statement, ref statements) => {
-        Self::visit_statement(statement, collector);
-        Self::visit_statements(statements, collector);
-      },
-      &Statements::Empty() => ()
-    }
+    let &Statements::Statements(ref stmt_vector) = tree;
+    for stmt in stmt_vector { Self::visit_statement(stmt, collector); }
   }
   
   fn visit_statement(tree : &Statement, collector : &mut Acc) {

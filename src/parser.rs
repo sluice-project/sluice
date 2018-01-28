@@ -21,14 +21,12 @@ pub enum Connections {
 
 #[derive(Debug)]
 pub enum IdList {
-  IdList(Identifier, Box<IdList>),
-  Empty()
+  IdList(Vec<Identifier>),
 }
 
 #[derive(Debug)]
 pub enum Initializers {
-  Initializers(Initializer, Box<Initializers>),
-  Empty()
+  Initializers(Vec<Initializer>),
 }
 
 #[derive(Debug)]
@@ -38,8 +36,7 @@ pub enum Initializer {
 
 #[derive(Debug)]
 pub enum Statements {
-  Statements(Statement, Box<Statements>),
-  Empty()
+  Statements(Vec<Statement>)
 }
 
 #[derive(Debug)]

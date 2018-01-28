@@ -89,37 +89,45 @@ impl Parsing for Connections {
 
 impl Parsing for IdList {
   fn parse(token_vector : & mut Vec<Token>) -> IdList {
+    // Helper function to detect identifiers
     fn is_ident(token : Option<& Token>) -> bool {
       match token {
         Some(& Token::Identifier(_)) => true,
         _                            => false,
       }
     }
-    if token_vector.is_empty() || (!is_ident(token_vector.first())) {
-      return IdList::Empty();
-    } else {
-      let identifier : Identifier = Parsing::parse(token_vector);
-      match_token(token_vector, Token::Comma, "Expected comma as separator between identifiers.");
-      let idlist     : IdList     = Parsing::parse(token_vector);
-      return IdList::IdList(identifier, Box::new(idlist));
+
+    let mut id_vector = Vec::<Identifier>::new();
+    loop {
+      if token_vector.is_empty() || (!is_ident(token_vector.first())) {
+        return IdList::IdList(id_vector);
+      } else {
+        let identifier : Identifier = Parsing::parse(token_vector);
+        match_token(token_vector, Token::Comma, "Expected comma as separator between identifiers.");
+        id_vector.push(identifier);
+      }
     }
   }
 }
 
 impl Parsing for Initializers {
   fn parse(token_vector : & mut Vec<Token>) -> Initializers {
+    // Helper function to determine if it's an initializer
     fn is_static(token : Option<& Token>) -> bool {
       match token {
         Some(& Token::Static) => true,
         _                     => false,
       }
     }
-    if token_vector.is_empty() || (!is_static(token_vector.first())) {
-      return Initializers::Empty();
-    } else {
-      let initializer : Initializer  = Parsing::parse(token_vector);
-      let initializers: Initializers = Parsing::parse(token_vector);
-      return Initializers::Initializers(initializer, Box::new(initializers));
+
+    let mut init_vector = Vec::<Initializer>::new();
+    loop {
+      if token_vector.is_empty() || (!is_static(token_vector.first())) {
+        return Initializers::Initializers(init_vector);
+      } else {
+        let initializer : Initializer  = Parsing::parse(token_vector);
+        init_vector.push(initializer);
+      }
     }
   }
 }
@@ -137,18 +145,22 @@ impl Parsing for Initializer {
 
 impl Parsing for Statements {
   fn parse(token_vector : & mut Vec<Token>) -> Statements {
+    // Helper function to identify beginning of statements
     fn is_ident(token : Option<& Token>) -> bool {
       match token {
         Some(& Token::Identifier(_)) => true,
         _                            => false,
       }
     }
-    if token_vector.is_empty() || (!is_ident(token_vector.first())) {
-      return Statements::Empty();
-    } else {
-      let stmt : Statement  = Parsing::parse(token_vector);
-      let stmts: Statements = Parsing::parse(token_vector);
-      return Statements::Statements(stmt, Box::new(stmts));
+
+    let mut stmt_vector = Vec::<Statement>::new();
+    loop {
+      if token_vector.is_empty() || (!is_ident(token_vector.first())) {
+        return Statements::Statements(stmt_vector);
+      } else {
+        let stmt : Statement  = Parsing::parse(token_vector);
+        stmt_vector.push(stmt);
+      }
     }
   }
 }

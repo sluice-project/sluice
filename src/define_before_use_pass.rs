@@ -16,10 +16,8 @@ impl TreeFold<HashSet<String>> for DefineBeforeUsePass {
   }
 
   fn visit_idlist(tree : & IdList, collector : &mut HashSet<String>) {
-    if let &IdList::IdList(ref identifier, ref rest_of_list) = tree {
-      collector.insert(identifier.get_string().clone());
-      Self::visit_idlist(rest_of_list, collector);
-    }
+    let &IdList::IdList(ref id_vector) = tree;
+    for id in id_vector { collector.insert(id.get_string().clone()); }
   }
 
   fn visit_snippet(tree : & Snippet, collector: &mut HashSet<String>) {
