@@ -74,13 +74,13 @@ impl Identifier {
 
 #[derive(Debug)]
 pub enum Value {
-  Value(String)
+  Value(u32)
 }
 
 impl Value {
-  pub fn get_string(&self) -> &String {
+  pub fn get_string(&self) -> String {
     let &Value::Value(ref s) = self;
-    return s;
+    return s.to_string();
   }
 }
 
@@ -104,7 +104,7 @@ impl Operand{
       _                            => panic!("Can't call get_id if operand isn't an identifier.") // TODO: Should use assert
     }
   }
-  pub fn get_val(&self) -> &String {
+  pub fn get_val(&self) -> String {
     match self {
       &Operand::Value(ref val) => val.get_string(),
       _                        => panic!("Can't call get_val if operand isn't a value.") // TODO: Should use assert

@@ -23,7 +23,7 @@ pub fn get_single_token(tok_str : &str) -> Token {
   } else if IDENTIFIERS.is_match(tok_str) {
     return Token::Identifier(String::from_str(tok_str).unwrap());
   } else if VALUES.is_match(tok_str) {
-    return Token::Value(String::from_str(tok_str).unwrap());
+    return Token::Value(tok_str.parse::<u32>().unwrap());
   } else {
     return match tok_str {
       ":" => Token::Colon,
