@@ -1,8 +1,8 @@
 #[derive(Debug)]
 #[derive(PartialEq)]
-pub enum Token {
+pub enum Token<'a> {
   // Variants that take an argument
-  Identifier(String),
+  Identifier(&'a str),
   Value(u32),
 
   // Keywords: static, snippet, and, or, not

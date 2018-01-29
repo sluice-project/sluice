@@ -6,6 +6,7 @@ use std;
 use super::parser::*;
 use super::token::Token;
 use std::iter::Peekable;
+use std::str::FromStr;
 
 // Helper function to consume next token and match it against a specified token
 // Throw an error if either:
@@ -243,7 +244,7 @@ impl Parsing for Identifier {
   fn parse(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Identifier {
     let identifier_token = token_iter.next().unwrap();
     match identifier_token {
-      & Token::Identifier(ref s) => Identifier::Identifier(s.clone()),
+      & Token::Identifier(i) => Identifier::Identifier(String::from_str(i).unwrap()),
       _                      => panic!("Invalid token: {:?}, expected Token::Identifier", identifier_token)
     }
   }
@@ -253,7 +254,7 @@ impl Parsing for Operand {
   fn parse(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Operand {
     let operand_token = token_iter.next().unwrap();
     match operand_token {
-      & Token::Identifier(ref i) => return Operand::Identifier(Identifier::Identifier(i.clone())),
+      & Token::Identifier(i) => return Operand::Identifier(Identifier::Identifier(String::from_str(i).unwrap())),
       & Token::Value(ref v)      => return Operand::Value(Value::Value(v.clone())),
       _                      => panic!("Invalid token: {:?}, expected Token::Identifier or Token::Value", operand_token)
     }

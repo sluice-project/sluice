@@ -1,6 +1,5 @@
 extern crate regex;
 use self::regex::Regex;
-use std::str::FromStr;
 
 lazy_static! {
   static ref TOKENS      : Regex = Regex::new(r"[0-9]+|[A-Za-z_][A-Za-z0-9_]*|==|!=|>=|<=|>|<|\+|-|/|\*|%|\{|\}|\(|\)|\[|\]|=|;|\.|,|\?|:|\S+").unwrap();
@@ -21,7 +20,7 @@ pub fn get_single_token(tok_str : &str) -> Token {
      _        => panic!("Unrecognized token string: {}", tok_str)
     }
   } else if IDENTIFIERS.is_match(tok_str) {
-    return Token::Identifier(String::from_str(tok_str).unwrap());
+    return Token::Identifier(tok_str);
   } else if VALUES.is_match(tok_str) {
     return Token::Value(tok_str.parse::<u32>().unwrap());
   } else {
@@ -58,8 +57,8 @@ pub fn get_single_token(tok_str : &str) -> Token {
 pub fn get_tokens(input_program : &str) -> Vec<Token> {
   let mut token_array = Vec::new();
   for cap in TOKENS.captures_iter(input_program) {
-    let ref token = cap[0];
-    token_array.push(get_single_token(token));
+    let ref tok_str = cap.get(0).unwrap().as_str();
+    token_array.push(get_single_token(tok_str));
   }
   return token_array;
 }
