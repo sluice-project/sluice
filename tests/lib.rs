@@ -1,10 +1,9 @@
 extern crate sculpt;
 
 use sculpt::lexer;
-use sculpt::parser;
 use sculpt::symbol_table_pass::SymbolTablePass;
 use sculpt::define_before_use_pass::DefineBeforeUsePass;
-use sculpt::parser_impl::Parsing;
+use sculpt::parser_impl::*;
 use sculpt::tree_fold::TreeFold;
 use std::collections::HashSet;
 
@@ -14,7 +13,7 @@ fn run_def_use(input_program : &str) {
 
   // parsing
   let token_iter = & mut tokens.iter().peekable();
-  let parse_tree = parser::Prog::parse(token_iter);
+  let parse_tree = parse_prog(token_iter);
   assert!(token_iter.peek().is_none(), "token_iter is not empty.");
   println!("Parse tree: {:?}\n", parse_tree);
 
