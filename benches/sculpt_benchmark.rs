@@ -30,7 +30,8 @@ fn bench_parser(b: &mut Bencher) {
                         }
                         ".repeat(100);
   b.iter(|| { let tokens = & mut lexer::get_tokens(&input_program);
-              parser::Prog::parse(tokens); } );
+              let token_iter = & mut tokens.iter().peekable();
+              parser::Prog::parse(token_iter); } );
 }
 
 #[bench]
@@ -51,5 +52,6 @@ fn bench_parser_large(b: &mut Bencher) {
                         }
                         ".repeat(1000);
   b.iter(|| { let tokens = & mut lexer::get_tokens(&input_program);
-              parser::Prog::parse(tokens); } );
+              let token_iter = & mut tokens.iter().peekable();
+              parser::Prog::parse(token_iter); } );
 }

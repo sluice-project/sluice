@@ -16,77 +16,86 @@ mod tests{
   fn test_parse_operand() {
     let input =  r"5";
     let tokens = & mut get_tokens(input);
-    println!("{:?}", Operand::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Operand::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
   
   #[test]
   fn test_parse_expr() {
     let input = r"7%5";
     let tokens = & mut get_tokens(input);
-    println!("{:?}", Expr::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Expr::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
   
   #[test]
   fn test_parse_stmt() {
     let input = r"x=6+5;";
     let tokens = & mut get_tokens(input);
-    println!("{:?}", Statement::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Statement::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
   
   #[test]
   fn test_parse_stmts() {
     let input = r"x=6+5;y=7*8;";
     let tokens = & mut get_tokens(input);
-    println!("{:?}", Statements::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Statements::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
   
   #[test]
   fn test_parse_inits() {
     let input = r"static x=6;static y=7;";
     let tokens = & mut get_tokens(input);
-    println!("{:?}", Initializers::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Initializers::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
   
   #[test]
   fn test_parse_snippet1() {
     let input = r"snippet fun(a, b, c,) { static x=6;static y=7;}";
     let tokens = & mut get_tokens(input);
-    println!("{:?}", Snippet::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Snippet::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
   
   #[test]
   fn test_parse_snippet2() {
     let input = r"snippet fun(a, b, c,) { static x=6;x=y+5;}";
     let tokens = & mut get_tokens(input);
-    println!("{:?}", Snippet::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Snippet::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
   
   #[test]
   fn test_parse_snippets() {
     let input = r"snippet fun(a, b, c,) { static x=6;x=y+5;} snippet fun(a, b, c,) { static x=6;x=y+5;}";
     let tokens = & mut get_tokens(input);
-    println!("{:?}", Snippets::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Snippets::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
   
   #[test]
   fn test_parse_connections() {
     let input = r"(foo, fun) (bar, foobar)";
     let tokens = & mut get_tokens(input);
-    println!("{:?}", Connections::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Connections::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
   
   #[test]
   fn test_parse_prog() {
-    let input_program = r"snippet fun(a, b, c, x, y, ) {
+    let input        = r"snippet fun(a, b, c, x, y, ) {
                             static x = 0;
                             a = x;
                             b = y;
@@ -98,14 +107,15 @@ mod tests{
                           }
                           (foo, fun)
                           ";
-    let tokens = & mut get_tokens(input_program);
-    println!("{:?}", Prog::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Prog::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
 
   #[test]
   fn test_parse_prog2() {
-    let input_program = r"snippet fun ( a , b , c , x , y, ) {
+    let input          = r"snippet fun ( a , b , c , x , y, ) {
                             static x = 0 ;
                             t1 = a >= b;
                             a = t1 ? x : a;
@@ -120,20 +130,22 @@ mod tests{
                           }
                           (foo, fun)
                           ";
-    let tokens = & mut get_tokens(input_program);
-    println!("{:?}", Prog::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Prog::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
 
   #[test]
   fn test_parse_huge_prog() {
-    let input_program = r"snippet foo(a, b, c, ) {
+    let input       = r"snippet foo(a, b, c, ) {
                           d = 1;
                           x = d;
                         }
                         ".repeat(10000);
-    let tokens = & mut get_tokens(&input_program);
-    println!("{:?}", Prog::parse(tokens));
-    assert!(tokens.is_empty(), "tokens is not empty");
+    let tokens = & mut get_tokens(&input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", Prog::parse(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
 }
