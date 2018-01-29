@@ -10,7 +10,10 @@ fn main() {
   }
 
   // Implementation 2: takes about 0.05 seconds
-//  for item in a {
+//  let mut a_iter = a.iter().peekable();
+//  loop {
+//    if a_iter.peek().is_none() { break; }
+//    let item = a_iter.next();
 //    b.push(item);
 //  }
 }
