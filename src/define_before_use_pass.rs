@@ -1,6 +1,7 @@
 use super::parser::*;
 use std::collections::HashSet;
 use tree_fold::TreeFold;
+use std::str::FromStr;
 
 // Compiler pass to check that identifiers are defined before being used
 pub struct DefineBeforeUsePass;
@@ -10,19 +11,19 @@ pub struct DefineBeforeUsePass;
 impl TreeFold<HashSet<String>> for DefineBeforeUsePass {
   fn visit_initializer(tree : & Initializer, collector : &mut HashSet<String>) {
     let &Initializer::Initializer(ref identifier, _) = tree;
-    let &Identifier::Identifier(ref id_string) = identifier;
+    let &Identifier::Identifier(id_string) = identifier;
     if collector.get(id_string) != None { panic!("Can't initialize {} that is already defined", id_string); }
-    collector.insert(id_string.clone());
+    collector.insert(String::from_str(id_string).unwrap());
   }
 
   fn visit_idlist(tree : & IdList, collector : &mut HashSet<String>) {
     let &IdList::IdList(ref id_vector) = tree;
-    for id in id_vector { collector.insert(id.get_string().clone()); }
+    for id in id_vector { collector.insert(String::from_str(id.get_string()).unwrap()); }
   }
 
   fn visit_snippet(tree : & Snippet, collector: &mut HashSet<String>) {
     let &Snippet::Snippet(ref id, ref id_list, ref inits, ref stmts) = tree;
-    collector.insert(id.get_string().clone());
+    collector.insert(String::from_str(id.get_string()).unwrap());
     Self::visit_idlist(id_list, collector);
     Self::visit_initializers(inits, collector);
     Self::visit_statements(stmts, collector);
@@ -31,7 +32,7 @@ impl TreeFold<HashSet<String>> for DefineBeforeUsePass {
   fn visit_statement(tree : &Statement, collector : &mut HashSet<String>) {
     let &Statement::Statement(ref identifier, ref expr) = tree;
     let &Identifier::Identifier(ref id_string) = identifier;
-    collector.insert(id_string.clone());
+    collector.insert(String::from_str(id_string).unwrap());
     Self::visit_expr(expr, collector);
   }
 

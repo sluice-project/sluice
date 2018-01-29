@@ -25,13 +25,13 @@ fn match_token(token_iter : & mut Peekable<std::slice::Iter<Token>>, expected : 
   }
 }
 
-pub fn parse_prog(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Prog {
+pub fn parse_prog<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Prog<'a> {
   let snippets    : Snippets    = parse_snippets(token_iter);
   let connections : Connections = parse_connections(token_iter);
   return Prog::Prog(snippets, connections);
 }
 
-pub fn parse_snippets(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Snippets {
+pub fn parse_snippets<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Snippets<'a> {
   // Internal helper function to check if it's a snippet or not
   fn is_snippet(token : Option<&& Token>) -> bool {
       match token {
@@ -51,7 +51,7 @@ pub fn parse_snippets(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> S
   }
 }
   
-pub fn parse_snippet(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Snippet {
+pub fn parse_snippet<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Snippet<'a> {
   match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
   let identifier : Identifier = parse_identifier(token_iter);
   match_token(token_iter, Token::ParenLeft, "Snippet argument list must start with a left parenthesis.");
@@ -64,7 +64,7 @@ pub fn parse_snippet(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Sn
   return Snippet::Snippet(identifier, id_list, inits, stmts);
 }
 
-pub fn parse_connections(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Connections {
+pub fn parse_connections<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Connections<'a> {
   if !token_iter.peek().is_some() {
     return Connections::Empty();
   } else {
@@ -78,7 +78,7 @@ pub fn parse_connections(token_iter : & mut Peekable<std::slice::Iter<Token>>) -
   }
 }
 
-pub fn parse_idlist(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> IdList {
+pub fn parse_idlist<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> IdList<'a> {
   // Helper function to detect identifiers
   fn is_ident(token : Option<&& Token>) -> bool {
     match token {
@@ -99,7 +99,7 @@ pub fn parse_idlist(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> IdL
   }
 }
 
-pub fn parse_initializers(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Initializers {
+pub fn parse_initializers<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Initializers<'a> {
   // Helper function to determine if it's an initializer
   fn is_static(token : Option<&& Token>) -> bool {
     match token {
@@ -119,7 +119,7 @@ pub fn parse_initializers(token_iter : & mut Peekable<std::slice::Iter<Token>>) 
   }
 }
 
-pub fn parse_initializer(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Initializer {
+pub fn parse_initializer<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Initializer<'a> {
   match_token(token_iter, Token::Static, "First token in an initializer must be the keyword static.");
   let identifier : Identifier = parse_identifier(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
@@ -128,7 +128,7 @@ pub fn parse_initializer(token_iter : & mut Peekable<std::slice::Iter<Token>>) -
   return Initializer::Initializer(identifier, value);
 }
 
-pub fn parse_statements(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Statements {
+pub fn parse_statements<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Statements<'a> {
   // Helper function to identify beginning of statements
   fn is_ident(token : Option<&& Token>) -> bool {
     match token {
@@ -148,7 +148,7 @@ pub fn parse_statements(token_iter : & mut Peekable<std::slice::Iter<Token>>) ->
   }
 }
 
-pub fn parse_statement(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Statement {
+pub fn parse_statement<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Statement<'a> {
   let identifier : Identifier = parse_identifier(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and expression by an assignment symbol.");
   let expr      : Expr     = parse_expr(token_iter);
@@ -156,7 +156,7 @@ pub fn parse_statement(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> 
   return Statement::Statement(identifier, expr);
 }
 
-pub fn parse_expr(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Expr {
+pub fn parse_expr<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Expr<'a> {
   if !token_iter.peek().is_some() {
     panic!("Insufficient tokens in call to parse_expr.");
   }
@@ -175,7 +175,7 @@ macro_rules! expr_right_parser {
       $($x,)*
     }
 
-    pub fn parse_expr_right(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> ExprRight {
+    pub fn parse_expr_right<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> ExprRight<'a> {
       // generate is_operator helper function
       fn is_operator(token : Option<&& Token>) -> bool {
         match token {
@@ -214,18 +214,18 @@ macro_rules! expr_right_parser {
 // generate parser using macro
 expr_right_parser!(BooleanAnd, BooleanOr, Plus, Minus, Mul, Div, Modulo, Equal, NotEqual, LTEQOp, GTEQOp, LessThan, GreaterThan);
 
-pub fn parse_identifier(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Identifier {
+pub fn parse_identifier<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Identifier<'a> {
   let identifier_token = token_iter.next().unwrap();
   match identifier_token {
-    & Token::Identifier(i) => Identifier::Identifier(String::from_str(i).unwrap()),
+    & Token::Identifier(i) => Identifier::Identifier(i),
     _                      => panic!("Invalid token: {:?}, expected Token::Identifier", identifier_token)
   }
 }
 
-pub fn parse_operand(token_iter : & mut Peekable<std::slice::Iter<Token>>) -> Operand {
+pub fn parse_operand<'a>(token_iter : &mut Peekable<std::slice::Iter<'a, Token>>) -> Operand<'a> {
   let operand_token = token_iter.next().unwrap();
   match operand_token {
-    & Token::Identifier(i) => return Operand::Identifier(Identifier::Identifier(String::from_str(i).unwrap())),
+    & Token::Identifier(i) => return Operand::Identifier(Identifier::Identifier(i)),
     & Token::Value(v)      => return Operand::Value(Value::Value(v)),
     _                      => panic!("Invalid token: {:?}, expected Token::Identifier or Token::Value", operand_token)
   }

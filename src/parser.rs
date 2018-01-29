@@ -1,52 +1,52 @@
 #[derive(Debug)]
-pub enum Prog {
-  Prog(Snippets, Connections)
+pub enum Prog<'a> {
+  Prog(Snippets<'a>, Connections<'a>)
 }
 
 #[derive(Debug)]
-pub enum Snippets {
-  Snippets(Vec<Snippet>),
+pub enum Snippets<'a> {
+  Snippets(Vec<Snippet<'a>>),
 }
 
 #[derive(Debug)]
-pub enum Snippet {
-  Snippet(Identifier, IdList, Initializers, Statements) 
+pub enum Snippet<'a> {
+  Snippet(Identifier<'a>, IdList<'a>, Initializers<'a>, Statements<'a>) 
 }
 
 #[derive(Debug)]
-pub enum Connections {
-  Connections(Identifier, Identifier, Box<Connections>),
+pub enum Connections<'a> {
+  Connections(Identifier<'a>, Identifier<'a>, Box<Connections<'a>>),
   Empty()
 }
 
 #[derive(Debug)]
-pub enum IdList {
-  IdList(Vec<Identifier>),
+pub enum IdList<'a> {
+  IdList(Vec<Identifier<'a>>),
 }
 
 #[derive(Debug)]
-pub enum Initializers {
-  Initializers(Vec<Initializer>),
+pub enum Initializers<'a> {
+  Initializers(Vec<Initializer<'a>>),
 }
 
 #[derive(Debug)]
-pub enum Initializer {
-  Initializer(Identifier, Value)
+pub enum Initializer<'a> {
+  Initializer(Identifier<'a>, Value)
 }
 
 #[derive(Debug)]
-pub enum Statements {
-  Statements(Vec<Statement>)
+pub enum Statements<'a> {
+  Statements(Vec<Statement<'a>>)
 }
 
 #[derive(Debug)]
-pub enum Statement {
-  Statement(Identifier, Expr)
+pub enum Statement<'a> {
+  Statement(Identifier<'a>, Expr<'a>)
 }
 
 #[derive(Debug)]
-pub enum Expr {
-  Expr(Operand, ExprRight)
+pub enum Expr<'a> {
+  Expr(Operand<'a>, ExprRight<'a>)
 }
 
 // XXX: The use ... is ugly, but required.
@@ -54,20 +54,20 @@ pub enum Expr {
 // in the parser_impl.rs module by a macro.
 use parser_impl::BinOpType;
 #[derive(Debug)]
-pub enum ExprRight {
-  BinOp(BinOpType, Operand),
-  Cond(Operand, Operand),
+pub enum ExprRight<'a> {
+  BinOp(BinOpType, Operand<'a>),
+  Cond(Operand<'a>, Operand<'a>),
   Empty()
 }
 
 #[derive(Debug)]
-pub enum Identifier {
-  Identifier(String),
+pub enum Identifier<'a> {
+  Identifier(&'a str),
 }
 
-impl Identifier {
-  pub fn get_string(&self) -> &String{
-    let &Identifier::Identifier(ref s) = self;
+impl<'a> Identifier<'a> {
+  pub fn get_string(&self) -> &str{
+    let &Identifier::Identifier(s) = self;
     return s;
   }
 }
@@ -85,12 +85,12 @@ impl Value {
 }
 
 #[derive(Debug)]
-pub enum Operand {
-  Identifier(Identifier),
+pub enum Operand<'a> {
+  Identifier(Identifier<'a>),
   Value(Value),
 }
 
-impl Operand{
+impl<'a> Operand<'a>{
   pub fn is_id(&self) -> bool {
     match self {
       &Operand::Identifier(_)     => true,
@@ -98,7 +98,7 @@ impl Operand{
     }
   }
   pub fn is_val(&self) -> bool { !self.is_id() }
-  pub fn get_id(&self) -> &String {
+  pub fn get_id(&self) -> &str {
     match self {
       &Operand::Identifier(ref id) => id.get_string(),
       _                            => panic!("Can't call get_id if operand isn't an identifier.") // TODO: Should use assert
