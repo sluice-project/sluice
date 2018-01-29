@@ -27,8 +27,9 @@ fn main() {
   let tokens = & mut lexer::get_tokens(input_program);
 
   // parsing
-  let parse_tree = parser::Prog::parse(&mut tokens.iter().peekable());
-  assert!(tokens.is_empty(), "Tokens is not empty.");
+  let token_iter = & mut tokens.iter().peekable();
+  let parse_tree = parser::Prog::parse(token_iter);
+  assert!(token_iter.peek().is_none(), "Token iterator is not empty.");
   println!("Parse tree: {:?}\n", parse_tree);
 
   // symbol table generation
