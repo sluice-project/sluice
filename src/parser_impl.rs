@@ -255,7 +255,7 @@ impl Parsing for Operand {
     let operand_token = token_iter.next().unwrap();
     match operand_token {
       & Token::Identifier(i) => return Operand::Identifier(Identifier::Identifier(String::from_str(i).unwrap())),
-      & Token::Value(ref v)      => return Operand::Value(Value::Value(v.clone())),
+      & Token::Value(v)      => return Operand::Value(Value::Value(v)),
       _                      => panic!("Invalid token: {:?}, expected Token::Identifier or Token::Value", operand_token)
     }
   }
