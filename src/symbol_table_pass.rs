@@ -1,4 +1,4 @@
-use super::parser::*;
+use super::grammar::*;
 use std::collections::HashSet;
 use tree_fold::TreeFold;
 use std::str::FromStr;

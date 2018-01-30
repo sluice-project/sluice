@@ -3,7 +3,7 @@
 // methods that process specific types of tree nodes, while using default
 // methods for other types of tree nodes.
 
-use super::parser::*;
+use super::grammar::*;
 
 pub trait TreeFold<Acc> {
   fn visit_prog(tree : &Prog, collector : &mut Acc) {
@@ -22,23 +22,20 @@ pub trait TreeFold<Acc> {
  
   fn visit_snippet(tree : &Snippet, collector : &mut Acc) {
     match tree {
-      &Snippet::Snippet(ref id, ref id_list, ref inits, ref statements) => {
-        Self::visit_identifier(id, collector);
+      &Snippet::Snippet(ref identifier, ref id_list, ref initializers, ref statements) => {
+        Self::visit_identifier(identifier, collector);
         Self::visit_idlist(id_list, collector);
-        Self::visit_initializers(inits, collector);
+        Self::visit_initializers(initializers, collector);
         Self::visit_statements(statements, collector);
       }
     }
   }
   
   fn visit_connections(tree : &Connections, collector : &mut Acc) {
-    match tree {
-      &Connections::Connections(ref id1, ref id2, ref connections) => {
-        Self::visit_identifier(id1, collector);
-        Self::visit_identifier(id2, collector);
-        Self::visit_connections(connections, collector);
-      },
-      &Connections::Empty() => () 
+    let &Connections::Connections(ref connection_vector) = tree;
+    for connection in connection_vector {
+      Self::visit_identifier(&connection.0, collector);
+      Self::visit_identifier(&connection.1, collector);
     }
   }
   

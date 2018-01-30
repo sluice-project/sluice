@@ -1,4 +1,4 @@
-use super::parser::*;
+use super::grammar::*;
 use std::collections::HashSet;
 use tree_fold::TreeFold;
 use std::str::FromStr;
@@ -22,11 +22,11 @@ impl TreeFold<HashSet<String>> for DefineBeforeUsePass {
   }
 
   fn visit_snippet(tree : & Snippet, collector: &mut HashSet<String>) {
-    let &Snippet::Snippet(ref id, ref id_list, ref inits, ref stmts) = tree;
-    collector.insert(String::from_str(id.get_string()).unwrap());
+    let &Snippet::Snippet(ref identifier, ref id_list, ref initializers, ref statements) = tree;
+    collector.insert(String::from_str(identifier.get_string()).unwrap());
     Self::visit_idlist(id_list, collector);
-    Self::visit_initializers(inits, collector);
-    Self::visit_statements(stmts, collector);
+    Self::visit_initializers(initializers, collector);
+    Self::visit_statements(statements, collector);
   }
 
   fn visit_statement(tree : &Statement, collector : &mut HashSet<String>) {
@@ -37,10 +37,10 @@ impl TreeFold<HashSet<String>> for DefineBeforeUsePass {
   }
 
   fn visit_connections(tree : & Connections, collector: & mut HashSet<String>) {
-    if let &Connections::Connections(ref s1, ref s2, ref the_rest) = tree {
-      if collector.get(s1.get_string()) == None { panic!("{} connected, but not defined", s1.get_string()); }
-      if collector.get(s2.get_string()) == None { panic!("{} connected, but not defined", s2.get_string()); }
-      Self::visit_connections(the_rest, collector);
+    let &Connections::Connections(ref connection_vector) = tree;
+    for connection in connection_vector {
+      if collector.get(connection.0.get_string()) == None { panic!("{} connected, but undefined", connection.0.get_string()); }
+      if collector.get(connection.1.get_string()) == None { panic!("{} connected, but undefined", connection.1.get_string()); }
     }
   }
 

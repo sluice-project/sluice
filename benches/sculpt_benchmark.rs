@@ -7,7 +7,6 @@ use sculpt::lexer;
 use sculpt::parser;
 use sculpt::symbol_table_pass::SymbolTablePass;
 use sculpt::define_before_use_pass::DefineBeforeUsePass;
-use sculpt::parser_impl::*;
 use sculpt::tree_fold::TreeFold;
 use std::collections::HashSet;
 use test::Bencher;
@@ -31,7 +30,7 @@ fn bench_parser(b: &mut Bencher) {
                         ".repeat(100);
   b.iter(|| { let tokens = & mut lexer::get_tokens(&input_program);
               let token_iter = & mut tokens.iter().peekable();
-              parse_prog(token_iter); } );
+              parser::parse_prog(token_iter); } );
 }
 
 #[bench]
@@ -53,5 +52,5 @@ fn bench_parser_large(b: &mut Bencher) {
                         ".repeat(1000);
   b.iter(|| { let tokens = & mut lexer::get_tokens(&input_program);
               let token_iter = & mut tokens.iter().peekable();
-              parse_prog(token_iter); } );
+              parser::parse_prog(token_iter); } );
 }
