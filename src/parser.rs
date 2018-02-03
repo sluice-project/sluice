@@ -66,7 +66,7 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
 }
 
 fn parse_connections<'a>(token_iter : &mut TokenIterator<'a>) -> Connections<'a> {
-  let mut connection_vector = Vec::<(Identifier, Identifier)>::new();
+  let mut connection_vector = Vec::<Connection<'a>>::new();
   loop {
     if !token_iter.peek().is_some() {
       return Connections::Connections(connection_vector);
@@ -76,7 +76,9 @@ fn parse_connections<'a>(token_iter : &mut TokenIterator<'a>) -> Connections<'a>
       match_token(token_iter, Token::Comma, "Need a comma between snippets that are being connected.");
       let id2   = parse_identifier(token_iter);
       match_token(token_iter, Token::ParenRight, "Connection must end with a right parenthesis.");
-      connection_vector.push((id1, id2));
+      connection_vector.push(Connection{ from_function : id1,
+                                           to_function : id2,
+                                        variable_pairs : Vec::new() });
     }
   }
 }

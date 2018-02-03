@@ -38,8 +38,8 @@ impl<'a> TreeFold<'a, HashSet<&'a str>> for DefineBeforeUsePass {
   fn visit_connections(tree : &'a Connections, collector: &mut HashSet<&'a str>) {
     let &Connections::Connections(ref connection_vector) = tree;
     for connection in connection_vector {
-      if collector.get(connection.0.get_string()) == None { panic!("{} connected, but undefined", connection.0.get_string()); }
-      if collector.get(connection.1.get_string()) == None { panic!("{} connected, but undefined", connection.1.get_string()); }
+      if collector.get(connection.from_function.get_string()) == None { panic!("{} connected, but undefined", connection.from_function.get_string()); }
+      if collector.get(connection.to_function.get_string()) == None { panic!("{} connected, but undefined", connection.to_function.get_string()); }
     }
   }
 

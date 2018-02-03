@@ -15,7 +15,19 @@ pub enum Snippet<'a> {
 
 #[derive(Debug)]
 pub enum Connections<'a> {
-  Connections(Vec<(Identifier<'a>, Identifier<'a>)>),
+  Connections(Vec<(Connection<'a>)>)
+}
+
+#[derive(Debug)]
+pub struct Connection<'a> {
+   pub from_function : Identifier<'a>,
+   pub to_function   : Identifier<'a>,
+   pub variable_pairs: Vec<VariablePair<'a>>
+}
+
+#[derive(Debug)]
+pub enum VariablePair<'a> {
+  VariablePair(Identifier<'a>, Identifier<'a>)
 }
 
 #[derive(Debug)]
@@ -100,7 +112,7 @@ impl<'a> Operand<'a>{
   pub fn get_id(&self) -> &str {
     match self {
       &Operand::Identifier(ref id) => id.get_string(),
-      _                            => panic!("Can't call get_id if operand isn't an identifier.") // TODO: Should use assert
+      _                            => panic!("Can't call get_id if operand isn't identifier.") // TODO: Should use assert
     }
   }
   pub fn get_val(&self) -> String {
