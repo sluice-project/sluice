@@ -5,8 +5,8 @@
 
 use super::grammar::*;
 
-pub trait TreeFold<Acc> {
-  fn visit_prog(tree : &Prog, collector : &mut Acc) {
+pub trait TreeFold<'a, Acc> {
+  fn visit_prog(tree : &'a Prog, collector : &mut Acc) {
     match tree {
       &Prog::Prog(ref snippets, ref connections) => {
         Self::visit_snippets(snippets, collector);
@@ -15,12 +15,12 @@ pub trait TreeFold<Acc> {
     }
   }
 
-  fn visit_snippets(tree : &Snippets, collector : &mut Acc) {
+  fn visit_snippets(tree : &'a Snippets, collector : &mut Acc) {
     let &Snippets::Snippets(ref snippet_vector) = tree;
     for snippet in snippet_vector { Self::visit_snippet(snippet, collector); }
   }
  
-  fn visit_snippet(tree : &Snippet, collector : &mut Acc) {
+  fn visit_snippet(tree : &'a Snippet, collector : &mut Acc) {
     match tree {
       &Snippet::Snippet(ref identifier, ref id_list, ref initializers, ref statements) => {
         Self::visit_identifier(identifier, collector);
@@ -31,7 +31,7 @@ pub trait TreeFold<Acc> {
     }
   }
   
-  fn visit_connections(tree : &Connections, collector : &mut Acc) {
+  fn visit_connections(tree : &'a Connections, collector : &mut Acc) {
     let &Connections::Connections(ref connection_vector) = tree;
     for connection in connection_vector {
       Self::visit_identifier(&connection.0, collector);
@@ -39,17 +39,17 @@ pub trait TreeFold<Acc> {
     }
   }
   
-  fn visit_idlist(tree : &IdList, collector : &mut Acc) {
+  fn visit_idlist(tree : &'a IdList, collector : &mut Acc) {
     let &IdList::IdList(ref id_vector) = tree;
     for id in id_vector { Self::visit_identifier(id, collector); }
   }
   
-  fn visit_initializers(tree : &Initializers, collector : &mut Acc ) {
+  fn visit_initializers(tree : &'a Initializers, collector : &mut Acc ) {
     let &Initializers::Initializers(ref init_vector) = tree;
     for init in init_vector { Self::visit_initializer(init, collector); }
   }
 
-  fn visit_initializer(tree : &Initializer, collector : &mut Acc) {
+  fn visit_initializer(tree : &'a Initializer, collector : &mut Acc) {
     match tree {
       &Initializer::Initializer(ref identifier, ref value) => {
         Self::visit_identifier(identifier, collector);
@@ -58,12 +58,12 @@ pub trait TreeFold<Acc> {
     }
   }
   
-  fn visit_statements(tree : &Statements, collector : &mut Acc) {
+  fn visit_statements(tree : &'a Statements, collector : &mut Acc) {
     let &Statements::Statements(ref stmt_vector) = tree;
     for stmt in stmt_vector { Self::visit_statement(stmt, collector); }
   }
   
-  fn visit_statement(tree : &Statement, collector : &mut Acc) {
+  fn visit_statement(tree : &'a Statement, collector : &mut Acc) {
     match tree {
       &Statement::Statement(ref identifier, ref expr) => {
         Self::visit_identifier(identifier, collector);
@@ -72,7 +72,7 @@ pub trait TreeFold<Acc> {
     }
   }
   
-  fn visit_expr(tree : &Expr, collector : &mut Acc) {
+  fn visit_expr(tree : &'a Expr, collector : &mut Acc) {
     match tree {
       &Expr::Expr(ref operand, ref expr_right) => {
         Self::visit_operand(operand, collector);
@@ -81,7 +81,7 @@ pub trait TreeFold<Acc> {
     }
   }
   
-  fn visit_expr_right(tree : &ExprRight, collector : &mut Acc) {
+  fn visit_expr_right(tree : &'a ExprRight, collector : &mut Acc) {
     match tree {
       &ExprRight::BinOp(_, ref operand) => Self::visit_operand(operand, collector),
       &ExprRight::Cond(ref operand_true, ref operand_false) => {
@@ -92,7 +92,7 @@ pub trait TreeFold<Acc> {
     }
   }
   
-  fn visit_operand(tree : &Operand, collector : &mut Acc) {
+  fn visit_operand(tree : &'a Operand, collector : &mut Acc) {
     match tree {
       &Operand::Identifier(ref identifier) => Self::visit_identifier(identifier, collector),
       &Operand::Value(ref value)           => Self::visit_value(value, collector)
@@ -101,7 +101,7 @@ pub trait TreeFold<Acc> {
  
   // The awkward let _ is required to suppress the unused variables warning
   // https://github.com/rust-lang/rust/issues/26487
-  fn visit_identifier(tree : &Identifier, collector : &mut Acc) { let _ = tree; let _ = collector; }
+  fn visit_identifier(tree : &'a Identifier, collector : &mut Acc) { let _ = tree; let _ = collector; }
   
-  fn visit_value(tree : &Value, collector : &mut Acc) { let _ = tree; let _ = collector; }
+  fn visit_value(tree : &'a Value, collector : &mut Acc) { let _ = tree; let _ = collector; }
 }
