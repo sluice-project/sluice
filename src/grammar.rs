@@ -63,10 +63,17 @@ pub enum Expr<'a> {
   Expr(Operand<'a>, ExprRight<'a>)
 }
 
-// XXX: The use ... is ugly, but required.
-// This is because BinOpType is generated
-// in the parser_impl.rs module by a macro.
-use parser::BinOpType;
+// Enum of binary operation types
+macro_rules! bin_op_type {
+  ($($x:ident),*) => {
+    #[derive(Debug)]
+    pub enum BinOpType {
+      $($x,)*
+    }
+  };
+}
+bin_op_type!(BooleanAnd, BooleanOr, Plus, Minus, Mul, Div, Modulo, Equal, NotEqual, LTEQOp, GTEQOp, LessThan, GreaterThan);
+
 #[derive(Debug)]
 pub enum ExprRight<'a> {
   BinOp(BinOpType, Operand<'a>),

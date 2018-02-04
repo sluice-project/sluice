@@ -34,16 +34,11 @@ pub fn parse_prog<'a>(token_iter : &mut TokenIterator<'a>) -> Prog<'a> {
 
 fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a>) -> Snippets<'a> {
   // Internal helper function to check if it's a snippet or not
-  fn is_snippet(token : Option<&& Token>) -> bool {
-    match token {
-      Some(&& Token::Snippet)=> true,
-      _                     => false,
-    }
-  }
+  let is_snippet = |token| { match token { &Token::Snippet => true, _ => false, } };
 
   let mut snippet_vector = Vec::<Snippet>::new();
   loop {
-    if !token_iter.peek().is_some() || !is_snippet(token_iter.peek()) {
+    if !token_iter.peek().is_some() || !is_snippet(*token_iter.peek().unwrap()) {
       return Snippets::Snippets(snippet_vector);
     } else {
       let snippet = parse_snippet(token_iter);
@@ -77,22 +72,9 @@ fn parse_connections<'a>(token_iter : &mut TokenIterator<'a>) -> Connections<'a>
 }
 
 fn parse_connection<'a>(token_iter : &mut TokenIterator<'a>) -> Connection<'a> {
-  // Helper function to detect identifiers
-  fn is_ident(token : Option<&& Token>) -> bool {
-    match token {
-      Some(&& Token::Identifier(_)) => true,
-      _                            => false,
-    }
-  }
-
-  // Internal helper function to check if it's a colon or not
-  fn is_colon(token : Option<&& Token>) -> bool {
-    match token {
-      Some(&& Token::Colon)=> true,
-      _                     => false,
-    }
-  }
-
+  // Helper function to detect identifiers and colons
+  let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false, } };
+  let is_colon = |token| { match token { &Token::Colon => true, _ => false, } };
 
   match_token(token_iter, Token::ParenLeft, "Connection must start with a left parenthesis.");
   let id1   = parse_identifier(token_iter);
@@ -100,10 +82,10 @@ fn parse_connection<'a>(token_iter : &mut TokenIterator<'a>) -> Connection<'a> {
   let id2   = parse_identifier(token_iter);
   match_token(token_iter, Token::ParenRight, "Connection must end with a right parenthesis.");
   let mut variable_pairs = Vec::<VariablePair>::new();
-  if token_iter.peek().is_some() && is_colon(token_iter.peek()) {
+  if token_iter.peek().is_some() && is_colon(*token_iter.peek().unwrap()) {
     match_token(token_iter, Token::Colon, "Need a colon before variable pairings");
     loop {
-      if !token_iter.peek().is_some() || !is_ident(token_iter.peek()) { break; }
+      if !token_iter.peek().is_some() || !is_ident(*token_iter.peek().unwrap()) { break; }
       let from_variable = parse_identifier(token_iter);
       match_token(token_iter, Token::Arrow, "Need an arrow between variables.");
       let to_variable   = parse_identifier(token_iter);
@@ -116,16 +98,11 @@ fn parse_connection<'a>(token_iter : &mut TokenIterator<'a>) -> Connection<'a> {
 
 fn parse_idlist<'a>(token_iter : &mut TokenIterator<'a>) -> IdList<'a> {
   // Helper function to detect identifiers
-  fn is_ident(token : Option<&& Token>) -> bool {
-    match token {
-      Some(&& Token::Identifier(_)) => true,
-      _                            => false,
-    }
-  }
+  let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false, } };
 
   let mut id_vector = Vec::<Identifier>::new();
   loop {
-    if !token_iter.peek().is_some() || (!is_ident(token_iter.peek())) {
+    if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
       return IdList::IdList(id_vector);
     } else {
       let identifier = parse_identifier(token_iter);
@@ -137,16 +114,11 @@ fn parse_idlist<'a>(token_iter : &mut TokenIterator<'a>) -> IdList<'a> {
 
 fn parse_initializers<'a>(token_iter : &mut TokenIterator<'a>) -> Initializers<'a> {
   // Helper function to determine if it's an initializer
-  fn is_static(token : Option<&& Token>) -> bool {
-    match token {
-      Some(&& Token::Static) => true,
-      _                     => false,
-    }
-  }
+  let is_static = |token| { match token { &Token::Static => true, _ => false, } };
 
   let mut init_vector = Vec::<Initializer>::new();
   loop {
-    if !token_iter.peek().is_some() || (!is_static(token_iter.peek())) {
+    if !token_iter.peek().is_some() || (!is_static(*token_iter.peek().unwrap())) {
       return Initializers::Initializers(init_vector);
     } else {
       let initializer = parse_initializer(token_iter);
@@ -166,16 +138,11 @@ fn parse_initializer<'a>(token_iter : &mut TokenIterator<'a>) -> Initializer<'a>
 
 fn parse_statements<'a>(token_iter : &mut TokenIterator<'a>) -> Statements<'a> {
   // Helper function to identify beginning of statements
-  fn is_ident(token : Option<&& Token>) -> bool {
-    match token {
-      Some(&& Token::Identifier(_)) => true,
-      _                            => false,
-    }
-  }
+  let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false } };
 
   let mut statement_vector = Vec::<Statement>::new();
   loop {
-    if !token_iter.peek().is_some() || (!is_ident(token_iter.peek())) {
+    if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
       return Statements::Statements(statement_vector);
     } else {
       let statement = parse_statement(token_iter);
@@ -204,22 +171,9 @@ fn parse_expr<'a>(token_iter : &mut TokenIterator<'a>) -> Expr<'a> {
 // Macro to generate parser for ExprRight given a list of binary operations
 macro_rules! expr_right_parser {
   ($($x:ident),*) => {
-    // generate enum of binary operation types
-    // this must be public (I think)
-    #[derive(Debug)]
-    pub enum BinOpType {
-      $($x,)*
-    }
-
     fn parse_expr_right<'a>(token_iter : &mut TokenIterator<'a>) -> ExprRight<'a> {
       // generate is_operator helper function
-      fn is_operator(token : Option<&& Token>) -> bool {
-        match token {
-          $(Some(&& Token::$x)|)*
-          Some(&& Token::Cond) => true,
-          _                   => false,
-        }
-      }
+      let is_operator = |token| { match token { $(&Token::$x|)* &Token::Cond => true, _ => false, } };
 
       // generate get_bin_op helper function
       fn get_bin_op(t : & Token) -> BinOpType {
@@ -230,7 +184,7 @@ macro_rules! expr_right_parser {
       }
 
       // use it in parse implementation
-      if !token_iter.peek().is_some() || (!is_operator(token_iter.peek())) {
+      if !token_iter.peek().is_some() || (!is_operator(*token_iter.peek().unwrap())) {
         return ExprRight::Empty();
       }
       let op_type = token_iter.next().unwrap();
