@@ -20,14 +20,17 @@ pub enum Connections<'a> {
 
 #[derive(Debug)]
 pub struct Connection<'a> {
-   pub from_function : Identifier<'a>,
-   pub to_function   : Identifier<'a>,
-   pub variable_pairs: Vec<VariablePair<'a>>
+  pub from_function  : Identifier<'a>,
+  pub to_function    : Identifier<'a>,
+  pub variable_pairs : Vec<VariablePair<'a>>
 }
 
+// TODO: We seem to be mixing up structs and enums.
+// Need some convention for this.
 #[derive(Debug)]
-pub enum VariablePair<'a> {
-  VariablePair(Identifier<'a>, Identifier<'a>)
+pub struct VariablePair<'a> {
+  pub from_var : Identifier<'a>,
+  pub to_var   : Identifier<'a>
 }
 
 #[derive(Debug)]

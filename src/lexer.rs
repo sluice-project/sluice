@@ -2,7 +2,7 @@ extern crate regex;
 use self::regex::Regex;
 
 lazy_static! {
-  static ref TOKENS      : Regex = Regex::new(r"[0-9]+|[A-Za-z_][A-Za-z0-9_]*|==|!=|>=|<=|>|<|\+|-|/|\*|%|\{|\}|\(|\)|\[|\]|=|;|\.|,|\?|:|\S+").unwrap();
+  static ref TOKENS      : Regex = Regex::new(r"[0-9]+|[A-Za-z_][A-Za-z0-9_]*|->|==|!=|>=|<=|>|<|\+|-|/|\*|%|\{|\}|\(|\)|=|;|,|\?|:|\S+").unwrap();
   static ref KEYWORDS    : Regex = Regex::new(r"^(static|snippet|and|or|not)$").unwrap();
   static ref IDENTIFIERS : Regex = Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").unwrap();
   static ref VALUES      : Regex = Regex::new(r"^([0-9]+)$").unwrap();
@@ -28,6 +28,7 @@ fn get_single_token(tok_str : &str) -> Token {
       ":" => Token::Colon,
       ";" => Token::SemiColon,
       "," => Token::Comma,
+      "->"=> Token::Arrow,
 
       "(" => Token::ParenLeft,
       ")" => Token::ParenRight,

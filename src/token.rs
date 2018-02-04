@@ -16,6 +16,7 @@ pub enum Token<'a> {
   Colon,
   SemiColon,
   Comma,
+  Arrow,
 
   // Grouping operators
   ParenLeft,

@@ -35,15 +35,15 @@ pub fn parse_prog<'a>(token_iter : &mut TokenIterator<'a>) -> Prog<'a> {
 fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a>) -> Snippets<'a> {
   // Internal helper function to check if it's a snippet or not
   fn is_snippet(token : Option<&& Token>) -> bool {
-      match token {
-        Some(&& Token::Snippet)=> true,
-        _                     => false,
-      }
+    match token {
+      Some(&& Token::Snippet)=> true,
+      _                     => false,
+    }
   }
 
   let mut snippet_vector = Vec::<Snippet>::new();
   loop {
-    if !token_iter.peek().is_some() || (!is_snippet(token_iter.peek())) {
+    if !token_iter.peek().is_some() || !is_snippet(token_iter.peek()) {
       return Snippets::Snippets(snippet_vector);
     } else {
       let snippet = parse_snippet(token_iter);
@@ -71,16 +71,47 @@ fn parse_connections<'a>(token_iter : &mut TokenIterator<'a>) -> Connections<'a>
     if !token_iter.peek().is_some() {
       return Connections::Connections(connection_vector);
     } else {
-      match_token(token_iter, Token::ParenLeft, "Connection must start with a left parenthesis.");
-      let id1   = parse_identifier(token_iter);
-      match_token(token_iter, Token::Comma, "Need a comma between snippets that are being connected.");
-      let id2   = parse_identifier(token_iter);
-      match_token(token_iter, Token::ParenRight, "Connection must end with a right parenthesis.");
-      connection_vector.push(Connection{ from_function : id1,
-                                           to_function : id2,
-                                        variable_pairs : Vec::new() });
+      connection_vector.push(parse_connection(token_iter));
     }
   }
+}
+
+fn parse_connection<'a>(token_iter : &mut TokenIterator<'a>) -> Connection<'a> {
+  // Helper function to detect identifiers
+  fn is_ident(token : Option<&& Token>) -> bool {
+    match token {
+      Some(&& Token::Identifier(_)) => true,
+      _                            => false,
+    }
+  }
+
+  // Internal helper function to check if it's a colon or not
+  fn is_colon(token : Option<&& Token>) -> bool {
+    match token {
+      Some(&& Token::Colon)=> true,
+      _                     => false,
+    }
+  }
+
+
+  match_token(token_iter, Token::ParenLeft, "Connection must start with a left parenthesis.");
+  let id1   = parse_identifier(token_iter);
+  match_token(token_iter, Token::Comma, "Need a comma between snippets that are being connected.");
+  let id2   = parse_identifier(token_iter);
+  match_token(token_iter, Token::ParenRight, "Connection must end with a right parenthesis.");
+  let mut variable_pairs = Vec::<VariablePair>::new();
+  if token_iter.peek().is_some() && is_colon(token_iter.peek()) {
+    match_token(token_iter, Token::Colon, "Need a colon before variable pairings");
+    loop {
+      if !token_iter.peek().is_some() || !is_ident(token_iter.peek()) { break; }
+      let from_variable = parse_identifier(token_iter);
+      match_token(token_iter, Token::Arrow, "Need an arrow between variables.");
+      let to_variable   = parse_identifier(token_iter);
+      match_token(token_iter, Token::Comma, "Need a comma separating variable connections.");
+      variable_pairs.push(VariablePair { from_var : from_variable, to_var : to_variable });
+    }
+  }
+  return Connection { from_function : id1, to_function : id2, variable_pairs : variable_pairs };
 }
 
 fn parse_idlist<'a>(token_iter : &mut TokenIterator<'a>) -> IdList<'a> {
@@ -329,7 +360,16 @@ mod tests{
     println!("{:?}", parse_connections(token_iter));
     assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
-  
+
+  #[test]
+  fn test_parse_connections2() {
+    let input = r"(foo, fun): a->b, c->x, (bar, foobar)";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_connections(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+
   #[test]
   fn test_parse_prog() {
     let input        = r"snippet fun(a, b, c, x, y, ) {
