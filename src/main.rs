@@ -2,10 +2,10 @@ extern crate sculpt;
 
 use sculpt::lexer;
 use sculpt::parser;
-use sculpt::symbol_table_pass::SymbolTablePass;
-use sculpt::define_before_use_pass::DefineBeforeUsePass;
+use sculpt::def_use::DefUse;
+use sculpt::def_use::SymbolTableCollector;
 use sculpt::tree_fold::TreeFold;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 // Main compiler binary
 // Takes an input sculpt program and produces a refined program
@@ -31,12 +31,7 @@ fn main() {
   assert!(token_iter.peek().is_none(), "Token iterator is not empty.");
   println!("Parse tree: {:?}\n", parse_tree);
 
-  // symbol table generation
-  let mut symbol_table = HashSet::new();
-  SymbolTablePass::visit_prog(&parse_tree, &mut symbol_table);
-  println!("Symbol table: {:?}",symbol_table);
-
   // Check that identifiers are defined before use
-  let mut definitions = HashSet::new();
-  DefineBeforeUsePass::visit_prog(&parse_tree, &mut definitions);
+  let mut def_use_collector = SymbolTableCollector { current_snippet : "", symbol_table : HashMap::new() };
+  DefUse::visit_prog(&parse_tree, &mut def_use_collector);
 }

@@ -5,10 +5,10 @@ extern crate sculpt;
 
 use sculpt::lexer;
 use sculpt::parser;
-use sculpt::symbol_table_pass::SymbolTablePass;
-use sculpt::define_before_use_pass::DefineBeforeUsePass;
+use sculpt::def_use::DefUse;
+use sculpt::def_use::SymbolTableCollector;
 use sculpt::tree_fold::TreeFold;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use test::Bencher;
 
 #[bench]
@@ -56,29 +56,16 @@ fn bench_parser_large(b : &mut Bencher) {
 }
 
 #[bench]
-fn bench_symbol_table(b : &mut Bencher) {
-  let input_program = r"snippet foo(a, b, c, ) {
-                          d = 1;
-                          x = d;
-                        }
-                        ".repeat(1000);
-  b.iter(|| { let tokens = & mut lexer::get_tokens(&input_program);
-              let token_iter = & mut tokens.iter().peekable();
-              let parse_tree = parser::parse_prog(token_iter);
-              let mut symbol_table = HashSet::new();
-              SymbolTablePass::visit_prog(&parse_tree, &mut symbol_table); });
-}
-
-#[bench]
 fn bench_def_use(b : &mut Bencher) {
-  let input_program = r"snippet foo(a, b, c, ) {
-                          d = 1;
-                          x = d;
-                        }
-                        ".repeat(1000);
+  let mut input_program = "".to_string();
+  for i in 0..1000 {
+    input_program += r"snippet foo";
+    input_program += &i.to_string();
+    input_program += r"(a, b, c, ) { d = 1; x = d; }";
+  }
   b.iter(|| { let tokens = & mut lexer::get_tokens(&input_program);
               let token_iter = & mut tokens.iter().peekable();
               let parse_tree = parser::parse_prog(token_iter);
-              let mut symbol_table = HashSet::new();
-              DefineBeforeUsePass::visit_prog(&parse_tree, &mut symbol_table); });
+              let mut def_use_collector = SymbolTableCollector { current_snippet : "", symbol_table : HashMap::new() };
+              DefUse::visit_prog(&parse_tree, &mut def_use_collector); } );
 }

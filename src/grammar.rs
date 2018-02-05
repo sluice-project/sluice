@@ -20,8 +20,8 @@ pub enum Connections<'a> {
 
 #[derive(Debug)]
 pub struct Connection<'a> {
-  pub from_function  : Identifier<'a>,
-  pub to_function    : Identifier<'a>,
+  pub from_snippet   : Identifier<'a>,
+  pub to_snippet     : Identifier<'a>,
   pub variable_pairs : Vec<VariablePair<'a>>
 }
 

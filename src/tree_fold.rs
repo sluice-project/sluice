@@ -34,8 +34,8 @@ pub trait TreeFold<'a, Acc> {
   fn visit_connections(tree : &'a Connections, collector : &mut Acc) {
     let &Connections::Connections(ref connection_vector) = tree;
     for connection in connection_vector {
-      Self::visit_identifier(&connection.from_function, collector);
-      Self::visit_identifier(&connection.to_function, collector);
+      Self::visit_identifier(&connection.from_snippet, collector);
+      Self::visit_identifier(&connection.to_snippet, collector);
     }
   }
   

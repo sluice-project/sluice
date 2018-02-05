@@ -65,7 +65,7 @@ pub fn get_tokens(input_program : &str) -> Vec<Token> {
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
   use super::get_tokens;
   
   #[test]

@@ -93,7 +93,7 @@ fn parse_connection<'a>(token_iter : &mut TokenIterator<'a>) -> Connection<'a> {
       variable_pairs.push(VariablePair { from_var : from_variable, to_var : to_variable });
     }
   }
-  return Connection { from_function : id1, to_function : id2, variable_pairs : variable_pairs };
+  return Connection { from_snippet : id1, to_snippet : id2, variable_pairs : variable_pairs };
 }
 
 fn parse_idlist<'a>(token_iter : &mut TokenIterator<'a>) -> IdList<'a> {
@@ -230,7 +230,7 @@ fn parse_value<'a>(token_iter : & mut TokenIterator<'a>) -> Value {
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
   use super::*;
   use super::super::lexer::get_tokens;
   
