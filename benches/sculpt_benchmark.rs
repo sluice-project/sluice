@@ -6,9 +6,10 @@ extern crate sculpt;
 use sculpt::lexer;
 use sculpt::parser;
 use sculpt::def_use::DefUse;
-use sculpt::def_use::SymbolTableCollector;
+use sculpt::def_use::VariableCollector;
 use sculpt::tree_fold::TreeFold;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use test::Bencher;
 
 #[bench]
@@ -66,6 +67,9 @@ fn bench_def_use(b : &mut Bencher) {
   b.iter(|| { let tokens = & mut lexer::get_tokens(&input_program);
               let token_iter = & mut tokens.iter().peekable();
               let parse_tree = parser::parse_prog(token_iter);
-              let mut def_use_collector = SymbolTableCollector { current_snippet : "", symbol_table : HashMap::new() };
-              DefUse::visit_prog(&parse_tree, &mut def_use_collector); } );
+              let mut def_use_collector = VariableCollector { current_snippet : "",
+                                                              transient_vars : HashMap::new(),
+                                                              persistent_vars : HashMap::new(),
+                                                              snippet_set : HashSet::new() };
+              DefUse::visit_prog(&parse_tree, &mut def_use_collector);} );
 }

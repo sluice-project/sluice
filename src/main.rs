@@ -3,17 +3,18 @@ extern crate sculpt;
 use sculpt::lexer;
 use sculpt::parser;
 use sculpt::def_use::DefUse;
-use sculpt::def_use::SymbolTableCollector;
+use sculpt::def_use::VariableCollector;
 use sculpt::tree_fold::TreeFold;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 // Main compiler binary
 // Takes an input sculpt program and produces a refined program
 fn main() {
   let input_program = r"snippet fun(a, b, c, x, y, ) {
-                          y = 5;
-                          a = x;
-                          b = y;
+                          z = a + b;
+                          q = x;
+                          r = y;
                           m = 5;
                         }
                         snippet foo(a, b, c, ) {
@@ -32,6 +33,9 @@ fn main() {
   println!("Parse tree: {:?}\n", parse_tree);
 
   // Check that identifiers are defined before use
-  let mut def_use_collector = SymbolTableCollector { current_snippet : "", symbol_table : HashMap::new() };
+  let mut def_use_collector = VariableCollector { current_snippet : "",
+                                                  transient_vars : HashMap::new(),
+                                                  persistent_vars : HashMap::new(),
+                                                  snippet_set : HashSet::new() };
   DefUse::visit_prog(&parse_tree, &mut def_use_collector);
 }
