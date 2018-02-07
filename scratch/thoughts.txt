@@ -1,0 +1,11 @@
+3. No global variables in sculpt, although allowing refinements to a
+shared-memory multi-core implementation may cause us to change that.
+Aside: is there ever a case for shared memory? Or can you do everything
+efficiently with message passing? I guess shared memory is OK if you're not
+updating memory and only reading from it.
+One reference comparing the two: https://dl.acm.org/citation.cfm?id=192020;
+that paper seems to come down on the side of message passing.
+)
+
+5. Understand the "cannot borrow more than once" error as well as possible
+(http://blog.ezyang.com/2013/12/two-bugs-in-the-borrow-checker-every-rust-developer-should-know-about/)
