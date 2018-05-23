@@ -1,0 +1,24 @@
+Auto-generate
+1. Clocking logic.
+2. Constraints file.
+3. sequential and combinational logic in always_ff and always_comb blocks respectively.
+4. Top file for running specific modules on an FPGA.
+
+Speed up:
+1. Syntax checking.
+2. Design space exploration.
+3. Type checking.
+4. Synthesis.
+5. Out-of-context synthesis.
+
+Other support:
+1. Assertions.
+2. printfs.
+3. I/O simulations.
+
+Testing:
+1. Check correspondence with a previous version.
+2. Formal, fuzzy, or approximate checks.
+
+In general,
+reduce boilerplate, return syntax errors quickly, allow quick DSE, iterate on different splits quickly, and don't make the user wait.
