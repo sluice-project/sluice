@@ -25,6 +25,9 @@ Other support:
 Testing:
 1. Check correspondence with a previous version.
 2. Formal, fuzzy, or approximate checks.
+3. Testing individual modules both in simulation and on the actual FPGA.
 
 In general,
 reduce boilerplate, return syntax errors quickly, allow quick DSE, iterate on different splits quickly, and don't make the user wait.
+
+Question: how does this relate to the idea of refinements?
