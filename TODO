@@ -19,6 +19,8 @@ Other support:
 1. Assertions.
 2. printfs.
 3. I/O simulations.
+4. Modular testing of different parts of the program on the actual FPGA---not in simulation. Many problems go undetected in simulation, especially with code that does IO between the FPGA and CPU.
+5. A way to specify interfaces between different modules (can borrow techniques from Connectal).
 
 Testing:
 1. Check correspondence with a previous version.
