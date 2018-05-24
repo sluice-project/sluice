@@ -66,14 +66,19 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
   }
 
   fn visit_statement(tree : &'a Statement, collector : &mut VariableCollector<'a>) {
-    let &Statement::Statement(ref identifier, ref expr) = tree;
-    let &Identifier::Identifier(ref id_string) = identifier;
+    let &Statement::Statement(ref lvalue, ref expr) = tree;
+    let id_string =
+      match lvalue {
+        &LValue::Identifier(Identifier::Identifier(x)) => { x },
+        &LValue::Array(Identifier::Identifier(x), _) => { x }
+      };
+
     // First visit expression because that is conceptually processed first
     Self::visit_expr(expr, collector);
 
     // Then process id_string;
     if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id_string) != None {
-      panic!("Can't redefine transient var {} in {}. Transients are immutable.", id_string, collector.current_snippet);
+      panic!("Can't redefine transient var {} in {}. Transients are immutable for now.", id_string, collector.current_snippet);
     } else {
       collector.transient_vars.get_mut(collector.current_snippet).unwrap().insert(id_string);
     }
@@ -276,7 +281,7 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected="Can't redefine transient var a in foo. Transients are immutable.")]
+  #[should_panic(expected="Can't redefine transient var a in foo. Transients are immutable for now.")]
   fn test_def_use_redefine_transient_var() {
     let input_program = r"snippet foo(a, b,) { a = 1; }";
     run_def_use(input_program);

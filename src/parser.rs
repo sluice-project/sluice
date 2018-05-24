@@ -152,11 +152,11 @@ fn parse_statements<'a>(token_iter : &mut TokenIterator<'a>) -> Statements<'a> {
 }
 
 fn parse_statement<'a>(token_iter : &mut TokenIterator<'a>) -> Statement<'a> {
-  let identifier = parse_identifier(token_iter);
+  let lvalue = parse_lvalue(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and expression by an assignment symbol.");
   let expr       = parse_expr(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in an initializer must be a semicolon.");
-  return Statement::Statement(identifier, expr);
+  return Statement::Statement(lvalue, expr);
 }
 
 fn parse_expr<'a>(token_iter : &mut TokenIterator<'a>) -> Expr<'a> {
@@ -212,6 +212,24 @@ fn parse_identifier<'a>(token_iter : &mut TokenIterator<'a>) -> Identifier<'a> {
   }
 }
 
+fn parse_lvalue<'a>(token_iter : &mut TokenIterator<'a>) -> LValue<'a> {
+  let lvalue_token = token_iter.next().unwrap();
+  let is_square_left = |token| { match token { &Token::SquareLeft => true, _ => false, } };
+  match lvalue_token {
+    & Token::Identifier(i) => {
+      if token_iter.peek().is_none() || !is_square_left(token_iter.peek().unwrap()) {
+        return LValue::Identifier(Identifier::Identifier(i));
+      } else {
+        match_token(token_iter, Token::SquareLeft, "Expected [ here.");
+        let array_address = parse_operand(token_iter);
+        match_token(token_iter, Token::SquareRight, "Expected ] here.");
+        return LValue::Array(Identifier::Identifier(i), array_address);
+      }
+    }
+    _                      => panic!("Invalid token: {:?}, expected Token::Identifier", lvalue_token)
+  }
+}
+
 fn parse_operand<'a>(token_iter : &mut TokenIterator<'a>) -> Operand<'a> {
   let operand_token = token_iter.next().unwrap();
   match operand_token {
@@ -242,7 +260,44 @@ mod tests {
     println!("{:?}", parse_operand(token_iter));
     assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
-  
+
+  #[test]
+  #[should_panic(expected="Invalid token: Value(5), expected Token::Identifier")]
+  fn test_parse_identifier_fail() {
+    let input =  r"5";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_identifier(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+
+  #[test]
+  fn test_parse_identifier_pass() {
+    let input =  r"a";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_identifier(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+
+  #[test]
+  fn test_parse_lvalue1() {
+    let input =  r"a[5]";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_lvalue(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+
+  #[test]
+  fn test_parse_lvalue2() {
+    let input =  r"a";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_lvalue(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+
   #[test]
   fn test_parse_expr() {
     let input = r"7%5";

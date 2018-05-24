@@ -23,6 +23,8 @@ pub enum Token<'a> {
   ParenRight,
   BraceLeft,
   BraceRight,
+  SquareLeft,
+  SquareRight,
 
   // Binary arithmetic operators + conditional operator
   Plus,

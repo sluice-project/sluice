@@ -65,8 +65,8 @@ pub trait TreeFold<'a, Acc> {
   
   fn visit_statement(tree : &'a Statement, collector : &mut Acc) {
     match tree {
-      &Statement::Statement(ref identifier, ref expr) => {
-        Self::visit_identifier(identifier, collector);
+      &Statement::Statement(ref lvalue, ref expr) => {
+        Self::visit_lvalue(lvalue, collector);
         Self::visit_expr(expr, collector);
       }
     }
@@ -96,6 +96,16 @@ pub trait TreeFold<'a, Acc> {
     match tree {
       &Operand::Identifier(ref identifier) => Self::visit_identifier(identifier, collector),
       &Operand::Value(ref value)           => Self::visit_value(value, collector)
+    }
+  }
+
+  fn visit_lvalue(tree : &'a LValue, collector : &mut Acc) {
+    match tree {
+      &LValue::Identifier(ref identifier) => Self::visit_identifier(identifier, collector),
+      &LValue::Array(ref array, ref operand) => {
+        Self::visit_identifier(array, collector);
+        Self::visit_operand(operand, collector);
+      }
     }
   }
  

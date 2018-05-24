@@ -55,7 +55,7 @@ pub enum Statements<'a> {
 
 #[derive(Debug)]
 pub enum Statement<'a> {
-  Statement(Identifier<'a>, Expr<'a>)
+  Statement(LValue<'a>, Expr<'a>)
 }
 
 #[derive(Debug)]
@@ -131,4 +131,10 @@ impl<'a> Operand<'a>{
       _                        => panic!("Can't call get_val if operand isn't a value.") // TODO: Should use assert
     }
   }
+}
+
+#[derive(Debug)]
+pub enum LValue<'a> {
+  Identifier(Identifier<'a>),
+  Array(Identifier<'a>, Operand<'a>)
 }
