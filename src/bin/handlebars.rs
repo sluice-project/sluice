@@ -6,6 +6,8 @@ use handlebars::Handlebars;
 
 fn main() {
     let mut reg = Handlebars::new();
+    reg.set_strict_mode(true);
+
     // render without register
     println!("{}", reg.render_template("Hello {{name}}", &json!({"name": "foo"})).unwrap());
 
