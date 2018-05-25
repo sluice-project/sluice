@@ -107,22 +107,23 @@ impl Value {
 
 #[derive(Debug)]
 pub enum Operand<'a> {
-  Identifier(Identifier<'a>),
+  LValue(LValue<'a>),
   Value(Value),
 }
 
 impl<'a> Operand<'a>{
   pub fn is_id(&self) -> bool {
     match self {
-      &Operand::Identifier(_)     => true,
-      _                           => false
+      &Operand::LValue(LValue::Identifier(_))     => true,
+      _                                           => false
     }
   }
   pub fn is_val(&self) -> bool { !self.is_id() }
   pub fn get_id(&self) -> &str {
     match self {
-      &Operand::Identifier(ref id) => id.get_string(),
-      _                            => panic!("Can't call get_id if operand isn't identifier.") // TODO: Should use assert
+      &Operand::LValue(LValue::Identifier(ref id)) => id.get_string(),
+      _                                            => panic!("Can't call get_id if operand isn't identifier.")
+                                                      // TODO: Should use assert
     }
   }
   pub fn get_val(&self) -> String {
@@ -136,5 +137,5 @@ impl<'a> Operand<'a>{
 #[derive(Debug)]
 pub enum LValue<'a> {
   Identifier(Identifier<'a>),
-  Array(Identifier<'a>, Operand<'a>)
+  Array(Identifier<'a>, Box<Operand<'a>>)
 }

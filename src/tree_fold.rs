@@ -94,8 +94,8 @@ pub trait TreeFold<'a, Acc> {
   
   fn visit_operand(tree : &'a Operand, collector : &mut Acc) {
     match tree {
-      &Operand::Identifier(ref identifier) => Self::visit_identifier(identifier, collector),
-      &Operand::Value(ref value)           => Self::visit_value(value, collector)
+      &Operand::LValue(ref lvalue) => Self::visit_lvalue(lvalue, collector),
+      &Operand::Value(ref value)   => Self::visit_value(value, collector)
     }
   }
 

@@ -223,7 +223,7 @@ fn parse_lvalue<'a>(token_iter : &mut TokenIterator<'a>) -> LValue<'a> {
         match_token(token_iter, Token::SquareLeft, "Expected [ here.");
         let array_address = parse_operand(token_iter);
         match_token(token_iter, Token::SquareRight, "Expected ] here.");
-        return LValue::Array(Identifier::Identifier(i), array_address);
+        return LValue::Array(Identifier::Identifier(i), Box::new(array_address));
       }
     }
     _                      => panic!("Invalid token: {:?}, expected Token::Identifier", lvalue_token)
@@ -231,11 +231,10 @@ fn parse_lvalue<'a>(token_iter : &mut TokenIterator<'a>) -> LValue<'a> {
 }
 
 fn parse_operand<'a>(token_iter : &mut TokenIterator<'a>) -> Operand<'a> {
-  let operand_token = token_iter.next().unwrap();
-  match operand_token {
-    & Token::Identifier(i) => return Operand::Identifier(Identifier::Identifier(i)),
-    & Token::Value(v)      => return Operand::Value(Value::Value(v)),
-    _                      => panic!("Invalid token: {:?}, expected Token::Identifier or Token::Value", operand_token)
+  match token_iter.peek().unwrap() { // && is required because we are using Peekable iterators
+    && Token::Identifier(_) => return Operand::LValue(parse_lvalue(token_iter)),
+    && Token::Value(_)      => return Operand::Value(parse_value(token_iter)),
+    _                       => panic!("Invalid token: {:?}, expected Token::LValue or Token::Value", token_iter.peek().unwrap())
   }
 }
 
@@ -255,6 +254,24 @@ mod tests {
   #[test]
   fn test_parse_operand() {
     let input =  r"5";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_operand(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+
+  #[test]
+  fn test_parse_operand_id() {
+    let input =  r"a";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_operand(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+
+  #[test]
+  fn test_parse_operand_array() {
+    let input =  r"a[5]";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
     println!("{:?}", parse_operand(token_iter));
