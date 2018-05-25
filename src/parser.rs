@@ -241,8 +241,8 @@ fn parse_operand<'a>(token_iter : &mut TokenIterator<'a>) -> Operand<'a> {
 fn parse_value<'a>(token_iter : & mut TokenIterator<'a>) -> Value {
   let value_token = token_iter.next().unwrap();
   match value_token {
-    & Token::Value(ref v)  => return Value::Value(v.clone()),
-    _                      => panic!("Invalid token: {:?}, expected Token::Value", value_token)
+    & Token::Value(v)  => return Value::Value(v),
+    _                  => panic!("Invalid token: {:?}, expected Token::Value", value_token)
  }
 }
 
