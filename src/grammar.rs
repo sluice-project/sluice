@@ -45,7 +45,18 @@ pub enum Initializers<'a> {
 
 #[derive(Debug)]
 pub enum Initializer<'a> {
-  Initializer(Identifier<'a>, Value)
+  Initializer(Identifier<'a>, InitialValue)
+}
+
+#[derive(Debug)]
+pub enum InitialValue {
+  Value(Value),
+  ValueList(ValueList)
+}
+
+#[derive(Debug)]
+pub enum ValueList {
+  ValueList(Vec<Value>)
 }
 
 #[derive(Debug)]

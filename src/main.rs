@@ -19,6 +19,7 @@ fn main() {
                         }
                         snippet foo(a, b, c, ) {
                           static p = 1;
+                          static m = {1, 2, 3, };
                           q = 5;
                           z[5] = 6;
                           h = z[7];

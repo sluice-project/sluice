@@ -54,7 +54,7 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   let id_list    = parse_idlist(token_iter);
   match_token(token_iter, Token::ParenRight, "Snippet argument list must end with a right parenthesis.");
   match_token(token_iter, Token::BraceLeft, "Snippet body must begin with a left brace.");
-  let initializers      = parse_initializers(token_iter);
+  let initializers    = parse_initializers(token_iter);
   let statements      = parse_statements(token_iter);
   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
   return Snippet::Snippet(identifier, id_list, initializers, statements);
@@ -131,7 +131,7 @@ fn parse_initializer<'a>(token_iter : &mut TokenIterator<'a>) -> Initializer<'a>
   match_token(token_iter, Token::Static, "First token in an initializer must be the keyword static.");
   let identifier = parse_identifier(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
-  let value      = parse_value(token_iter);
+  let value      = parse_initial_value(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in an initializer must be a semicolon.");
   return Initializer::Initializer(identifier, value);
 }
@@ -238,7 +238,36 @@ fn parse_operand<'a>(token_iter : &mut TokenIterator<'a>) -> Operand<'a> {
   }
 }
 
-fn parse_value<'a>(token_iter : & mut TokenIterator<'a>) -> Value {
+fn parse_initial_value<'a>(token_iter : &mut TokenIterator<'a>) -> InitialValue {
+  match token_iter.peek().unwrap() {
+    && Token::Value(_)  => return InitialValue::Value(parse_value(token_iter)),
+    && Token::BraceLeft => {
+      match_token(token_iter, Token::BraceLeft, "Initializer list must start with a left brace.");
+      let value_list = parse_valuelist(token_iter);
+      match_token(token_iter, Token::BraceRight, "Initializer list must end with a right brace.");
+      return InitialValue::ValueList(value_list);
+    },
+    _                   => panic!("Invalid token: {:?}, expected Token::Value or Token::BraceLeft", token_iter.peek().unwrap())
+  }
+}
+
+fn parse_valuelist<'a>(token_iter : &mut TokenIterator<'a>) -> ValueList {
+  // Helper function to detect values
+  let is_value = |token| { match token { &Token::Value(_) => true, _ => false, } };
+
+  let mut value_vector = Vec::<Value>::new();
+  loop {
+    if !token_iter.peek().is_some() || (!is_value(*token_iter.peek().unwrap())) {
+      return ValueList::ValueList(value_vector);
+    } else {
+      let value = parse_value(token_iter);
+      match_token(token_iter, Token::Comma, "Expected comma as separator between values.");
+      value_vector.push(value);
+    }
+  }
+}
+
+fn parse_value<'a>(token_iter : &mut TokenIterator<'a>) -> Value {
   let value_token = token_iter.next().unwrap();
   match value_token {
     & Token::Value(v)  => return Value::Value(v),
@@ -350,7 +379,26 @@ mod tests {
     println!("{:?}", parse_initializers(token_iter));
     assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
+
+  #[test]
+  fn test_parse_initializers2() {
+    let input = r"static x={4, 5, 6, 7,};static y=7;";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_initializers(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
   
+  #[test]
+  #[should_panic(expected="Invalid token: BraceRight, expected Comma.\nError message: \"Expected comma as separator between values.\"")]
+  fn test_parse_initializers2_fail() {
+    let input = r"static x={4, 5, 6, 7};static y=7;";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_initializers(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+ 
   #[test]
   fn test_parse_snippet1() {
     let input = r"snippet fun(a, b, c,) { static x=6;static y=7;}";

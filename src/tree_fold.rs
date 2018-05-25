@@ -53,8 +53,16 @@ pub trait TreeFold<'a, Acc> {
     match tree {
       &Initializer::Initializer(ref identifier, ref value) => {
         Self::visit_identifier(identifier, collector);
-        Self::visit_value(value, collector);
+        Self::visit_initial_value(value, collector);
       }
+    }
+  }
+
+  fn visit_initial_value(tree : &'a InitialValue, collector : &mut Acc) {
+    match tree {
+      &InitialValue::Value(ref value) => Self::visit_value(value, collector),
+      &InitialValue::ValueList(ValueList::ValueList(ref value_vector)) =>
+       { for value in value_vector { Self::visit_value(value, collector); } }
     }
   }
   
