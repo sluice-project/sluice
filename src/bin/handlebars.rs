@@ -7,14 +7,9 @@ use handlebars::Handlebars;
 fn main() {
     let mut reg = Handlebars::new();
     // render without register
-    println!(
-        "{}",
-        reg.render_template("Hello {{name}}", &json!({"name": "foo"}))
-            .unwrap()
-    );
+    println!("{}", reg.render_template("Hello {{name}}", &json!({"name": "foo"})).unwrap());
 
     // register template using given name
-    reg.register_template_string("tpl_1", "Good afternoon, {{name}}")
-        .unwrap();
+    reg.register_template_string("tpl_1", "Good afternoon, {{name}}").unwrap();
     println!("{}", reg.render("tpl_1", &json!({"name": "foo"})).unwrap());
 }
