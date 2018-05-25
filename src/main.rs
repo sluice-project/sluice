@@ -21,6 +21,7 @@ fn main() {
                           static p = 1;
                           q = 5;
                           z[5] = 6;
+                          h = z[7];
                         }
                         (foo, fun)
                         ";
