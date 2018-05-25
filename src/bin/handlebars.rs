@@ -13,5 +13,6 @@ fn main() {
 
     // register template using given name
     reg.register_template_string("tpl_1", "Good afternoon, {{name}}").unwrap();
+    reg.register_template_file("tp1_2", "foobar").unwrap();
     println!("{}", reg.render("tpl_1", &json!({"name": "foo"})).unwrap());
 }
