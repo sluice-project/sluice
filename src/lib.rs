@@ -7,3 +7,4 @@ pub mod grammar;
 pub mod parser;
 pub mod tree_fold;
 pub mod def_use;
+pub mod code_gen;
