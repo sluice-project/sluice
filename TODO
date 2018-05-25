@@ -1,32 +1,25 @@
-Language constructs
-2. if-else
-
-Auto-generate
+Auto-generate SystemVerilog code for
 1. Clocking logic.
 2. Constraints file.
 3. sequential and combinational logic in always_ff and always_comb blocks respectively.
-4. Top file for running specific modules on an FPGA.
+4. Top SystemVerilog file for running specific snippets on an FPGA/simulation quickly.
+
+Language constructs that would be good to add
+1. if-else
+2. functions within snippets
+
+Other support:
+1. A way to specify different kinds of interfaces between snippets (can borrow techniques from Connectal).
+2. Assertions.
+3. printfs/display statements.
 
 Speed up:
 1. Syntax checking.
-2. Design space exploration.
-3. Type checking.
+2. Type/semantic checking.
+3. Design space exploration.
 4. Synthesis.
 5. Out-of-context synthesis.
 
-Other support:
-1. Assertions.
-2. printfs.
-3. I/O simulations.
-4. Modular testing of different parts of the program on the actual FPGA---not in simulation. Many problems go undetected in simulation, especially with code that does IO between the FPGA and CPU.
-5. A way to specify interfaces between different modules (can borrow techniques from Connectal).
-
 Testing:
-1. Check correspondence with a previous version.
+1. Check correspondence with a previous version (the idea of refinements).
 2. Formal, fuzzy, or approximate checks.
-3. Testing individual modules both in simulation and on the actual FPGA.
-
-In general,
-reduce boilerplate, return syntax errors quickly, allow quick DSE, iterate on different splits quickly, and don't make the user wait.
-
-Question: how does this relate to the idea of refinements?
