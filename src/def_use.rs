@@ -18,6 +18,7 @@ pub struct DefUse;
 // TODO: This is a bit ugly because our members are public.
 // We should be using sensible method calls instead, but
 // I don't know how to do that while using lifetimes (compiler's errors are confusing)
+// TODO: Need to check types (can't assign integers to arrays, etc.)
 pub struct VariableCollector<'a> {
   pub current_snippet : &'a str,
   pub transient_vars  : HashMap<&'a str, HashSet<&'a str>>,
