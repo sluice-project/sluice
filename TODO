@@ -5,13 +5,18 @@ Auto-generate SystemVerilog code for
 4. Top SystemVerilog file for running specific snippets on an FPGA/simulation quickly.
 
 Language constructs that would be good to add
+0. Type annotations (This is a requirement for code generation.)
 1. if-else
 2. functions within snippets
 
 Other support:
-1. A way to specify different kinds of interfaces between snippets (can borrow techniques from Connectal).
+1. A way to specify different kinds of interfaces between snippets (can borrow
+techniques from Connectal).
 2. Assertions.
 3. printfs/display statements.
+4. Even if the user specifies the pipelining boundaries, there's quite some
+grunt work involved in the actual pipelining. Automating this grunt work would
+be useful.
 
 Speed up:
 1. Syntax checking.
