@@ -12,6 +12,7 @@ pub struct DefUse;
 // from strings (snippet names) to
 // sets of strings (set of transient variables within a snippet)
 // 3. a global persistent_vars table, which similarly stores persistent variables
+// 4. a global snippet_set, which stores the names of all snippets in a set.
 // TODO: This is a bit ugly because our members are public.
 // We should be using sensible method calls instead, but
 // I don't know how to do that while using lifetimes (compiler's errors are confusing)
