@@ -6,7 +6,6 @@ Auto-generate SystemVerilog code for
 5. Mock frameworks to short-circuit the functionality of some FPGA modules for quick testing.
 
 Language constructs that would be good to add
-0. Type annotations (This is a requirement for code generation.)
 1. if-else
 2. functions within snippets
 
