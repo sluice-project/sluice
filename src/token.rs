@@ -5,8 +5,8 @@ pub enum Token<'a> {
   Identifier(&'a str),
   Value(u32),
 
-  // Keywords: static, snippet, and, or, not
-  Static,
+  // Keywords: persistent, snippet, and, or, not
+  Persistent,
   Snippet,
   BooleanAnd,
   BooleanOr,

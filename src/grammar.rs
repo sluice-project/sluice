@@ -10,7 +10,7 @@ pub enum Snippets<'a> {
 
 #[derive(Debug)]
 pub enum Snippet<'a> {
-  Snippet(Identifier<'a>, IdList<'a>, Initializers<'a>, Statements<'a>) 
+  Snippet(Identifier<'a>, IdList<'a>, PersistentDecls<'a>, TransientDecls<'a>, Statements<'a>)
 }
 
 #[derive(Debug)]
@@ -39,13 +39,26 @@ pub enum IdList<'a> {
 }
 
 #[derive(Debug)]
-pub enum Initializers<'a> {
-  Initializers(Vec<Initializer<'a>>),
+pub enum PersistentDecls<'a> {
+  PersistentDecls(Vec<PersistentDecl<'a>>),
 }
 
 #[derive(Debug)]
-pub enum Initializer<'a> {
-  Initializer(Identifier<'a>, InitialValue)
+pub struct PersistentDecl<'a> {
+  pub identifier : Identifier<'a>,
+  pub initial_value : InitialValue,
+  pub bit_width  : u32
+}
+
+#[derive(Debug)]
+pub enum TransientDecls<'a> {
+  TransientDecls(Vec<TransientDecl<'a>>),
+}
+
+#[derive(Debug)]
+pub struct TransientDecl<'a> {
+  pub identifier : Identifier<'a>,
+  pub bit_width  : u32
 }
 
 #[derive(Debug)]

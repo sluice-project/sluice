@@ -54,10 +54,11 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   let id_list    = parse_idlist(token_iter);
   match_token(token_iter, Token::ParenRight, "Snippet argument list must end with a right parenthesis.");
   match_token(token_iter, Token::BraceLeft, "Snippet body must begin with a left brace.");
-  let initializers    = parse_initializers(token_iter);
+  let persistent_decls    = parse_persistent_decls(token_iter);
+  let transient_decls     = TransientDecls::TransientDecls(Vec::<TransientDecl>::new()); // TODO XXX Fix this.
   let statements      = parse_statements(token_iter);
   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
-  return Snippet::Snippet(identifier, id_list, initializers, statements);
+  return Snippet::Snippet(identifier, id_list, persistent_decls, transient_decls, statements);
 }
 
 fn parse_connections<'a>(token_iter : &mut TokenIterator<'a>) -> Connections<'a> {
@@ -112,28 +113,28 @@ fn parse_idlist<'a>(token_iter : &mut TokenIterator<'a>) -> IdList<'a> {
   }
 }
 
-fn parse_initializers<'a>(token_iter : &mut TokenIterator<'a>) -> Initializers<'a> {
-  // Helper function to determine if it's an initializer
-  let is_static = |token| { match token { &Token::Static => true, _ => false, } };
+fn parse_persistent_decls<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentDecls<'a> {
+  // Helper function to determine if it's an persistent_decl
+  let is_persistent = |token| { match token { &Token::Persistent => true, _ => false, } };
 
-  let mut init_vector = Vec::<Initializer>::new();
+  let mut init_vector = Vec::<PersistentDecl>::new();
   loop {
-    if !token_iter.peek().is_some() || (!is_static(*token_iter.peek().unwrap())) {
-      return Initializers::Initializers(init_vector);
+    if !token_iter.peek().is_some() || (!is_persistent(*token_iter.peek().unwrap())) {
+      return PersistentDecls::PersistentDecls(init_vector);
     } else {
-      let initializer = parse_initializer(token_iter);
-      init_vector.push(initializer);
+      let persistent_decl = parse_persistent_decl(token_iter);
+      init_vector.push(persistent_decl);
     }
   }
 }
 
-fn parse_initializer<'a>(token_iter : &mut TokenIterator<'a>) -> Initializer<'a> {
-  match_token(token_iter, Token::Static, "First token in an initializer must be the keyword static.");
+fn parse_persistent_decl<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentDecl<'a> {
+  match_token(token_iter, Token::Persistent, "First token in an persistent_decl must be the keyword persistent.");
   let identifier = parse_identifier(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
   let value      = parse_initial_value(token_iter);
-  match_token(token_iter, Token::SemiColon, "Last token in an initializer must be a semicolon.");
-  return Initializer::Initializer(identifier, value);
+  match_token(token_iter, Token::SemiColon, "Last token in a persistent_decl must be a semicolon.");
+  return PersistentDecl { identifier : identifier, initial_value : value, bit_width : 0 }; // TODO: Fix bit_width.
 }
 
 fn parse_statements<'a>(token_iter : &mut TokenIterator<'a>) -> Statements<'a> {
@@ -155,7 +156,7 @@ fn parse_statement<'a>(token_iter : &mut TokenIterator<'a>) -> Statement<'a> {
   let lvalue = parse_lvalue(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and expression by an assignment symbol.");
   let expr       = parse_expr(token_iter);
-  match_token(token_iter, Token::SemiColon, "Last token in an initializer must be a semicolon.");
+  match_token(token_iter, Token::SemiColon, "Last token in a persistent_decl must be a semicolon.");
   return Statement::Statement(lvalue, expr);
 }
 
@@ -242,9 +243,9 @@ fn parse_initial_value<'a>(token_iter : &mut TokenIterator<'a>) -> InitialValue 
   match token_iter.peek().unwrap() {
     && Token::Value(_)  => return InitialValue::Value(parse_value(token_iter)),
     && Token::BraceLeft => {
-      match_token(token_iter, Token::BraceLeft, "Initializer list must start with a left brace.");
+      match_token(token_iter, Token::BraceLeft, "PersistentDecl list must start with a left brace.");
       let value_list = parse_valuelist(token_iter);
-      match_token(token_iter, Token::BraceRight, "Initializer list must end with a right brace.");
+      match_token(token_iter, Token::BraceRight, "PersistentDecl list must end with a right brace.");
       return InitialValue::ValueList(value_list);
     },
     _                   => panic!("Invalid token: {:?}, expected Token::Value or Token::BraceLeft", token_iter.peek().unwrap())
@@ -372,36 +373,36 @@ mod tests {
   }
   
   #[test]
-  fn test_parse_initializers() {
-    let input = r"static x=6;static y=7;";
+  fn test_parse_persistent_decls() {
+    let input = r"persistent x=6;persistent y=7;";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_initializers(token_iter));
+    println!("{:?}", parse_persistent_decls(token_iter));
     assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
 
   #[test]
-  fn test_parse_initializers2() {
-    let input = r"static x={4, 5, 6, 7,};static y=7;";
+  fn test_parse_persistent_decls2() {
+    let input = r"persistent x={4, 5, 6, 7,};persistent y=7;";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_initializers(token_iter));
+    println!("{:?}", parse_persistent_decls(token_iter));
     assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
   
   #[test]
   #[should_panic(expected="Invalid token: BraceRight, expected Comma.\nError message: \"Expected comma as separator between values.\"")]
-  fn test_parse_initializers2_fail() {
-    let input = r"static x={4, 5, 6, 7};static y=7;";
+  fn test_parse_persistent_decls2_fail() {
+    let input = r"persistent x={4, 5, 6, 7};persistent y=7;";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_initializers(token_iter));
+    println!("{:?}", parse_persistent_decls(token_iter));
     assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
  
   #[test]
   fn test_parse_snippet1() {
-    let input = r"snippet fun(a, b, c,) { static x=6;static y=7;}";
+    let input = r"snippet fun(a, b, c,) { persistent x=6;persistent y=7;}";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
     println!("{:?}", parse_snippet(token_iter));
@@ -410,7 +411,7 @@ mod tests {
   
   #[test]
   fn test_parse_snippet2() {
-    let input = r"snippet fun(a, b, c,) { static x=6;x=y+5;}";
+    let input = r"snippet fun(a, b, c,) { persistent x=6;x=y+5;}";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
     println!("{:?}", parse_snippet(token_iter));
@@ -419,7 +420,7 @@ mod tests {
   
   #[test]
   fn test_parse_snippets() {
-    let input = r"snippet fun(a, b, c,) { static x=6;x=y+5;} snippet fun(a, b, c,) { static x=6;x=y+5;}";
+    let input = r"snippet fun(a, b, c,) { persistent x=6;x=y+5;} snippet fun(a, b, c,) { persistent x=6;x=y+5;}";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
     println!("{:?}", parse_snippets(token_iter));
@@ -447,13 +448,13 @@ mod tests {
   #[test]
   fn test_parse_prog() {
     let input        = r"snippet fun(a, b, c, x, y, ) {
-                            static x = 0;
+                            persistent x = 0;
                             a = x;
                             b = y;
                             m = 5;
                           }
                           snippet foo(a, b, c, ) {
-                            static x = 1;
+                            persistent x = 1;
                             x = 5;
                           }
                           (foo, fun)
@@ -467,7 +468,7 @@ mod tests {
   #[test]
   fn test_parse_prog2() {
     let input          = r"snippet fun ( a , b , c , x , y, ) {
-                            static x = 0 ;
+                            persistent x = 0 ;
                             t1 = a >= b;
                             a = t1 ? x : a;
                             b = t1 ? y : b;
@@ -476,7 +477,7 @@ mod tests {
                             e = t2 ? m : 5;
                           }
                           snippet foo(a, b, c,) {
-                            static x = 1;
+                            persistent x = 1;
                             x = 5;
                           }
                           (foo, fun)

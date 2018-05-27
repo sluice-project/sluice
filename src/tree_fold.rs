@@ -22,15 +22,16 @@ pub trait TreeFold<'a, Acc> {
  
   fn visit_snippet(tree : &'a Snippet, collector : &mut Acc) {
     match tree {
-      &Snippet::Snippet(ref identifier, ref id_list, ref initializers, ref statements) => {
+      &Snippet::Snippet(ref identifier, ref id_list, ref persistent_decls, ref transient_decls, ref statements) => {
+        // TODO: do something with transient_decls
         Self::visit_identifier(identifier, collector);
         Self::visit_idlist(id_list, collector);
-        Self::visit_initializers(initializers, collector);
+        Self::visit_persistent_decls(persistent_decls, collector);
         Self::visit_statements(statements, collector);
       }
     }
   }
-  
+
   fn visit_connections(tree : &'a Connections, collector : &mut Acc) {
     let &Connections::Connections(ref connection_vector) = tree;
     for connection in connection_vector {
@@ -44,18 +45,14 @@ pub trait TreeFold<'a, Acc> {
     for id in id_vector { Self::visit_identifier(id, collector); }
   }
   
-  fn visit_initializers(tree : &'a Initializers, collector : &mut Acc ) {
-    let &Initializers::Initializers(ref init_vector) = tree;
-    for init in init_vector { Self::visit_initializer(init, collector); }
+  fn visit_persistent_decls(tree : &'a PersistentDecls, collector : &mut Acc ) {
+    let &PersistentDecls::PersistentDecls(ref init_vector) = tree;
+    for init in init_vector { Self::visit_persistent_decl(init, collector); }
   }
 
-  fn visit_initializer(tree : &'a Initializer, collector : &mut Acc) {
-    match tree {
-      &Initializer::Initializer(ref identifier, ref value) => {
-        Self::visit_identifier(identifier, collector);
-        Self::visit_initial_value(value, collector);
-      }
-    }
+  fn visit_persistent_decl(tree : &'a PersistentDecl, collector : &mut Acc) {
+    Self::visit_identifier(&tree.identifier, collector);
+    Self::visit_initial_value(&tree.initial_value, collector);
   }
 
   fn visit_initial_value(tree : &'a InitialValue, collector : &mut Acc) {

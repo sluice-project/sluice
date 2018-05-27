@@ -26,14 +26,13 @@ pub struct VariableCollector<'a> {
   pub snippet_set     : HashSet<&'a str>
 }
 
-// Add definitions from initializers, idlist, snippet names, and statements
+// Add definitions from persistent_decls, idlist, snippet names, and statements
 // Check use of these definitions in visit_expr and visit_connections
 impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
-  fn visit_initializer(tree : &'a Initializer, collector : &mut VariableCollector<'a>) {
-    let &Initializer::Initializer(ref identifier, _) = tree;
-    let &Identifier::Identifier(id_string) = identifier;
+  fn visit_persistent_decl(tree : &'a PersistentDecl, collector : &mut VariableCollector<'a>) {
+    let &Identifier::Identifier(id_string) = &tree.identifier;
     if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id_string) != None {
-      panic!("Static variable {} has same name as {}'s argument variable {}",
+      panic!("Persistent variable {} has same name as {}'s argument variable {}",
              id_string,
              collector.current_snippet,
              id_string);
@@ -54,7 +53,7 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
   }
 
   fn visit_snippet(tree : &'a Snippet, collector: &mut VariableCollector<'a>) {
-    let &Snippet::Snippet(ref identifier, ref id_list, ref initializers, ref statements) = tree;
+    let &Snippet::Snippet(ref identifier, ref id_list, ref persistent_decls, ref transient_decls, ref statements) = tree;
     // Initialize symbol table for this snippet
     collector.current_snippet = identifier.get_string();
     if collector.transient_vars.get(collector.current_snippet) != None {
@@ -65,7 +64,7 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
       collector.snippet_set.insert(collector.current_snippet);
     }
     Self::visit_idlist(id_list, collector);
-    Self::visit_initializers(initializers, collector);
+    Self::visit_persistent_decls(persistent_decls, collector);
     Self::visit_statements(statements, collector);
   }
 
@@ -227,9 +226,9 @@ mod tests {
   }
 
   #[test]
-  fn test_def_use_defined_in_static(){
+  fn test_def_use_defined_in_persistent(){
     let input_program = r"snippet foo(a, b, c, ) {
-                            static d = 1;
+                            persistent d = 1;
                             x = d;
                           }
                           ";
@@ -237,9 +236,9 @@ mod tests {
   }
 
   #[test]
-  fn test_def_use_defined_in_static2(){
+  fn test_def_use_defined_in_persistent2(){
     let input_program = r"snippet foo(a, b, c, ) {
-                            static d = 1;
+                            persistent d = 1;
                             y = d + a;
                             x = d ? a : b;
                           }
@@ -248,10 +247,10 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected="Static variable x has same name as fun's argument variable x")]
-  fn test_def_use_redefined_static_arglist(){
+  #[should_panic(expected="Persistent variable x has same name as fun's argument variable x")]
+  fn test_def_use_redefined_persistent_arglist(){
     let input_program = r"snippet fun(a, b, c, x, y, ) {
-                            static x = 0;
+                            persistent x = 0;
                           }
                           ";
     run_def_use(input_program);
@@ -292,8 +291,8 @@ mod tests {
   }
 
   #[test]
-  fn test_def_use_redefine_transient_static() {
-    let input_program = r"snippet foo(a, b,) { static d = 1; d = 5; }";
+  fn test_def_use_redefine_transient_persistent() {
+    let input_program = r"snippet foo(a, b,) { persistent d = 1; d = 5; }";
     run_def_use(input_program);
   }
 }
