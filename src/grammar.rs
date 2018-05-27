@@ -138,14 +138,13 @@ impl<'a> Operand<'a>{
   pub fn get_id(&self) -> &str {
     match self {
       &Operand::LValue(LValue::Identifier(ref id)) => id.get_string(),
-      _                                            => panic!("Can't call get_id if operand isn't identifier.")
-                                                      // TODO: Should use assert
+      _ =>  { assert!(false, "Can't call get_id if operand isn't identifier.");"" }
     }
   }
   pub fn get_val(&self) -> String {
     match self {
       &Operand::Value(ref val) => val.get_string(),
-      _                        => panic!("Can't call get_val if operand isn't a value.") // TODO: Should use assert
+      _ => { assert!(false, "Can't call get_val if operand isn't a value."); return String::new();}
     }
   }
 }
