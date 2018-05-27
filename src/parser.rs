@@ -55,7 +55,7 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   match_token(token_iter, Token::ParenRight, "Snippet argument list must end with a right parenthesis.");
   match_token(token_iter, Token::BraceLeft, "Snippet body must begin with a left brace.");
   let persistent_decls    = parse_persistent_decls(token_iter);
-  let transient_decls     = TransientDecls::TransientDecls(Vec::<TransientDecl>::new()); // TODO XXX Fix this.
+  let transient_decls     = parse_transient_decls(token_iter);
   let statements      = parse_statements(token_iter);
   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
   return Snippet::Snippet(identifier, id_list, persistent_decls, transient_decls, statements);
@@ -129,12 +129,36 @@ fn parse_persistent_decls<'a>(token_iter : &mut TokenIterator<'a>) -> Persistent
 }
 
 fn parse_persistent_decl<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentDecl<'a> {
-  match_token(token_iter, Token::Persistent, "First token in an persistent_decl must be the keyword persistent.");
+  match_token(token_iter, Token::Persistent, "First token in a persistent_decl must be the keyword persistent.");
   let identifier = parse_identifier(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
   let value      = parse_initial_value(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in a persistent_decl must be a semicolon.");
   return PersistentDecl { identifier : identifier, initial_value : value, bit_width : 0 }; // TODO: Fix bit_width.
+}
+
+fn parse_transient_decls<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecls<'a> {
+  // Helper function to determine if it's an transient_decl
+  let is_transient = |token| { match token { &Token::Transient => true, _ => false, } };
+
+  let mut init_vector = Vec::<TransientDecl>::new();
+  loop {
+    if !token_iter.peek().is_some() || (!is_transient(*token_iter.peek().unwrap())) {
+      return TransientDecls::TransientDecls(init_vector);
+    } else {
+      let transient_decl = parse_transient_decl(token_iter);
+      init_vector.push(transient_decl);
+    }
+  }
+}
+
+fn parse_transient_decl<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecl<'a> {
+  match_token(token_iter, Token::Transient, "First token in a transient_decl must be the keyword transient.");
+  let identifier = parse_identifier(token_iter);
+  match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
+  let value      = parse_initial_value(token_iter);
+  match_token(token_iter, Token::SemiColon, "Last token in a transient_decl must be a semicolon.");
+  return TransientDecl { identifier : identifier, bit_width : 0 }; // TODO: Fix bit_width.
 }
 
 fn parse_statements<'a>(token_iter : &mut TokenIterator<'a>) -> Statements<'a> {
@@ -156,7 +180,7 @@ fn parse_statement<'a>(token_iter : &mut TokenIterator<'a>) -> Statement<'a> {
   let lvalue = parse_lvalue(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and expression by an assignment symbol.");
   let expr       = parse_expr(token_iter);
-  match_token(token_iter, Token::SemiColon, "Last token in a persistent_decl must be a semicolon.");
+  match_token(token_iter, Token::SemiColon, "Last token in a statement must be a semicolon.");
   return Statement::Statement(lvalue, expr);
 }
 

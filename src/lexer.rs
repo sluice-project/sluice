@@ -13,10 +13,12 @@ fn get_single_token(tok_str : &str) -> Token {
   if KEYWORDS.is_match(tok_str) {
     return match tok_str {
      "persistent" => Token::Persistent,
+     "transient"  => Token::Transient,
      "snippet"=> Token::Snippet,
      "and"    => Token::BooleanAnd,
      "or"     => Token::BooleanOr,
      "not"    => Token::BooleanNot,
+     "bit"    => Token::Bit,
      _        => panic!("Unrecognized token string: {}", tok_str)
     }
   } else if IDENTIFIERS.is_match(tok_str) {

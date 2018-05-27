@@ -5,12 +5,14 @@ pub enum Token<'a> {
   Identifier(&'a str),
   Value(u32),
 
-  // Keywords: persistent, snippet, and, or, not
+  // Keywords: persistent, transient, snippet, and, or, not, bit
   Persistent,
+  Transient,
   Snippet,
   BooleanAnd,
   BooleanOr,
   BooleanNot, // XXX: Not used in language yet
+  Bit,
 
   // Separators
   Colon,
