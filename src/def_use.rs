@@ -228,7 +228,7 @@ mod tests {
   #[test]
   fn test_def_use_defined_in_persistent(){
     let input_program = r"snippet foo(a, b, c, ) {
-                            persistent d = 1;
+                            persistent d : bit<1> = 1;
                             x = d;
                           }
                           ";
@@ -238,7 +238,7 @@ mod tests {
   #[test]
   fn test_def_use_defined_in_persistent2(){
     let input_program = r"snippet foo(a, b, c, ) {
-                            persistent d = 1;
+                            persistent d : bit<1> = 1;
                             y = d + a;
                             x = d ? a : b;
                           }
@@ -250,7 +250,7 @@ mod tests {
   #[should_panic(expected="Persistent variable x has same name as fun's argument variable x")]
   fn test_def_use_redefined_persistent_arglist(){
     let input_program = r"snippet fun(a, b, c, x, y, ) {
-                            persistent x = 0;
+                            persistent x : bit<1> = 0;
                           }
                           ";
     run_def_use(input_program);
@@ -292,7 +292,7 @@ mod tests {
 
   #[test]
   fn test_def_use_redefine_transient_persistent() {
-    let input_program = r"snippet foo(a, b,) { persistent d = 1; d = 5; }";
+    let input_program = r"snippet foo(a, b,) { persistent d : bit<2> = 1; d = 5; }";
     run_def_use(input_program);
   }
 }

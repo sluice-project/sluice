@@ -131,10 +131,34 @@ fn parse_persistent_decls<'a>(token_iter : &mut TokenIterator<'a>) -> Persistent
 fn parse_persistent_decl<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentDecl<'a> {
   match_token(token_iter, Token::Persistent, "First token in a persistent_decl must be the keyword persistent.");
   let identifier = parse_identifier(token_iter);
+  let bit_width  = parse_type_annotation(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
   let value      = parse_initial_value(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in a persistent_decl must be a semicolon.");
-  return PersistentDecl { identifier : identifier, initial_value : value, bit_width : 0 }; // TODO: Fix bit_width.
+
+  // Check that the initial values are representable using bit vector of bit_width
+  match &value {
+    &InitialValue::Value(Value::Value(ref init_value_u32)) => {
+      if *init_value_u32 > 2_u32.pow(bit_width) - 1 {
+        panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
+               init_value_u32,
+               2_u32.pow(bit_width) - 1,
+               bit_width);
+      }
+    },
+    &InitialValue::ValueList(ValueList::ValueList(ref initial_values)) => {
+      for value in initial_values {
+        let Value::Value(init_value_u32) = value;
+        if *init_value_u32 > 2_u32.pow(bit_width) - 1 {
+          panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
+                 init_value_u32,
+                 2_u32.pow(bit_width) - 1,
+                 bit_width);
+        }
+      }
+    }
+  }
+  return PersistentDecl { identifier : identifier, initial_value : value, bit_width : bit_width};
 }
 
 fn parse_transient_decls<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecls<'a> {
@@ -155,10 +179,24 @@ fn parse_transient_decls<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDe
 fn parse_transient_decl<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecl<'a> {
   match_token(token_iter, Token::Transient, "First token in a transient_decl must be the keyword transient.");
   let identifier = parse_identifier(token_iter);
-  match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
-  let value      = parse_initial_value(token_iter);
+  let bit_width  = parse_type_annotation(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in a transient_decl must be a semicolon.");
-  return TransientDecl { identifier : identifier, bit_width : 0 }; // TODO: Fix bit_width.
+  return TransientDecl { identifier : identifier, bit_width : bit_width };
+}
+
+// Retrieve bit width of bit vector. That's the only type for now.
+fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>) -> u32 {
+  match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
+  match_token(token_iter, Token::Bit, "Invalid type, bit vectors are the only supported type.");
+  match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
+  let Value::Value(bit_width) = parse_value(token_iter);
+  if bit_width > 30 {
+    panic!("Bit width can be at most 30.");
+  } else if bit_width < 1 {
+    panic!("Bit width must be at least 1.");
+  }
+  match_token(token_iter, Token::GreaterThan, "Need angular brackets to specify width of bit vector.");
+  return bit_width;
 }
 
 fn parse_statements<'a>(token_iter : &mut TokenIterator<'a>) -> Statements<'a> {
@@ -395,10 +433,19 @@ mod tests {
     println!("{:?}", parse_statements(token_iter));
     assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
+
+  #[test]
+  fn test_parse_transient_decls() {
+    let input = r"transient x : bit<8>;";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_transient_decls(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
   
   #[test]
   fn test_parse_persistent_decls() {
-    let input = r"persistent x=6;persistent y=7;";
+    let input = r"persistent x : bit<3> = 6;persistent y : bit<3> =7;";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
     println!("{:?}", parse_persistent_decls(token_iter));
@@ -407,7 +454,7 @@ mod tests {
 
   #[test]
   fn test_parse_persistent_decls2() {
-    let input = r"persistent x={4, 5, 6, 7,};persistent y=7;";
+    let input = r"persistent x : bit<3> ={4, 5, 6, 7,};persistent y : bit<3> =7;";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
     println!("{:?}", parse_persistent_decls(token_iter));
@@ -417,16 +464,46 @@ mod tests {
   #[test]
   #[should_panic(expected="Invalid token: BraceRight, expected Comma.\nError message: \"Expected comma as separator between values.\"")]
   fn test_parse_persistent_decls2_fail() {
-    let input = r"persistent x={4, 5, 6, 7};persistent y=7;";
+    let input = r"persistent x : bit<3> ={4, 5, 6, 7};persistent y : bit<3> =7;";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
     println!("{:?}", parse_persistent_decls(token_iter));
     assert!(token_iter.peek().is_none(), "token iterator is not empty");
   }
- 
+
+  #[test]
+  #[should_panic(expected="Initial value 4 is outside the range [0, 3] of 2-bit vector.")]
+  fn test_parse_persistent_decls_outside_range() {
+    let input = r"persistent x : bit<2> = 4;";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_persistent_decls(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+
+  #[test]
+  #[should_panic(expected="Bit width must be at least 1.")]
+  fn test_parse_persistent_decls_bitwidth0() {
+    let input = r"persistent x : bit<0> = 4;";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_persistent_decls(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+
+  #[test]
+  #[should_panic(expected="Bit width can be at most 30.")]
+  fn test_parse_persistent_decls_bitwidth31() {
+    let input = r"persistent x : bit<31> = 4;";
+    let tokens = & mut get_tokens(input);
+    let token_iter = & mut tokens.iter().peekable();
+    println!("{:?}", parse_persistent_decls(token_iter));
+    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  }
+
   #[test]
   fn test_parse_snippet1() {
-    let input = r"snippet fun(a, b, c,) { persistent x=6;persistent y=7;}";
+    let input = r"snippet fun(a, b, c,) { persistent x : bit<3> =6;persistent y : bit<3> =7;}";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
     println!("{:?}", parse_snippet(token_iter));
@@ -435,7 +512,7 @@ mod tests {
   
   #[test]
   fn test_parse_snippet2() {
-    let input = r"snippet fun(a, b, c,) { persistent x=6;x=y+5;}";
+    let input = r"snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
     println!("{:?}", parse_snippet(token_iter));
@@ -444,7 +521,7 @@ mod tests {
   
   #[test]
   fn test_parse_snippets() {
-    let input = r"snippet fun(a, b, c,) { persistent x=6;x=y+5;} snippet fun(a, b, c,) { persistent x=6;x=y+5;}";
+    let input = r"snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;} snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}";
     let tokens = & mut get_tokens(input);
     let token_iter = & mut tokens.iter().peekable();
     println!("{:?}", parse_snippets(token_iter));
@@ -472,13 +549,13 @@ mod tests {
   #[test]
   fn test_parse_prog() {
     let input        = r"snippet fun(a, b, c, x, y, ) {
-                            persistent x = 0;
+                            persistent x : bit<3> = 0;
                             a = x;
                             b = y;
                             m = 5;
                           }
                           snippet foo(a, b, c, ) {
-                            persistent x = 1;
+                            persistent x : bit<3> = 1;
                             x = 5;
                           }
                           (foo, fun)
@@ -492,7 +569,8 @@ mod tests {
   #[test]
   fn test_parse_prog2() {
     let input          = r"snippet fun ( a , b , c , x , y, ) {
-                            persistent x = 0 ;
+                            persistent x : bit<3> = 0 ;
+                            transient k : bit<5>;
                             t1 = a >= b;
                             a = t1 ? x : a;
                             b = t1 ? y : b;
@@ -501,7 +579,7 @@ mod tests {
                             e = t2 ? m : 5;
                           }
                           snippet foo(a, b, c,) {
-                            persistent x = 1;
+                            persistent x : bit<3> = 1;
                             x = 5;
                           }
                           (foo, fun)
