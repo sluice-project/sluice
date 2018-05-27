@@ -133,31 +133,19 @@ fn parse_persistent_decl<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentD
   let identifier = parse_identifier(token_iter);
   let bit_width  = parse_type_annotation(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
-  let value      = parse_initial_value(token_iter);
+  let initial_values = parse_initial_values(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in a persistent_decl must be a semicolon.");
 
   // Check that the initial values are representable using bit vector of bit_width
-  match &value {
-    &InitialValue::Value(ref value) => {
-      if value.value > 2_u32.pow(bit_width) - 1 {
-        panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
-               value.value,
-               2_u32.pow(bit_width) - 1,
-               bit_width);
-      }
-    },
-    &InitialValue::ValueList(ref value_list) => {
-      for value in &(value_list.value_vector) {
-        if value.value > 2_u32.pow(bit_width) - 1 {
-          panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
-                 value.value,
-                 2_u32.pow(bit_width) - 1,
-                 bit_width);
-        }
-      }
+  for value in &(initial_values) {
+    if value.value > 2_u32.pow(bit_width) - 1 {
+      panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
+             value.value,
+             2_u32.pow(bit_width) - 1,
+             bit_width);
     }
   }
-  return PersistentDecl { identifier : identifier, initial_value : value, bit_width : bit_width};
+  return PersistentDecl { identifier, initial_values, bit_width};
 }
 
 fn parse_transient_decls<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecls<'a> {
@@ -300,27 +288,29 @@ fn parse_operand<'a>(token_iter : &mut TokenIterator<'a>) -> Operand<'a> {
   }
 }
 
-fn parse_initial_value<'a>(token_iter : &mut TokenIterator<'a>) -> InitialValue {
+fn parse_initial_values<'a>(token_iter : &mut TokenIterator<'a>) -> Vec<Value> {
   match token_iter.peek().unwrap() {
-    && Token::Value(_)  => return InitialValue::Value(parse_value(token_iter)),
+    && Token::Value(_)  => { let mut singleton_vector = Vec::<Value>::new();
+                             singleton_vector.push(parse_value(token_iter));
+                             return singleton_vector; },
     && Token::BraceLeft => {
       match_token(token_iter, Token::BraceLeft, "PersistentDecl list must start with a left brace.");
-      let value_list = parse_valuelist(token_iter);
+      let value_vector = parse_value_vector(token_iter);
       match_token(token_iter, Token::BraceRight, "PersistentDecl list must end with a right brace.");
-      return InitialValue::ValueList(value_list);
+      return value_vector;
     },
     _                   => panic!("Invalid token: {:?}, expected Token::Value or Token::BraceLeft", token_iter.peek().unwrap())
   }
 }
 
-fn parse_valuelist<'a>(token_iter : &mut TokenIterator<'a>) -> ValueList {
+fn parse_value_vector<'a>(token_iter : &mut TokenIterator<'a>) -> Vec<Value> {
   // Helper function to detect values
   let is_value = |token| { match token { &Token::Value(_) => true, _ => false, } };
 
   let mut value_vector = Vec::<Value>::new();
   loop {
     if !token_iter.peek().is_some() || (!is_value(*token_iter.peek().unwrap())) {
-      return ValueList{value_vector};
+      return value_vector;
     } else {
       let value = parse_value(token_iter);
       match_token(token_iter, Token::Comma, "Expected comma as separator between values.");

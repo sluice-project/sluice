@@ -49,7 +49,7 @@ pub struct PersistentDecls<'a> {
 #[derive(Debug)]
 pub struct PersistentDecl<'a> {
   pub identifier : Identifier<'a>,
-  pub initial_value : InitialValue,
+  pub initial_values : Vec<Value>,
   pub bit_width  : u32
 }
 
@@ -62,17 +62,6 @@ pub struct TransientDecls<'a> {
 pub struct TransientDecl<'a> {
   pub identifier : Identifier<'a>,
   pub bit_width  : u32
-}
-
-#[derive(Debug)]
-pub enum InitialValue {
-  Value(Value),
-  ValueList(ValueList)
-}
-
-#[derive(Debug)]
-pub struct ValueList {
-  pub value_vector : Vec<Value>
 }
 
 #[derive(Debug)]

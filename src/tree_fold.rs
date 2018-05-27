@@ -40,17 +40,9 @@ pub trait TreeFold<'a, Acc> {
 
   fn visit_persistent_decl(tree : &'a PersistentDecl, collector : &mut Acc) {
     Self::visit_identifier(&tree.identifier, collector);
-    Self::visit_initial_value(&tree.initial_value, collector);
+    for value in &(tree.initial_values) { Self::visit_value(value, collector); };
   }
 
-  fn visit_initial_value(tree : &'a InitialValue, collector : &mut Acc) {
-    match tree {
-      &InitialValue::Value(ref value) => Self::visit_value(value, collector),
-      &InitialValue::ValueList(ref value_list) =>
-       { for value in &(value_list.value_vector) { Self::visit_value(value, collector); } }
-    }
-  }
-  
   fn visit_statements(tree : &'a Statements, collector : &mut Acc) {
     for stmt in &tree.stmt_vector { Self::visit_statement(stmt, collector); }
   }
