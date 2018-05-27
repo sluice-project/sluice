@@ -1,21 +1,26 @@
 #[derive(Debug)]
-pub enum Prog<'a> {
-  Prog(Snippets<'a>, Connections<'a>)
+pub struct Prog<'a> {
+  pub snippets : Snippets<'a>,
+  pub connections : Connections<'a>
 }
 
 #[derive(Debug)]
-pub enum Snippets<'a> {
-  Snippets(Vec<Snippet<'a>>),
+pub struct Snippets<'a> {
+  pub snippet_vector : Vec<Snippet<'a>>
 }
 
 #[derive(Debug)]
-pub enum Snippet<'a> {
-  Snippet(Identifier<'a>, IdList<'a>, PersistentDecls<'a>, TransientDecls<'a>, Statements<'a>)
+pub struct Snippet<'a> {
+  pub snippet_id : Identifier<'a>,
+  pub arg_list   : IdList<'a>,
+  pub persistent_decls : PersistentDecls<'a>,
+  pub transient_decls : TransientDecls<'a>,
+  pub statements : Statements<'a>
 }
 
 #[derive(Debug)]
-pub enum Connections<'a> {
-  Connections(Vec<(Connection<'a>)>)
+pub struct Connections<'a> {
+  pub connection_vector : Vec<Connection<'a>>
 }
 
 #[derive(Debug)]
@@ -25,8 +30,6 @@ pub struct Connection<'a> {
   pub variable_pairs : Vec<VariablePair<'a>>
 }
 
-// TODO: We seem to be mixing up structs and enums.
-// Need some convention for this.
 #[derive(Debug)]
 pub struct VariablePair<'a> {
   pub from_var : Identifier<'a>,
@@ -34,13 +37,13 @@ pub struct VariablePair<'a> {
 }
 
 #[derive(Debug)]
-pub enum IdList<'a> {
-  IdList(Vec<Identifier<'a>>),
+pub struct IdList<'a> {
+  pub id_vector : Vec<Identifier<'a>>
 }
 
 #[derive(Debug)]
-pub enum PersistentDecls<'a> {
-  PersistentDecls(Vec<PersistentDecl<'a>>),
+pub struct PersistentDecls<'a> {
+  pub decl_vector : Vec<PersistentDecl<'a>>
 }
 
 #[derive(Debug)]
@@ -51,8 +54,8 @@ pub struct PersistentDecl<'a> {
 }
 
 #[derive(Debug)]
-pub enum TransientDecls<'a> {
-  TransientDecls(Vec<TransientDecl<'a>>),
+pub struct TransientDecls<'a> {
+  pub decl_vector : Vec<TransientDecl<'a>>
 }
 
 #[derive(Debug)]
@@ -68,23 +71,25 @@ pub enum InitialValue {
 }
 
 #[derive(Debug)]
-pub enum ValueList {
-  ValueList(Vec<Value>)
+pub struct ValueList {
+  pub value_vector : Vec<Value>
 }
 
 #[derive(Debug)]
-pub enum Statements<'a> {
-  Statements(Vec<Statement<'a>>)
+pub struct Statements<'a> {
+  pub stmt_vector : Vec<Statement<'a>>
 }
 
 #[derive(Debug)]
-pub enum Statement<'a> {
-  Statement(LValue<'a>, Expr<'a>)
+pub struct Statement<'a> {
+  pub lvalue : LValue<'a>,
+  pub expr   : Expr<'a>
 }
 
 #[derive(Debug)]
-pub enum Expr<'a> {
-  Expr(Operand<'a>, ExprRight<'a>)
+pub struct Expr<'a> {
+  pub op1        : Operand<'a>,
+  pub expr_right : ExprRight<'a>
 }
 
 // Enum of binary operation types
@@ -106,26 +111,24 @@ pub enum ExprRight<'a> {
 }
 
 #[derive(Debug)]
-pub enum Identifier<'a> {
-  Identifier(&'a str),
+pub struct Identifier<'a> {
+  pub id_name : &'a str,
 }
 
 impl<'a> Identifier<'a> {
   pub fn get_string(&self) -> &str{
-    let &Identifier::Identifier(s) = self;
-    return s;
+    return self.id_name;
   }
 }
 
 #[derive(Debug)]
-pub enum Value {
-  Value(u32)
+pub struct Value {
+  pub value : u32
 }
 
 impl Value {
   pub fn get_string(&self) -> String {
-    let &Value::Value(ref s) = self;
-    return s.to_string();
+    return self.value.to_string();
   }
 }
 

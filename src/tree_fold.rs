@@ -7,47 +7,35 @@ use super::grammar::*;
 
 pub trait TreeFold<'a, Acc> {
   fn visit_prog(tree : &'a Prog, collector : &mut Acc) {
-    match tree {
-      &Prog::Prog(ref snippets, ref connections) => {
-        Self::visit_snippets(snippets, collector);
-        Self::visit_connections(connections, collector);
-      }
-    }
+    Self::visit_snippets(&tree.snippets, collector);
+    Self::visit_connections(&tree.connections, collector);
   }
 
   fn visit_snippets(tree : &'a Snippets, collector : &mut Acc) {
-    let &Snippets::Snippets(ref snippet_vector) = tree;
-    for snippet in snippet_vector { Self::visit_snippet(snippet, collector); }
+    for snippet in &tree.snippet_vector { Self::visit_snippet(snippet, collector); }
   }
  
   fn visit_snippet(tree : &'a Snippet, collector : &mut Acc) {
-    match tree {
-      &Snippet::Snippet(ref identifier, ref id_list, ref persistent_decls, ref transient_decls, ref statements) => {
-        // TODO: do something with transient_decls
-        Self::visit_identifier(identifier, collector);
-        Self::visit_idlist(id_list, collector);
-        Self::visit_persistent_decls(persistent_decls, collector);
-        Self::visit_statements(statements, collector);
-      }
-    }
+    // TODO: do something with transient_decls
+    Self::visit_identifier(&tree.snippet_id, collector);
+    Self::visit_idlist(&tree.arg_list, collector);
+    Self::visit_persistent_decls(&tree.persistent_decls, collector);
+    Self::visit_statements(&tree.statements, collector);
   }
 
   fn visit_connections(tree : &'a Connections, collector : &mut Acc) {
-    let &Connections::Connections(ref connection_vector) = tree;
-    for connection in connection_vector {
+    for connection in &tree.connection_vector {
       Self::visit_identifier(&connection.from_snippet, collector);
       Self::visit_identifier(&connection.to_snippet, collector);
     }
   }
   
   fn visit_idlist(tree : &'a IdList, collector : &mut Acc) {
-    let &IdList::IdList(ref id_vector) = tree;
-    for id in id_vector { Self::visit_identifier(id, collector); }
+    for id in &tree.id_vector { Self::visit_identifier(id, collector); }
   }
   
   fn visit_persistent_decls(tree : &'a PersistentDecls, collector : &mut Acc ) {
-    let &PersistentDecls::PersistentDecls(ref init_vector) = tree;
-    for init in init_vector { Self::visit_persistent_decl(init, collector); }
+    for init in &tree.decl_vector { Self::visit_persistent_decl(init, collector); }
   }
 
   fn visit_persistent_decl(tree : &'a PersistentDecl, collector : &mut Acc) {
@@ -58,32 +46,23 @@ pub trait TreeFold<'a, Acc> {
   fn visit_initial_value(tree : &'a InitialValue, collector : &mut Acc) {
     match tree {
       &InitialValue::Value(ref value) => Self::visit_value(value, collector),
-      &InitialValue::ValueList(ValueList::ValueList(ref value_vector)) =>
-       { for value in value_vector { Self::visit_value(value, collector); } }
+      &InitialValue::ValueList(ref value_list) =>
+       { for value in &(value_list.value_vector) { Self::visit_value(value, collector); } }
     }
   }
   
   fn visit_statements(tree : &'a Statements, collector : &mut Acc) {
-    let &Statements::Statements(ref stmt_vector) = tree;
-    for stmt in stmt_vector { Self::visit_statement(stmt, collector); }
+    for stmt in &tree.stmt_vector { Self::visit_statement(stmt, collector); }
   }
   
   fn visit_statement(tree : &'a Statement, collector : &mut Acc) {
-    match tree {
-      &Statement::Statement(ref lvalue, ref expr) => {
-        Self::visit_lvalue(lvalue, collector);
-        Self::visit_expr(expr, collector);
-      }
-    }
+    Self::visit_lvalue(&tree.lvalue, collector);
+    Self::visit_expr(&tree.expr, collector);
   }
   
   fn visit_expr(tree : &'a Expr, collector : &mut Acc) {
-    match tree {
-      &Expr::Expr(ref operand, ref expr_right) => {
-        Self::visit_operand(operand, collector);
-        Self::visit_expr_right(expr_right, collector);
-      }
-    }
+    Self::visit_operand(&tree.op1, collector);
+    Self::visit_expr_right(&tree.expr_right, collector);
   }
   
   fn visit_expr_right(tree : &'a ExprRight, collector : &mut Acc) {

@@ -29,7 +29,7 @@ fn match_token<'a>(token_iter : & mut TokenIterator<'a>, expected : Token<'a>, e
 pub fn parse_prog<'a>(token_iter : &mut TokenIterator<'a>) -> Prog<'a> {
   let snippets    = parse_snippets(token_iter);
   let connections = parse_connections(token_iter);
-  return Prog::Prog(snippets, connections);
+  return Prog { snippets, connections };
 }
 
 fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a>) -> Snippets<'a> {
@@ -39,7 +39,7 @@ fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a>) -> Snippets<'a> {
   let mut snippet_vector = Vec::<Snippet>::new();
   loop {
     if !token_iter.peek().is_some() || !is_snippet(*token_iter.peek().unwrap()) {
-      return Snippets::Snippets(snippet_vector);
+      return Snippets{snippet_vector};
     } else {
       let snippet = parse_snippet(token_iter);
       snippet_vector.push(snippet);
@@ -49,23 +49,23 @@ fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a>) -> Snippets<'a> {
   
 fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
-  let identifier = parse_identifier(token_iter);
+  let snippet_id  = parse_identifier(token_iter);
   match_token(token_iter, Token::ParenLeft, "Snippet argument list must start with a left parenthesis.");
-  let id_list    = parse_idlist(token_iter);
+  let arg_list    = parse_idlist(token_iter);
   match_token(token_iter, Token::ParenRight, "Snippet argument list must end with a right parenthesis.");
   match_token(token_iter, Token::BraceLeft, "Snippet body must begin with a left brace.");
   let persistent_decls    = parse_persistent_decls(token_iter);
   let transient_decls     = parse_transient_decls(token_iter);
   let statements      = parse_statements(token_iter);
   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
-  return Snippet::Snippet(identifier, id_list, persistent_decls, transient_decls, statements);
+  return Snippet{snippet_id, arg_list, persistent_decls, transient_decls, statements};
 }
 
 fn parse_connections<'a>(token_iter : &mut TokenIterator<'a>) -> Connections<'a> {
   let mut connection_vector = Vec::<Connection<'a>>::new();
   loop {
     if !token_iter.peek().is_some() {
-      return Connections::Connections(connection_vector);
+      return Connections{connection_vector};
     } else {
       connection_vector.push(parse_connection(token_iter));
     }
@@ -104,7 +104,7 @@ fn parse_idlist<'a>(token_iter : &mut TokenIterator<'a>) -> IdList<'a> {
   let mut id_vector = Vec::<Identifier>::new();
   loop {
     if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
-      return IdList::IdList(id_vector);
+      return IdList{id_vector};
     } else {
       let identifier = parse_identifier(token_iter);
       match_token(token_iter, Token::Comma, "Expected comma as separator between identifiers.");
@@ -117,13 +117,13 @@ fn parse_persistent_decls<'a>(token_iter : &mut TokenIterator<'a>) -> Persistent
   // Helper function to determine if it's an persistent_decl
   let is_persistent = |token| { match token { &Token::Persistent => true, _ => false, } };
 
-  let mut init_vector = Vec::<PersistentDecl>::new();
+  let mut decl_vector = Vec::<PersistentDecl>::new();
   loop {
     if !token_iter.peek().is_some() || (!is_persistent(*token_iter.peek().unwrap())) {
-      return PersistentDecls::PersistentDecls(init_vector);
+      return PersistentDecls{decl_vector};
     } else {
       let persistent_decl = parse_persistent_decl(token_iter);
-      init_vector.push(persistent_decl);
+      decl_vector.push(persistent_decl);
     }
   }
 }
@@ -138,20 +138,19 @@ fn parse_persistent_decl<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentD
 
   // Check that the initial values are representable using bit vector of bit_width
   match &value {
-    &InitialValue::Value(Value::Value(ref init_value_u32)) => {
-      if *init_value_u32 > 2_u32.pow(bit_width) - 1 {
+    &InitialValue::Value(ref value) => {
+      if value.value > 2_u32.pow(bit_width) - 1 {
         panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
-               init_value_u32,
+               value.value,
                2_u32.pow(bit_width) - 1,
                bit_width);
       }
     },
-    &InitialValue::ValueList(ValueList::ValueList(ref initial_values)) => {
-      for value in initial_values {
-        let Value::Value(init_value_u32) = value;
-        if *init_value_u32 > 2_u32.pow(bit_width) - 1 {
+    &InitialValue::ValueList(ref value_list) => {
+      for value in &(value_list.value_vector) {
+        if value.value > 2_u32.pow(bit_width) - 1 {
           panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
-                 init_value_u32,
+                 value.value,
                  2_u32.pow(bit_width) - 1,
                  bit_width);
         }
@@ -165,13 +164,13 @@ fn parse_transient_decls<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDe
   // Helper function to determine if it's an transient_decl
   let is_transient = |token| { match token { &Token::Transient => true, _ => false, } };
 
-  let mut init_vector = Vec::<TransientDecl>::new();
+  let mut decl_vector = Vec::<TransientDecl>::new();
   loop {
     if !token_iter.peek().is_some() || (!is_transient(*token_iter.peek().unwrap())) {
-      return TransientDecls::TransientDecls(init_vector);
+      return TransientDecls{decl_vector};
     } else {
       let transient_decl = parse_transient_decl(token_iter);
-      init_vector.push(transient_decl);
+      decl_vector.push(transient_decl);
     }
   }
 }
@@ -189,7 +188,7 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>) -> u32 {
   match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
   match_token(token_iter, Token::Bit, "Invalid type, bit vectors are the only supported type.");
   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
-  let Value::Value(bit_width) = parse_value(token_iter);
+  let bit_width = parse_value(token_iter).value;
   if bit_width > 30 {
     panic!("Bit width can be at most 30.");
   } else if bit_width < 1 {
@@ -203,13 +202,13 @@ fn parse_statements<'a>(token_iter : &mut TokenIterator<'a>) -> Statements<'a> {
   // Helper function to identify beginning of statements
   let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false } };
 
-  let mut statement_vector = Vec::<Statement>::new();
+  let mut stmt_vector = Vec::<Statement>::new();
   loop {
     if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
-      return Statements::Statements(statement_vector);
+      return Statements{stmt_vector};
     } else {
       let statement = parse_statement(token_iter);
-      statement_vector.push(statement);
+      stmt_vector.push(statement);
     }
   }
 }
@@ -219,16 +218,16 @@ fn parse_statement<'a>(token_iter : &mut TokenIterator<'a>) -> Statement<'a> {
   match_token(token_iter, Token::Assign, "Must separate identifier and expression by an assignment symbol.");
   let expr       = parse_expr(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in a statement must be a semicolon.");
-  return Statement::Statement(lvalue, expr);
+  return Statement{lvalue, expr};
 }
 
 fn parse_expr<'a>(token_iter : &mut TokenIterator<'a>) -> Expr<'a> {
   if !token_iter.peek().is_some() {
     panic!("Insufficient tokens in call to parse_expr.");
   }
-  let operand    = parse_operand(token_iter);
+  let op1        = parse_operand(token_iter);
   let expr_right = parse_expr_right(token_iter);
-  return Expr::Expr(operand, expr_right);
+  return Expr{op1, expr_right};
 }
 
 // Macro to generate parser for ExprRight given a list of binary operations
@@ -270,8 +269,8 @@ expr_right_parser!(BooleanAnd, BooleanOr, Plus, Minus, Mul, Div, Modulo, Equal, 
 fn parse_identifier<'a>(token_iter : &mut TokenIterator<'a>) -> Identifier<'a> {
   let identifier_token = token_iter.next().unwrap();
   match identifier_token {
-    & Token::Identifier(i) => Identifier::Identifier(i),
-    _                      => panic!("Invalid token: {:?}, expected Token::Identifier", identifier_token)
+    & Token::Identifier(id_name) => Identifier{id_name},
+    _                            => panic!("Invalid token: {:?}, expected Token::Identifier", identifier_token)
   }
 }
 
@@ -279,14 +278,14 @@ fn parse_lvalue<'a>(token_iter : &mut TokenIterator<'a>) -> LValue<'a> {
   let lvalue_token = token_iter.next().unwrap();
   let is_square_left = |token| { match token { &Token::SquareLeft => true, _ => false, } };
   match lvalue_token {
-    & Token::Identifier(i) => {
+    & Token::Identifier(id_name) => {
       if token_iter.peek().is_none() || !is_square_left(token_iter.peek().unwrap()) {
-        return LValue::Identifier(Identifier::Identifier(i));
+        return LValue::Identifier(Identifier{id_name});
       } else {
         match_token(token_iter, Token::SquareLeft, "Expected [ here.");
         let array_address = parse_operand(token_iter);
         match_token(token_iter, Token::SquareRight, "Expected ] here.");
-        return LValue::Array(Identifier::Identifier(i), Box::new(array_address));
+        return LValue::Array(Identifier{id_name}, Box::new(array_address));
       }
     }
     _                      => panic!("Invalid token: {:?}, expected Token::Identifier", lvalue_token)
@@ -321,7 +320,7 @@ fn parse_valuelist<'a>(token_iter : &mut TokenIterator<'a>) -> ValueList {
   let mut value_vector = Vec::<Value>::new();
   loop {
     if !token_iter.peek().is_some() || (!is_value(*token_iter.peek().unwrap())) {
-      return ValueList::ValueList(value_vector);
+      return ValueList{value_vector};
     } else {
       let value = parse_value(token_iter);
       match_token(token_iter, Token::Comma, "Expected comma as separator between values.");
@@ -333,7 +332,7 @@ fn parse_valuelist<'a>(token_iter : &mut TokenIterator<'a>) -> ValueList {
 fn parse_value<'a>(token_iter : &mut TokenIterator<'a>) -> Value {
   let value_token = token_iter.next().unwrap();
   match value_token {
-    & Token::Value(v)  => return Value::Value(v),
+    & Token::Value(value)  => return Value{value},
     _                  => panic!("Invalid token: {:?}, expected Token::Value", value_token)
  }
 }

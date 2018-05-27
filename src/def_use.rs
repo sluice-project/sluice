@@ -30,20 +30,19 @@ pub struct VariableCollector<'a> {
 // Check use of these definitions in visit_expr and visit_connections
 impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
   fn visit_persistent_decl(tree : &'a PersistentDecl, collector : &mut VariableCollector<'a>) {
-    let &Identifier::Identifier(id_string) = &tree.identifier;
-    if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id_string) != None {
+    let id_name = &tree.identifier.id_name;
+    if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id_name) != None {
       panic!("Persistent variable {} has same name as {}'s argument variable {}",
-             id_string,
+             id_name,
              collector.current_snippet,
-             id_string);
+             id_name);
     } else {
-      collector.persistent_vars.get_mut(collector.current_snippet).unwrap().insert(id_string);
+      collector.persistent_vars.get_mut(collector.current_snippet).unwrap().insert(id_name);
     }
   }
 
   fn visit_idlist(tree : &'a IdList, collector : &mut VariableCollector<'a>) {
-    let &IdList::IdList(ref id_vector) = tree;
-    for id in id_vector {
+    for id in &tree.id_vector {
       if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id.get_string()) != None {
         panic!("Variable {} repeated twice in {}'s argument list", id.get_string(), collector.current_snippet);
       } else {
@@ -53,9 +52,8 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
   }
 
   fn visit_snippet(tree : &'a Snippet, collector: &mut VariableCollector<'a>) {
-    let &Snippet::Snippet(ref identifier, ref id_list, ref persistent_decls, ref transient_decls, ref statements) = tree;
     // Initialize symbol table for this snippet
-    collector.current_snippet = identifier.get_string();
+    collector.current_snippet = &tree.snippet_id.get_string();
     if collector.transient_vars.get(collector.current_snippet) != None {
       panic!("Can't have two snippets named {}.", collector.current_snippet);
     } else {
@@ -63,41 +61,39 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
       collector.persistent_vars.insert(collector.current_snippet, HashSet::new());
       collector.snippet_set.insert(collector.current_snippet);
     }
-    Self::visit_idlist(id_list, collector);
-    Self::visit_persistent_decls(persistent_decls, collector);
-    Self::visit_statements(statements, collector);
+    Self::visit_idlist(&tree.arg_list, collector);
+    Self::visit_persistent_decls(&tree.persistent_decls, collector);
+    Self::visit_statements(&tree.statements, collector);
   }
 
   fn visit_statement(tree : &'a Statement, collector : &mut VariableCollector<'a>) {
-    let &Statement::Statement(ref lvalue, ref expr) = tree;
-    let id_string =
-      match lvalue {
-        &LValue::Identifier(Identifier::Identifier(x)) => { x },
-        &LValue::Array(Identifier::Identifier(x), _) => { x }
+    let id_name =
+      match &tree.lvalue {
+        &LValue::Identifier(ref identifier) => { identifier.id_name },
+        &LValue::Array(ref identifier, _) => { identifier.id_name }
       };
 
     // First visit expression because that is conceptually processed first
-    Self::visit_expr(expr, collector);
+    Self::visit_expr(&tree.expr, collector);
 
-    // Then process id_string;
-    if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id_string) != None {
-      panic!("Can't redefine transient var {} in {}. Transients are immutable for now.", id_string, collector.current_snippet);
+    // Then process id_name;
+    if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id_name) != None {
+      panic!("Can't redefine transient var {} in {}. Transients are immutable for now.", id_name, collector.current_snippet);
     } else {
-      collector.transient_vars.get_mut(collector.current_snippet).unwrap().insert(id_string);
+      collector.transient_vars.get_mut(collector.current_snippet).unwrap().insert(id_name);
     }
   }
 
   fn visit_expr(tree : &'a Expr, collector : &mut VariableCollector<'a>) {
     // Check def-before-use for first operand
-    let &Expr::Expr(ref op1, ref expr_right) = tree;
-    if op1.is_id() &&
-       collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(op1.get_id()) == None &&
-       collector.persistent_vars.get_mut(collector.current_snippet).unwrap().get(op1.get_id()) == None {
-      panic!("{} used before definition", op1.get_id());
+    if tree.op1.is_id() &&
+       collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(&tree.op1.get_id()) == None &&
+       collector.persistent_vars.get_mut(collector.current_snippet).unwrap().get(&tree.op1.get_id()) == None {
+      panic!("{} used before definition", &tree.op1.get_id());
     }
 
     // Check for the remaining operands
-    match expr_right {
+    match &tree.expr_right {
       &ExprRight::BinOp(_, ref op2) => {
         if op2.is_id() &&
            collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(op2.get_id()) == None &&
@@ -125,8 +121,7 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
   // 1. Make sure snippets that are connected are defined.
   // 2. Make sure that variables within a connection are defined in their respective snippets.
   fn visit_connections(tree : &'a Connections, collector: &mut VariableCollector<'a>) {
-    let &Connections::Connections(ref connection_vector) = tree;
-    for connection in connection_vector {
+    for connection in &tree.connection_vector {
       let from_snippet = connection.from_snippet.get_string();
       let to_snippet   = connection.to_snippet.get_string();
       if collector.snippet_set.get(from_snippet) == None {
