@@ -131,21 +131,21 @@ fn parse_persistent_decls<'a>(token_iter : &mut TokenIterator<'a>) -> Persistent
 fn parse_persistent_decl<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentDecl<'a> {
   match_token(token_iter, Token::Persistent, "First token in a persistent_decl must be the keyword persistent.");
   let identifier = parse_identifier(token_iter);
-  let bit_width  = parse_type_annotation(token_iter);
+  let var_type   = parse_type_annotation(token_iter);
   match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
   let initial_values = parse_initial_values(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in a persistent_decl must be a semicolon.");
 
   // Check that the initial values are representable using bit vector of bit_width
   for value in &(initial_values) {
-    if value.value > 2_u32.pow(bit_width) - 1 {
+    if value.value > 2_u32.pow(var_type.bit_width) - 1 {
       panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
              value.value,
-             2_u32.pow(bit_width) - 1,
-             bit_width);
+             2_u32.pow(var_type.bit_width) - 1,
+             var_type.bit_width);
     }
   }
-  return PersistentDecl { identifier, initial_values, bit_width};
+  return PersistentDecl {identifier, initial_values, var_type};
 }
 
 fn parse_transient_decls<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecls<'a> {
@@ -166,13 +166,13 @@ fn parse_transient_decls<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDe
 fn parse_transient_decl<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecl<'a> {
   match_token(token_iter, Token::Transient, "First token in a transient_decl must be the keyword transient.");
   let identifier = parse_identifier(token_iter);
-  let bit_width  = parse_type_annotation(token_iter);
+  let var_type   = parse_type_annotation(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in a transient_decl must be a semicolon.");
-  return TransientDecl { identifier : identifier, bit_width : bit_width };
+  return TransientDecl {identifier, var_type};
 }
 
 // Retrieve bit width of bit vector. That's the only type for now.
-fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>) -> u32 {
+fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>) -> VarType {
   match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
   match_token(token_iter, Token::Bit, "Invalid type, bit vectors are the only supported type.");
   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
@@ -183,7 +183,16 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>) -> u32 {
     panic!("Bit width must be at least 1.");
   }
   match_token(token_iter, Token::GreaterThan, "Need angular brackets to specify width of bit vector.");
-  return bit_width;
+
+  // Check if it's an array
+  if token_iter.peek().is_some() && **token_iter.peek().unwrap() == Token::SquareLeft {
+    match_token(token_iter, Token::SquareLeft, "Expected [ here.");
+    let var_size = parse_value(token_iter).value;
+    match_token(token_iter, Token::SquareRight, "Expected ] here.");
+    return VarType { var_size, bit_width };
+  } else {
+    return VarType { var_size : 1, bit_width };
+  }
 }
 
 fn parse_statements<'a>(token_iter : &mut TokenIterator<'a>) -> Statements<'a> {

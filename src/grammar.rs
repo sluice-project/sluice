@@ -47,10 +47,17 @@ pub struct PersistentDecls<'a> {
 }
 
 #[derive(Debug)]
+pub struct VarType {
+  pub bit_width : u32,
+  pub var_size  : u32
+  // var_size 1 is a scalar, > 1 is an array.
+}
+
+#[derive(Debug)]
 pub struct PersistentDecl<'a> {
-  pub identifier : Identifier<'a>,
+  pub identifier     : Identifier<'a>,
   pub initial_values : Vec<Value>,
-  pub bit_width  : u32
+  pub var_type       : VarType
 }
 
 #[derive(Debug)]
@@ -61,7 +68,7 @@ pub struct TransientDecls<'a> {
 #[derive(Debug)]
 pub struct TransientDecl<'a> {
   pub identifier : Identifier<'a>,
-  pub bit_width  : u32
+  pub var_type   : VarType
 }
 
 #[derive(Debug)]

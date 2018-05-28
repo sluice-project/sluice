@@ -3,7 +3,6 @@ Auto-generate SystemVerilog code for
 2. Constraints file.
 3. sequential and combinational logic in always_ff and always_comb blocks respectively.
 4. Top SystemVerilog file for running specific snippets on an FPGA/simulation quickly.
-5. Mock frameworks to short-circuit the functionality of some FPGA modules for quick testing.
 
 Language constructs that would be good to add
 1. if-else
@@ -17,6 +16,7 @@ techniques from Connectal).
 4. Even if the user specifies the pipelining boundaries, there's quite some
 grunt work involved in the actual pipelining. Automating this grunt work would
 be useful.
+5. Mock frameworks to short-circuit the functionality of some FPGA modules for quick testing.
 
 Speed up:
 1. Syntax checking.
