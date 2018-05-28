@@ -12,7 +12,7 @@ pub struct Snippets<'a> {
 #[derive(Debug)]
 pub struct Snippet<'a> {
   pub snippet_id : Identifier<'a>,
-  pub arg_list   : IdList<'a>,
+  pub arg_list   : TransientDecls<'a>,
   pub persistent_decls : PersistentDecls<'a>,
   pub transient_decls : TransientDecls<'a>,
   pub statements : Statements<'a>
@@ -34,11 +34,6 @@ pub struct Connection<'a> {
 pub struct VariablePair<'a> {
   pub from_var : Identifier<'a>,
   pub to_var   : Identifier<'a>
-}
-
-#[derive(Debug)]
-pub struct IdList<'a> {
-  pub id_vector : Vec<Identifier<'a>>
 }
 
 #[derive(Debug)]

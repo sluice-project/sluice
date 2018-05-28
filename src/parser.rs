@@ -51,7 +51,7 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
   let snippet_id  = parse_identifier(token_iter);
   match_token(token_iter, Token::ParenLeft, "Snippet argument list must start with a left parenthesis.");
-  let arg_list    = parse_idlist(token_iter);
+  let arg_list    = parse_arglist(token_iter);
   match_token(token_iter, Token::ParenRight, "Snippet argument list must end with a right parenthesis.");
   match_token(token_iter, Token::BraceLeft, "Snippet body must begin with a left brace.");
   let persistent_decls    = parse_persistent_decls(token_iter);
@@ -97,18 +97,19 @@ fn parse_connection<'a>(token_iter : &mut TokenIterator<'a>) -> Connection<'a> {
   return Connection { from_snippet : id1, to_snippet : id2, variable_pairs : variable_pairs };
 }
 
-fn parse_idlist<'a>(token_iter : &mut TokenIterator<'a>) -> IdList<'a> {
+fn parse_arglist<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecls<'a> {
   // Helper function to detect identifiers
   let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false, } };
 
-  let mut id_vector = Vec::<Identifier>::new();
+  let mut decl_vector = Vec::<TransientDecl>::new();
   loop {
     if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
-      return IdList{id_vector};
+      return TransientDecls{decl_vector};
     } else {
       let identifier = parse_identifier(token_iter);
+      let var_type   = parse_type_annotation(token_iter);
       match_token(token_iter, Token::Comma, "Expected comma as separator between identifiers.");
-      id_vector.push(identifier);
+      decl_vector.push(TransientDecl{identifier, var_type});
     }
   }
 }
@@ -409,28 +410,32 @@ mod tests {
   test_parser_fail!   (r"persistent x : bit<30>[2] = {1, 2, 3,};", parse_persistent_decls,
                        test_parse_persistent_decls_arrays_fail,
                        "Found 3 initial values. Need 2 initial values for variable x.");
-  test_parser_success!(r"snippet fun(a, b, c,) { persistent x : bit<3> =6;persistent y : bit<3> =7;}",
+  test_parser_success!(r"snippet fun(a : bit<2>, b : bit<2>, c : bit<2>,)
+                       { persistent x : bit<3> =6;persistent y : bit<3> =7;}",
                        parse_snippet, test_parse_snippet1);
-  test_parser_success!(r"snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}",
+  test_parser_success!(r"snippet fun(a : bit<2>, b : bit<2>, c : bit<2>,)
+                       { persistent x : bit<3> =6;x=y+5;}",
                        parse_snippet, test_parse_snippet2); 
-  test_parser_success!(r"snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}
-                         snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}",
+  test_parser_success!(r"snippet fun(a : bit<2>, b : bit<2>, c : bit<2>,)
+                         { persistent x : bit<3> =6;x=y+5;}
+                         snippet fun(a : bit<2>, b : bit<2>, c : bit<2>,)
+                         { persistent x : bit<3> =6;x=y+5;}",
                        parse_snippets, test_parse_snippets);
   test_parser_success!(r"(foo, fun) (bar, foobar)", parse_connections, test_parse_connections); 
   test_parser_success!(r"(foo, fun): a->b, c->x, (bar, foobar)", parse_connections, test_parse_connections2);
-  test_parser_success!(r"snippet fun(a, b, c, x, y, ) {
+  test_parser_success!(r"snippet fun ( a : bit<2> , b : bit<2>, c : bit<2> , x : bit<2>, y : bit<2>, ) {
                             persistent x : bit<3> = 0;
                             a = x;
                             b = y;
                             m = 5;
                           }
-                          snippet foo(a, b, c, ) {
+                          snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
                             persistent x : bit<3> = 1;
                             x = 5;
                           }
                           (foo, fun)
                           ", parse_prog, test_parse_prog);
-  test_parser_success!(r"snippet fun ( a , b , c , x , y, ) {
+  test_parser_success!(r"snippet fun ( a : bit<2> , b : bit<2>, c : bit<2> , x : bit<2>, y : bit<2>, ) {
                             persistent x : bit<3> = 0 ;
                             transient k : bit<5>;
                             t1 = a >= b;
@@ -440,7 +445,7 @@ mod tests {
                             t3 = t2 and t1;
                             e = t2 ? m : 5;
                           }
-                          snippet foo(a, b, c,) {
+                          snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
                             persistent x : bit<3> = 1;
                             x = 5;
                           }

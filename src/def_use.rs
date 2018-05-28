@@ -41,8 +41,9 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
     }
   }
 
-  fn visit_idlist(tree : &'a IdList, collector : &mut VariableCollector<'a>) {
-    for id in &tree.id_vector {
+  fn visit_arglist(tree : &'a TransientDecls, collector : &mut VariableCollector<'a>) {
+    for decl in &tree.decl_vector {
+      let id = &decl.identifier;
       if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id.get_string()) != None {
         panic!("Variable {} repeated twice in {}'s argument list", id.get_string(), collector.current_snippet);
       } else {
@@ -61,7 +62,7 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
       collector.persistent_vars.insert(collector.current_snippet, HashSet::new());
       collector.snippet_set.insert(collector.current_snippet);
     }
-    Self::visit_idlist(&tree.arg_list, collector);
+    Self::visit_arglist(&tree.arg_list, collector);
     Self::visit_persistent_decls(&tree.persistent_decls, collector);
     Self::visit_statements(&tree.statements, collector);
   }
@@ -175,7 +176,7 @@ mod tests {
   #[test]
   #[should_panic(expected="y used before definition")]
   fn test_def_use_undefined(){
-    let input_program = r"snippet fun(x, ) {
+    let input_program = r"snippet fun(x : bit<2>, ) {
                             b = y;
                             m = 5;
                           }
@@ -186,7 +187,7 @@ mod tests {
   #[test]
   #[should_panic(expected="x used before definition")]
   fn test_def_use_undefined2(){
-    let input_program = r"snippet fun(a,) {
+    let input_program = r"snippet fun(a : bit<2>,) {
                             x = x + 1;
                           }
                           ";
@@ -203,7 +204,7 @@ mod tests {
  
   #[test]
   fn test_def_use_defined_in_arg_list(){
-    let input_program = r"snippet foo(a, b, c, ) {
+    let input_program = r"snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
                             x = a;
                           }
                           ";
@@ -212,7 +213,7 @@ mod tests {
   
   #[test]
   fn test_def_use_defined_in_prog(){
-    let input_program = r"snippet foo(a, b, c, ) {
+    let input_program = r"snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
                             d = 1;
                             x = d;
                           }
@@ -222,7 +223,7 @@ mod tests {
 
   #[test]
   fn test_def_use_defined_in_persistent(){
-    let input_program = r"snippet foo(a, b, c, ) {
+    let input_program = r"snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
                             persistent d : bit<1> = 1;
                             x = d;
                           }
@@ -232,7 +233,7 @@ mod tests {
 
   #[test]
   fn test_def_use_defined_in_persistent2(){
-    let input_program = r"snippet foo(a, b, c, ) {
+    let input_program = r"snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
                             persistent d : bit<1> = 1;
                             y = d + a;
                             x = d ? a : b;
@@ -244,7 +245,7 @@ mod tests {
   #[test]
   #[should_panic(expected="Persistent variable x has same name as fun's argument variable x")]
   fn test_def_use_redefined_persistent_arglist(){
-    let input_program = r"snippet fun(a, b, c, x, y, ) {
+    let input_program = r"snippet fun(a : bit<2>, b : bit<2>, c : bit<2>, x : bit<2>, y : bit<2>, ) {
                             persistent x : bit<1> = 0;
                           }
                           ";
@@ -267,27 +268,27 @@ mod tests {
   #[test]
   #[should_panic(expected="Trying to connect non-existent variable c from snippet foo")]
   fn test_def_use_connections_undefined_variable() {
-    let input_program = r"snippet foo(a, b,) {} snippet fun(c, d,) {} (foo, fun):c->d,";
+    let input_program = r"snippet foo(a : bit<2>, b : bit<2>,) {} snippet fun(c : bit<2>, d : bit<2>,) {} (foo, fun):c->d,";
     run_def_use(input_program);
   }
 
   #[test]
   #[should_panic(expected="Variable a repeated twice in foo's argument list")]
   fn test_def_use_repeated_arguments() {
-    let input_program = r"snippet foo(a, a,) {}";
+    let input_program = r"snippet foo(a : bit<2>, a : bit<2>,) {}";
     run_def_use(input_program);
   }
 
   #[test]
   #[should_panic(expected="Can't redefine transient var a in foo. Transients are immutable for now.")]
   fn test_def_use_redefine_transient_var() {
-    let input_program = r"snippet foo(a, b,) { a = 1; }";
+    let input_program = r"snippet foo(a : bit<2>, b : bit<2>,) { a = 1; }";
     run_def_use(input_program);
   }
 
   #[test]
   fn test_def_use_redefine_transient_persistent() {
-    let input_program = r"snippet foo(a, b,) { persistent d : bit<2> = 1; d = 5; }";
+    let input_program = r"snippet foo(a : bit<2>, b : bit<2>,) { persistent d : bit<2> = 1; d = 5; }";
     run_def_use(input_program);
   }
 }
