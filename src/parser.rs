@@ -340,213 +340,72 @@ fn parse_value<'a>(token_iter : &mut TokenIterator<'a>) -> Value {
 mod tests {
   use super::*;
   use super::super::lexer::get_tokens;
-  
-  #[test]
-  fn test_parse_operand() {
-    let input =  r"5";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_operand(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+
+  // Macro to test that parser parses successfully
+  macro_rules! test_parser_success {
+    ($input_code:expr,$parser_routine:ident,$test_name:ident) => (
+      #[test]
+      fn $test_name() {
+        let input = $input_code;
+        let tokens = &mut get_tokens(input);
+        let token_iter = &mut tokens.iter().peekable();
+        println!("{:?}", $parser_routine(token_iter));
+        assert!(token_iter.peek().is_none(), "token iterator is not empty");
+      }
+    )
   }
 
-  #[test]
-  fn test_parse_operand_id() {
-    let input =  r"a";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_operand(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
+  // Macro to test that parser fails to parse with correct panic message
+  macro_rules! test_parser_fail {
+    ($input_code:expr,$parser_routine:ident,$test_name:ident,$panic_msg:expr) => (
+      #[test]
+      #[should_panic(expected=$panic_msg)] 
+      fn $test_name() {
+        let input = $input_code;
+        let tokens = &mut get_tokens(input);
+        let token_iter = &mut tokens.iter().peekable();
+        println!("{:?}", $parser_routine(token_iter));
+        assert!(token_iter.peek().is_none(), "token iterator is not empty");
+      }
+    )
   }
 
-  #[test]
-  fn test_parse_operand_array() {
-    let input =  r"a[5]";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_operand(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  #[should_panic(expected="Invalid token: Value(5), expected Token::Identifier")]
-  fn test_parse_identifier_fail() {
-    let input =  r"5";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_identifier(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  fn test_parse_identifier_pass() {
-    let input =  r"a";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_identifier(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  fn test_parse_lvalue1() {
-    let input =  r"a[5]";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_lvalue(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  fn test_parse_lvalue2() {
-    let input =  r"a";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_lvalue(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  fn test_parse_expr() {
-    let input = r"7%5";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_expr(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-  
-  #[test]
-  fn test_parse_statement() {
-    let input = r"x=6+5;";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_statement(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-  
-  #[test]
-  fn test_parse_statements() {
-    let input = r"x=6+5;y=7*8;";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_statements(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  fn test_parse_transient_decls() {
-    let input = r"transient x : bit<8>;";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_transient_decls(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-  
-  #[test]
-  fn test_parse_persistent_decls() {
-    let input = r"persistent x : bit<3> = 6;persistent y : bit<3> =7;";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_persistent_decls(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  fn test_parse_persistent_decls2() {
-    let input = r"persistent x : bit<3> ={4, 5, 6, 7,};persistent y : bit<3> =7;";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_persistent_decls(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-  
-  #[test]
-  #[should_panic(expected="Invalid token: BraceRight, expected Comma.\nError message: \"Expected comma as separator between values.\"")]
-  fn test_parse_persistent_decls2_fail() {
-    let input = r"persistent x : bit<3> ={4, 5, 6, 7};persistent y : bit<3> =7;";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_persistent_decls(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  #[should_panic(expected="Initial value 4 is outside the range [0, 3] of 2-bit vector.")]
-  fn test_parse_persistent_decls_outside_range() {
-    let input = r"persistent x : bit<2> = 4;";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_persistent_decls(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  #[should_panic(expected="Bit width must be at least 1.")]
-  fn test_parse_persistent_decls_bitwidth0() {
-    let input = r"persistent x : bit<0> = 4;";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_persistent_decls(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  #[should_panic(expected="Bit width can be at most 30.")]
-  fn test_parse_persistent_decls_bitwidth31() {
-    let input = r"persistent x : bit<31> = 4;";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_persistent_decls(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  fn test_parse_snippet1() {
-    let input = r"snippet fun(a, b, c,) { persistent x : bit<3> =6;persistent y : bit<3> =7;}";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_snippet(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-  
-  #[test]
-  fn test_parse_snippet2() {
-    let input = r"snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_snippet(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-  
-  #[test]
-  fn test_parse_snippets() {
-    let input = r"snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;} snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_snippets(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-  
-  #[test]
-  fn test_parse_connections() {
-    let input = r"(foo, fun) (bar, foobar)";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_connections(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  fn test_parse_connections2() {
-    let input = r"(foo, fun): a->b, c->x, (bar, foobar)";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_connections(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  fn test_parse_prog() {
-    let input        = r"snippet fun(a, b, c, x, y, ) {
+  test_parser_success!(r"5", parse_operand, test_parser_operand);
+  test_parser_success!(r"a", parse_operand, test_parse_operand_id);
+  test_parser_success!(r"a[5]", parse_operand, test_parser_operand_array);
+  test_parser_fail!   (r"5", parse_identifier, test_parse_identifier_fail,
+                      "Invalid token: Value(5), expected Token::Identifier");
+  test_parser_success!(r"a", parse_identifier, test_parse_identifier_pass);
+  test_parser_success!(r"a[5]", parse_lvalue, test_parse_lvalue1);
+  test_parser_success!(r"a", parse_lvalue, test_parse_lvalue2);
+  test_parser_success!(r"7%5", parse_expr, test_parse_expr);
+  test_parser_success!(r"x=6+5;", parse_statement, test_parse_statement); 
+  test_parser_success!(r"x=6+5;y=7*8;", parse_statements, test_parse_statements); 
+  test_parser_success!(r"transient x : bit<8>;", parse_transient_decls, test_parse_transient_decls);
+  test_parser_success!(r"persistent x : bit<3> = 6; persistent y : bit<3> = 7;",
+                       parse_persistent_decls, test_parse_persistent_decls); 
+  test_parser_success!(r"persistent x : bit<3> = {4, 5, 6, 7, }; persistent y: bit<3> = 7;",
+                       parse_persistent_decls, test_parse_persistent_decls2);
+  test_parser_fail!   (r"persistent x : bit<3> ={4, 5, 6, 7};persistent y : bit<3> =7;",
+                       parse_persistent_decls, test_parse_persistent_decls2_fail,
+                       "Invalid token: BraceRight, expected Comma.\nError message: \"Expected comma as separator between values.\""); 
+  test_parser_fail!   (r"persistent x : bit<2> = 4;", parse_persistent_decls,
+                       test_parse_persistent_decls_outside_range,
+                       "Initial value 4 is outside the range [0, 3] of 2-bit vector.");
+  test_parser_fail!   (r"persistent x : bit<0> = 4;", parse_persistent_decls,
+                       test_parse_persistent_decls_bitwidth0, "Bit width must be at least 1.");
+  test_parser_fail!   (r"persistent x : bit<31> = 4;", parse_persistent_decls,
+                       test_parse_persistent_decls_bitwidth31, "Bit width can be at most 30.");
+  test_parser_success!(r"snippet fun(a, b, c,) { persistent x : bit<3> =6;persistent y : bit<3> =7;}",
+                       parse_snippet, test_parse_snippet1);
+  test_parser_success!(r"snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}",
+                       parse_snippet, test_parse_snippet2); 
+  test_parser_success!(r"snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}
+                         snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}",
+                       parse_snippets, test_parse_snippets);
+  test_parser_success!(r"(foo, fun) (bar, foobar)", parse_connections, test_parse_connections); 
+  test_parser_success!(r"(foo, fun): a->b, c->x, (bar, foobar)", parse_connections, test_parse_connections2);
+  test_parser_success!(r"snippet fun(a, b, c, x, y, ) {
                             persistent x : bit<3> = 0;
                             a = x;
                             b = y;
@@ -557,16 +416,8 @@ mod tests {
                             x = 5;
                           }
                           (foo, fun)
-                          ";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_prog(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
-
-  #[test]
-  fn test_parse_prog2() {
-    let input          = r"snippet fun ( a , b , c , x , y, ) {
+                          ", parse_prog, test_parse_prog);
+  test_parser_success!(r"snippet fun ( a , b , c , x , y, ) {
                             persistent x : bit<3> = 0 ;
                             transient k : bit<5>;
                             t1 = a >= b;
@@ -581,10 +432,5 @@ mod tests {
                             x = 5;
                           }
                           (foo, fun)
-                          ";
-    let tokens = & mut get_tokens(input);
-    let token_iter = & mut tokens.iter().peekable();
-    println!("{:?}", parse_prog(token_iter));
-    assert!(token_iter.peek().is_none(), "token iterator is not empty");
-  }
+                          ", parse_prog, test_parse_prog2);
 }
