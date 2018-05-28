@@ -145,6 +145,14 @@ fn parse_persistent_decl<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentD
              var_type.bit_width);
     }
   }
+
+  // Check that the number of initial values matches up with the type
+  if initial_values.len() as u32 != var_type.var_size {
+    panic!("Found {} initial values. Need {} initial values for variable {}.",
+           initial_values.len(),
+           var_type.var_size,
+           identifier.id_name);
+  }
   return PersistentDecl {identifier, initial_values, var_type};
 }
 
@@ -384,7 +392,7 @@ mod tests {
   test_parser_success!(r"transient x : bit<8>;", parse_transient_decls, test_parse_transient_decls);
   test_parser_success!(r"persistent x : bit<3> = 6; persistent y : bit<3> = 7;",
                        parse_persistent_decls, test_parse_persistent_decls); 
-  test_parser_success!(r"persistent x : bit<3> = {4, 5, 6, 7, }; persistent y: bit<3> = 7;",
+  test_parser_success!(r"persistent x : bit<3>[4] = {4, 5, 6, 7, }; persistent y: bit<3> = 7;",
                        parse_persistent_decls, test_parse_persistent_decls2);
   test_parser_fail!   (r"persistent x : bit<3> ={4, 5, 6, 7};persistent y : bit<3> =7;",
                        parse_persistent_decls, test_parse_persistent_decls2_fail,
@@ -396,6 +404,11 @@ mod tests {
                        test_parse_persistent_decls_bitwidth0, "Bit width must be at least 1.");
   test_parser_fail!   (r"persistent x : bit<31> = 4;", parse_persistent_decls,
                        test_parse_persistent_decls_bitwidth31, "Bit width can be at most 30.");
+  test_parser_success!(r"persistent x : bit<30>[4] = {1, 2, 3, 4,};", parse_persistent_decls,
+                       test_parse_persistent_decls_arrays);
+  test_parser_fail!   (r"persistent x : bit<30>[2] = {1, 2, 3,};", parse_persistent_decls,
+                       test_parse_persistent_decls_arrays_fail,
+                       "Found 3 initial values. Need 2 initial values for variable x.");
   test_parser_success!(r"snippet fun(a, b, c,) { persistent x : bit<3> =6;persistent y : bit<3> =7;}",
                        parse_snippet, test_parse_snippet1);
   test_parser_success!(r"snippet fun(a, b, c,) { persistent x : bit<3> =6;x=y+5;}",
