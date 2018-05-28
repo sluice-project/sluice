@@ -367,7 +367,7 @@ mod tests {
   macro_rules! test_parser_fail {
     ($input_code:expr,$parser_routine:ident,$test_name:ident,$panic_msg:expr) => (
       #[test]
-      #[should_panic(expected=$panic_msg)] 
+      #[should_panic(expected=$panic_msg)]
       fn $test_name() {
         let input = $input_code;
         let tokens = &mut get_tokens(input);
@@ -387,8 +387,8 @@ mod tests {
   test_parser_success!(r"a[5]", parse_lvalue, test_parse_lvalue1);
   test_parser_success!(r"a", parse_lvalue, test_parse_lvalue2);
   test_parser_success!(r"7%5", parse_expr, test_parse_expr);
-  test_parser_success!(r"x=6+5;", parse_statement, test_parse_statement); 
-  test_parser_success!(r"x=6+5;y=7*8;", parse_statements, test_parse_statements); 
+  test_parser_success!(r"x=6+5;", parse_statement, test_parse_statement);
+  test_parser_success!(r"x=6+5;y=7*8;", parse_statements, test_parse_statements);
   test_parser_success!(r"transient x : bit<8>;", parse_transient_decls, test_parse_transient_decls);
   test_parser_success!(r"persistent x : bit<3> = 6; persistent y : bit<3> = 7;",
                        parse_persistent_decls, test_parse_persistent_decls); 
