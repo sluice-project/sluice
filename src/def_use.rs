@@ -6,68 +6,76 @@ use tree_fold::TreeFold;
 // Compiler pass to check that identifiers are defined before being used in a snippet
 pub struct DefUse;
 
-// VariableCollector type to wrap a:
-// 1. string context that represents the current snippet
-// 2. a global transient_vars table, which is a dictionary
-// from strings (snippet names) to
-// sets of strings (set of transient variables within a snippet)
-// 3. a global persistent_vars table, which similarly stores persistent variables
-// 4. a global snippet_set, which stores the names of all snippets in a set.
-// Note: persistent_vars and transient_vars can overlap because persistent variables
-// are typically updated as part of every snippet invocation---unless they are read-only.
-// TODO: This is a bit ugly because our members are public.
-// We should be using sensible method calls instead, but
-// I don't know how to do that while using lifetimes (compiler's errors are confusing)
-// TODO: Need to check types (can't assign integers to arrays, etc.)
-pub struct VariableCollector<'a> {
+pub struct VariableMetadata<'a> {
+  pub var_type  : &'a VarType,
+  pub var_state : VarState 
+}
+
+// Defined => Declared, but not the other way around.
+#[derive(PartialEq)]
+pub enum VarState {
+  Declared,
+  Defined,
+  Updated,
+}
+
+pub struct SymTableCollector<'a> {
   pub current_snippet : &'a str,
-  pub transient_vars  : HashMap<&'a str, HashSet<&'a str>>,
-  pub persistent_vars : HashMap<&'a str, HashSet<&'a str>>,
+  pub symbol_table    : HashMap<&'a str, HashMap<&'a str, VariableMetadata<'a>>>,
   pub snippet_set     : HashSet<&'a str>
 }
 
-// Add definitions from persistent_decls, idlist, snippet names, and statements
-// Check use of these definitions in visit_expr and visit_connections
-impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
-  fn visit_persistent_decl(tree : &'a PersistentDecl, collector : &mut VariableCollector<'a>) {
-    let id_name = &tree.identifier.id_name;
-    if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id_name) != None {
-      panic!("Persistent variable {} has same name as {}'s argument variable {}",
-             id_name,
-             collector.current_snippet,
-             id_name);
+impl<'a> SymTableCollector <'a> {
+  pub fn get_symbol_table(&'a self) -> &'a HashMap<&'a str, VariableMetadata<'a>> {
+    self.symbol_table.get(self.current_snippet).unwrap()
+  }
+
+  pub fn is_defined(&'a self, id_name : &'a str) -> bool {
+    let sym_table = self.get_symbol_table();
+    if sym_table.get(id_name).is_none() {
+      // It's not even declared
+      return false;
+    } else if sym_table.get(id_name).unwrap().var_state == VarState::Declared {
+      return false;
     } else {
-      collector.persistent_vars.get_mut(collector.current_snippet).unwrap().insert(id_name);
+      assert!(sym_table.get(id_name).unwrap().var_state == VarState::Defined, "var_state should be VarState::Defined.");
+      return true;
+    }
+  }
+}
+
+impl<'a> TreeFold<'a, SymTableCollector<'a>> for DefUse {
+  fn visit_variable_decl(tree : &'a VariableDecl, collector : &mut SymTableCollector<'a>) {
+    let id_name = &tree.identifier.id_name;
+    if collector.symbol_table.get_mut(collector.current_snippet).unwrap().get(id_name).is_some() {
+      panic!("Variable {} is declared twice in {}.",
+             id_name,
+             collector.current_snippet);
+    } else {
+      let var_type = &tree.var_type;
+      let type_qualifier = &var_type.type_qualifier;
+      let var_state = if (*type_qualifier == TypeQualifier::Input) ||
+                         (*type_qualifier == TypeQualifier::Const) ||
+                         (*type_qualifier == TypeQualifier::Persistent) { VarState::Defined }
+                      else { VarState::Declared };
+      collector.symbol_table.get_mut(collector.current_snippet).unwrap().insert(id_name, VariableMetadata{var_type, var_state});
     }
   }
 
-  fn visit_arglist(tree : &'a TransientDecls, collector : &mut VariableCollector<'a>) {
-    for decl in &tree.decl_vector {
-      let id = &decl.identifier;
-      if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id.get_string()) != None {
-        panic!("Variable {} repeated twice in {}'s argument list", id.get_string(), collector.current_snippet);
-      } else {
-        collector.transient_vars.get_mut(collector.current_snippet).unwrap().insert(id.get_string());
-      }
-    }
-  }
-
-  fn visit_snippet(tree : &'a Snippet, collector: &mut VariableCollector<'a>) {
+  fn visit_snippet(tree : &'a Snippet, collector: &mut SymTableCollector<'a>) {
     // Initialize symbol table for this snippet
     collector.current_snippet = &tree.snippet_id.get_string();
-    if collector.transient_vars.get(collector.current_snippet) != None {
+    if collector.snippet_set.get(collector.current_snippet) != None {
       panic!("Can't have two snippets named {}.", collector.current_snippet);
     } else {
-      collector.transient_vars.insert(collector.current_snippet, HashSet::new());
-      collector.persistent_vars.insert(collector.current_snippet, HashSet::new());
+      collector.symbol_table.insert(collector.current_snippet, HashMap::new());
       collector.snippet_set.insert(collector.current_snippet);
     }
-    Self::visit_arglist(&tree.arg_list, collector);
-    Self::visit_persistent_decls(&tree.persistent_decls, collector);
+    Self::visit_variable_decls(&tree.variable_decls, collector);
     Self::visit_statements(&tree.statements, collector);
   }
 
-  fn visit_statement(tree : &'a Statement, collector : &mut VariableCollector<'a>) {
+  fn visit_statement(tree : &'a Statement, collector : &mut SymTableCollector<'a>) {
     let id_name =
       match &tree.lvalue {
         &LValue::Identifier(ref identifier) => { identifier.id_name },
@@ -77,19 +85,39 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
     // First visit expression because that is conceptually processed first
     Self::visit_expr(&tree.expr, collector);
 
-    // Then process id_name;
-    if collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(id_name) != None {
-      panic!("Can't redefine transient var {} in {}. Transients are immutable for now.", id_name, collector.current_snippet);
-    } else {
-      collector.transient_vars.get_mut(collector.current_snippet).unwrap().insert(id_name);
+    // Update var_state in collector for id_name
+    let sym_table = collector.symbol_table.get_mut(collector.current_snippet).unwrap();
+    match sym_table.get(id_name) {
+      None
+      => panic!("Defining variable {} that isn't declared in {}.", id_name, collector.current_snippet),
+
+      Some(&VariableMetadata{var_type, var_state : VarState::Defined})
+      =>  if var_type.type_qualifier == TypeQualifier::Persistent { sym_table.get_mut(id_name).unwrap().var_state = VarState::Updated;
+          } else {
+            if var_type.type_qualifier == TypeQualifier::Const {
+              panic!("Trying to update const variable {} in {}.", id_name, collector.current_snippet);
+            } else if var_type.type_qualifier == TypeQualifier::Input {
+              panic!("Trying to update input variable {} in {}. Inputs are implicity defined by caller.", id_name, collector.current_snippet);
+            } else {
+              panic!("Redefining variable {} that is already defined in {}.", id_name, collector.current_snippet);
+            }
+          },
+
+      Some(&VariableMetadata{var_type, var_state : VarState::Updated})
+      =>  {assert!(var_type.type_qualifier == TypeQualifier::Persistent, "Only persistent variables can be in updated state.");
+           panic!("Can update a persistent variable at most once.");},
+
+      _ 
+      => {assert!(sym_table.get(id_name).unwrap().var_state == VarState::Declared,
+         "var_state should be VarState::Declared.");
+          sym_table.get_mut(id_name).unwrap().var_state = VarState::Defined;}
     }
   }
 
-  fn visit_expr(tree : &'a Expr, collector : &mut VariableCollector<'a>) {
+  fn visit_expr(tree : &'a Expr, collector : &mut SymTableCollector<'a>) {
     // Check def-before-use for first operand
     if tree.op1.is_id() &&
-       collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(&tree.op1.get_id()) == None &&
-       collector.persistent_vars.get_mut(collector.current_snippet).unwrap().get(&tree.op1.get_id()) == None {
+       !collector.is_defined(tree.op1.get_id()) {
       panic!("{} used before definition", &tree.op1.get_id());
     }
 
@@ -97,21 +125,18 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
     match &tree.expr_right {
       &ExprRight::BinOp(_, ref op2) => {
         if op2.is_id() &&
-           collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(op2.get_id()) == None &&
-           collector.persistent_vars.get_mut(collector.current_snippet).unwrap().get(op2.get_id()) == None {
+           !collector.is_defined(op2.get_id()) {
           panic!("{} used before definition", op2.get_id());
         }
       }
       &ExprRight::Cond(ref true_op, ref false_op) => {
         if true_op.is_id()  &&
-           collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(true_op.get_id())  == None &&
-           collector.persistent_vars.get_mut(collector.current_snippet).unwrap().get(true_op.get_id()) == None {
+           !collector.is_defined(true_op.get_id()) {
           panic!("{} used before definition", true_op.get_id());
         }
 
         if false_op.is_id() &&
-           collector.transient_vars.get_mut(collector.current_snippet).unwrap().get(false_op.get_id()) == None &&
-           collector.persistent_vars.get_mut(collector.current_snippet).unwrap().get(false_op.get_id()) == None {
+           !collector.is_defined(false_op.get_id()) {
           panic!("{} used before definition", false_op.get_id());
         }
       }
@@ -120,8 +145,9 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
   }
 
   // 1. Make sure snippets that are connected are defined.
-  // 2. Make sure that variables within a connection are defined in their respective snippets.
-  fn visit_connections(tree : &'a Connections, collector: &mut VariableCollector<'a>) {
+  // 2. Make sure that variables within a connection are defined in their respective snippets and
+  //    are output/input variables in the source/destination snippets respectively.
+  fn visit_connections(tree : &'a Connections, collector: &mut SymTableCollector<'a>) {
     for connection in &tree.connection_vector {
       let from_snippet = connection.from_snippet.get_string();
       let to_snippet   = connection.to_snippet.get_string();
@@ -134,11 +160,33 @@ impl<'a> TreeFold<'a, VariableCollector<'a>> for DefUse {
       for variable_pair in &connection.variable_pairs {
         let from_var = variable_pair.from_var.get_string();
         let to_var   = variable_pair.to_var.get_string();
-        if collector.transient_vars.get(from_snippet).unwrap().get(from_var) == None {
+        if collector.symbol_table.get(from_snippet).unwrap().get(from_var).is_none() {
           panic!("Trying to connect non-existent variable {} from snippet {}", from_var, from_snippet);
+        } else {
+          if collector.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.type_qualifier !=
+             TypeQualifier::Output {
+            panic!("Trying to connect non-output variable {} in origin snippet {}", from_var, from_snippet);
+          }
         }
-        if collector.transient_vars.get(to_snippet).unwrap().get(to_var) == None {
+
+        if collector.symbol_table.get(to_snippet).unwrap().get(to_var).is_none() {
           panic!("Trying to connect non-existent variable {} from snippet {}", to_var, to_snippet);
+        } else {
+          if collector.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.type_qualifier !=
+             TypeQualifier::Input {
+            panic!("Trying to connect non-input variable {} in destination snippet {}", to_var, to_snippet);
+          }
+        }
+
+        assert!(collector.symbol_table.get(to_snippet).unwrap().get(to_var).is_some(), "to_var undefined");
+        assert!(collector.symbol_table.get(from_snippet).unwrap().get(from_var).is_some(), "from_var undefined");
+        if collector.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.bit_width !=
+           collector.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.bit_width {
+          panic!("Bit widths differ in the connection from {}.{} to {}.{}.", from_snippet, from_var, to_snippet, to_var);
+        }
+        if collector.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.var_size !=
+           collector.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.var_size {
+          panic!("Var sizes differ in the connection from {}.{} to {}.{}.", from_snippet, from_var, to_snippet, to_var);
         }
       }
     }
@@ -150,7 +198,7 @@ mod tests {
   use super::super::lexer;
   use super::super::parser;
   use super::DefUse;
-  use super::VariableCollector;
+  use super::SymTableCollector;
   use super::super::tree_fold::TreeFold;
   use std::collections::HashMap;
   use std::collections::HashSet;
@@ -166,17 +214,17 @@ mod tests {
     println!("Parse tree: {:?}\n", parse_tree);
   
     // Check that identifiers are defined before use
-    let mut def_use_collector = VariableCollector { current_snippet : "",
-                                                    transient_vars : HashMap::new(),
-                                                    persistent_vars : HashMap::new(),
+    let mut def_use_collector = SymTableCollector { current_snippet : "",
+                                                    symbol_table : HashMap::new(),
                                                     snippet_set : HashSet::new() };
     DefUse::visit_prog(&parse_tree, &mut def_use_collector);
   }
   
   #[test]
   #[should_panic(expected="y used before definition")]
-  fn test_def_use_undefined(){
-    let input_program = r"snippet fun(x : bit<2>, ) {
+  fn test_def_use_undefined_fail(){
+    let input_program = r"snippet fun() {
+                            input x : bit<2>;
                             b = y;
                             m = 5;
                           }
@@ -186,8 +234,9 @@ mod tests {
 
   #[test]
   #[should_panic(expected="x used before definition")]
-  fn test_def_use_undefined2(){
-    let input_program = r"snippet fun(a : bit<2>,) {
+  fn test_def_use_undefined2_fail(){
+    let input_program = r"snippet fun() {
+                            input a : bit<2>;
                             x = x + 1;
                           }
                           ";
@@ -197,23 +246,43 @@ mod tests {
 
   #[test]
   #[should_panic(expected="Can't have two snippets named foo.")]
-  fn test_connection_du_duplicate() {
+  fn test_def_use_duplicate_snippets_fail() {
     let input_program = r"snippet foo() {} snippet foo() {}";
     run_def_use(input_program);
   }
  
   #[test]
-  fn test_def_use_defined_in_arg_list(){
-    let input_program = r"snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
+  #[should_panic(expected="Defining variable x that isn't declared in foo.")]
+  fn test_def_use_undeclared_fail(){
+    let input_program = r"snippet foo() {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                            input c : bit<2>;
                             x = a;
                           }
                           ";
     run_def_use(input_program);
   }
+
+  #[test]
+  fn test_def_use1(){
+    let input_program = r"snippet foo() {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                            input c : bit<2>;
+                            transient x: bit<2>; 
+                            x = a;
+                          }
+                          ";
+    run_def_use(input_program);
+  }
+
   
   #[test]
-  fn test_def_use_defined_in_prog(){
-    let input_program = r"snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
+  fn test_def_use2(){
+    let input_program = r"snippet foo() {
+                            transient d : bit<2>;
+                            transient x : bit<2>;
                             d = 1;
                             x = d;
                           }
@@ -222,8 +291,9 @@ mod tests {
   }
 
   #[test]
-  fn test_def_use_defined_in_persistent(){
-    let input_program = r"snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
+  fn test_def_use3(){
+    let input_program = r"snippet foo() {
+                            transient x : bit<1> = 1;
                             persistent d : bit<1> = 1;
                             x = d;
                           }
@@ -232,9 +302,13 @@ mod tests {
   }
 
   #[test]
-  fn test_def_use_defined_in_persistent2(){
-    let input_program = r"snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
+  fn test_def_use4(){
+    let input_program = r"snippet foo() {
+                            input a : bit<2>;
+                            input b : bit<2>;
                             persistent d : bit<1> = 1;
+                            transient x : bit<1>;
+                            transient y : bit<1>;
                             y = d + a;
                             x = d ? a : b;
                           }
@@ -243,9 +317,11 @@ mod tests {
   }
 
   #[test]
-  #[should_panic(expected="Persistent variable x has same name as fun's argument variable x")]
-  fn test_def_use_redefined_persistent_arglist(){
-    let input_program = r"snippet fun(a : bit<2>, b : bit<2>, c : bit<2>, x : bit<2>, y : bit<2>, ) {
+  #[should_panic(expected="Variable x is declared twice in fun.")]
+  fn test_def_use_redefined_persistent_arglist_fail(){
+    let input_program = r"snippet fun() {
+                            input c : bit<2>;
+                            input x : bit<2>;
                             persistent x : bit<1> = 0;
                           }
                           ";
@@ -253,42 +329,134 @@ mod tests {
   }
 
   #[test]
-  fn test_def_use_connections(){
+  fn test_def_use_connections_empty(){
     let input_program = r"snippet foo() {} snippet bar() {}";
     run_def_use(input_program);
   }
 
   #[test]
+  fn test_def_use_connections(){
+    let input_program = r"snippet foo() {output c : bit<2>;} snippet fun() { input d : bit<2>;} (foo, fun):c->d,";
+    run_def_use(input_program);
+  }
+
+  #[test]
+  fn test_def_use_connections2(){
+    let input_program = r"snippet foo() {output c : bit<2>[1];} snippet fun() { input d : bit<2>;} (foo, fun):c->d,";
+    run_def_use(input_program);
+  }
+
+  #[test]
+  #[should_panic(expected="Bit widths differ in the connection from foo.c to fun.d.")]
+  fn test_def_use_connections_bitwidth_fail(){
+    let input_program = r"snippet foo() {output c : bit<1>;} snippet fun() { input d : bit<2>;} (foo, fun):c->d,";
+    run_def_use(input_program);
+  }
+
+  #[test]
+  #[should_panic(expected="Var sizes differ in the connection from foo.c to fun.d")]
+  fn test_def_use_connections_varsize_fail(){
+    let input_program = r"snippet foo() {output c : bit<1>[2];} snippet fun() { input d : bit<1>;} (foo, fun):c->d,";
+    run_def_use(input_program);
+  }
+
+  #[test]
+  #[should_panic(expected="Trying to connect non-output variable c in origin snippet foo")]
+  fn test_def_use_connection_fail1(){
+    let input_program = r"snippet foo() {input c : bit<2>;} snippet fun() { input d : bit<2>;} (foo, fun):c->d,";
+    run_def_use(input_program);
+  }
+
+  #[test]
+  #[should_panic(expected="Trying to connect non-input variable d in destination snippet fun")]
+  fn test_def_use_connection_fail2(){
+    let input_program = r"snippet foo() {output c : bit<2>;} snippet fun() { output d : bit<2>;} (foo, fun):c->d,";
+    run_def_use(input_program);
+  }
+
+  #[test]
   #[should_panic(expected="foo connected, but undefined")]
-  fn test_def_use_connections_undefined_snippet() {
+  fn test_def_use_connections_undefined_snippet_fail() {
     let input_program = r"(foo, fun)";
     run_def_use(input_program);
   }
 
   #[test]
   #[should_panic(expected="Trying to connect non-existent variable c from snippet foo")]
-  fn test_def_use_connections_undefined_variable() {
-    let input_program = r"snippet foo(a : bit<2>, b : bit<2>,) {} snippet fun(c : bit<2>, d : bit<2>,) {} (foo, fun):c->d,";
+  fn test_def_use_connections_undefined_variable_fail() {
+    let input_program = r"snippet foo() {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                          }
+                          snippet fun() {
+                            input c : bit<2>;
+                            input d : bit<2>;
+                          } (foo, fun):c->d,";
     run_def_use(input_program);
   }
 
   #[test]
-  #[should_panic(expected="Variable a repeated twice in foo's argument list")]
-  fn test_def_use_repeated_arguments() {
-    let input_program = r"snippet foo(a : bit<2>, a : bit<2>,) {}";
+  #[should_panic(expected="Variable a is declared twice in foo.")]
+  fn test_def_use_repeated_arguments_fail() {
+    let input_program = r"snippet foo() {
+                            input a : bit<2>;
+                            input a : bit<2>;
+                          }";
     run_def_use(input_program);
   }
 
   #[test]
-  #[should_panic(expected="Can't redefine transient var a in foo. Transients are immutable for now.")]
-  fn test_def_use_redefine_transient_var() {
-    let input_program = r"snippet foo(a : bit<2>, b : bit<2>,) { a = 1; }";
+  fn test_def_use_two_arguments() {
+    let input_program = r"snippet foo() {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                          }";
     run_def_use(input_program);
   }
 
   #[test]
-  fn test_def_use_redefine_transient_persistent() {
-    let input_program = r"snippet foo(a : bit<2>, b : bit<2>,) { persistent d : bit<2> = 1; d = 5; }";
+  #[should_panic(expected="Trying to update input variable a in foo. Inputs are implicity defined by caller.")]
+  fn test_def_use_redefine_input_fail() {
+    let input_program = r"snippet foo() {
+                            input a : bit<2>;
+                            a = 1;
+                          }";
+    run_def_use(input_program);
+  }
+
+  #[test]
+  fn test_def_use_redefine_persistent() {
+    let input_program = r"snippet foo() {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                            persistent d : bit<2> = 1;
+                            d = 5;
+                          }";
+    run_def_use(input_program);
+  }
+
+  #[test]
+  #[should_panic(expected="Can update a persistent variable at most once.")]
+  fn test_def_use_reupdate_persistent_fail() {
+    let input_program = r"snippet foo() {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                            persistent d : bit<2> = 1;
+                            d = 5;
+                            d = 6;
+                          }";
+    run_def_use(input_program);
+  }
+
+  #[test]
+  #[should_panic(expected="Trying to update const variable x in foo.")]
+  fn test_def_use_const_update_fail() {
+    let input_program = r"snippet foo() {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                            const x : bit<2> = 1;
+                            x = 1;
+                          }";
     run_def_use(input_program);
   }
 }

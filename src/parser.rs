@@ -51,14 +51,12 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
   let snippet_id  = parse_identifier(token_iter);
   match_token(token_iter, Token::ParenLeft, "Snippet argument list must start with a left parenthesis.");
-  let arg_list    = parse_arglist(token_iter);
   match_token(token_iter, Token::ParenRight, "Snippet argument list must end with a right parenthesis.");
   match_token(token_iter, Token::BraceLeft, "Snippet body must begin with a left brace.");
-  let persistent_decls    = parse_persistent_decls(token_iter);
-  let transient_decls     = parse_transient_decls(token_iter);
+  let variable_decls    = parse_variable_decls(token_iter);
   let statements      = parse_statements(token_iter);
   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
-  return Snippet{snippet_id, arg_list, persistent_decls, transient_decls, statements};
+  return Snippet{snippet_id, variable_decls, statements};
 }
 
 fn parse_connections<'a>(token_iter : &mut TokenIterator<'a>) -> Connections<'a> {
@@ -97,45 +95,34 @@ fn parse_connection<'a>(token_iter : &mut TokenIterator<'a>) -> Connection<'a> {
   return Connection { from_snippet : id1, to_snippet : id2, variable_pairs : variable_pairs };
 }
 
-fn parse_arglist<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecls<'a> {
-  // Helper function to detect identifiers
-  let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false, } };
+fn parse_variable_decls<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecls<'a> {
+  // Helper function to determine if the keyword starts a declaration
+  let is_decl = |token| { match token { &Token::Persistent | &Token::Transient | &Token::Const | &Token::Input | &Token::Output => true, _ => false, } };
 
-  let mut decl_vector = Vec::<TransientDecl>::new();
+  let mut decl_vector = Vec::<VariableDecl>::new();
   loop {
-    if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
-      return TransientDecls{decl_vector};
+    if !token_iter.peek().is_some() || (!is_decl(*token_iter.peek().unwrap())) {
+      return VariableDecls{decl_vector};
     } else {
-      let identifier = parse_identifier(token_iter);
-      let var_type   = parse_type_annotation(token_iter);
-      match_token(token_iter, Token::Comma, "Expected comma as separator between identifiers.");
-      decl_vector.push(TransientDecl{identifier, var_type});
+      let variable_decl = parse_variable_decl(token_iter);
+      decl_vector.push(variable_decl);
     }
   }
 }
 
-fn parse_persistent_decls<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentDecls<'a> {
-  // Helper function to determine if it's an persistent_decl
-  let is_persistent = |token| { match token { &Token::Persistent => true, _ => false, } };
-
-  let mut decl_vector = Vec::<PersistentDecl>::new();
-  loop {
-    if !token_iter.peek().is_some() || (!is_persistent(*token_iter.peek().unwrap())) {
-      return PersistentDecls{decl_vector};
-    } else {
-      let persistent_decl = parse_persistent_decl(token_iter);
-      decl_vector.push(persistent_decl);
-    }
-  }
-}
-
-fn parse_persistent_decl<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentDecl<'a> {
-  match_token(token_iter, Token::Persistent, "First token in a persistent_decl must be the keyword persistent.");
+fn parse_variable_decl<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecl<'a> {
+  let type_qualifier =  parse_type_qualifier(token_iter);
   let identifier = parse_identifier(token_iter);
-  let var_type   = parse_type_annotation(token_iter);
-  match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
-  let initial_values = parse_initial_values(token_iter);
-  match_token(token_iter, Token::SemiColon, "Last token in a persistent_decl must be a semicolon.");
+  let var_type   = parse_type_annotation(token_iter, type_qualifier);
+  let is_assign = |token| { match token { &Token::Assign => true, _ => false, } };
+  let initial_values = if is_assign(*token_iter.peek().unwrap())  {
+                         match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
+                         parse_initial_values(token_iter)
+                       } else {
+                         Vec::<Value>::new()
+                       };
+  // Must end declaration with a semi colon regardless of whether there's an initializer or not.
+  match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
 
   // Check that the initial values are representable using bit vector of bit_width
   for value in &(initial_values) {
@@ -147,41 +134,37 @@ fn parse_persistent_decl<'a>(token_iter : &mut TokenIterator<'a>) -> PersistentD
     }
   }
 
-  // Check that the number of initial values matches up with the type
-  if initial_values.len() as u32 != var_type.var_size {
-    panic!("Found {} initial values. Need {} initial values for variable {}.",
-           initial_values.len(),
-           var_type.var_size,
-           identifier.id_name);
+  // Check that the number of initial values matches up with the type for persistent and const
+  // variables alone
+  if &var_type.type_qualifier == &TypeQualifier::Const || &var_type.type_qualifier == &TypeQualifier::Persistent {
+    if initial_values.len() as u32 != var_type.var_size {
+      panic!("Found {} initial values. Need {} initial values for variable {}.",
+             initial_values.len(),
+             var_type.var_size,
+             identifier.id_name);
+    }
   }
-  return PersistentDecl {identifier, initial_values, var_type};
+  return VariableDecl {identifier, initial_values, var_type};
 }
 
-fn parse_transient_decls<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecls<'a> {
-  // Helper function to determine if it's an transient_decl
-  let is_transient = |token| { match token { &Token::Transient => true, _ => false, } };
-
-  let mut decl_vector = Vec::<TransientDecl>::new();
-  loop {
-    if !token_iter.peek().is_some() || (!is_transient(*token_iter.peek().unwrap())) {
-      return TransientDecls{decl_vector};
-    } else {
-      let transient_decl = parse_transient_decl(token_iter);
-      decl_vector.push(transient_decl);
+fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifier {
+  if token_iter.peek().is_none() {
+    panic!("No tokens left to parse in parse_type_qualifier.");
+  } else {
+    let next_token = token_iter.next().unwrap();
+    match *next_token {
+      Token::Transient  => TypeQualifier::Transient,
+      Token::Persistent => TypeQualifier::Persistent,
+      Token::Const      => TypeQualifier::Const,
+      Token::Input      => TypeQualifier::Input,
+      Token::Output     => TypeQualifier::Output,
+      _                 => panic!("Unsupported for now!!!")
     }
   }
 }
 
-fn parse_transient_decl<'a>(token_iter : &mut TokenIterator<'a>) -> TransientDecl<'a> {
-  match_token(token_iter, Token::Transient, "First token in a transient_decl must be the keyword transient.");
-  let identifier = parse_identifier(token_iter);
-  let var_type   = parse_type_annotation(token_iter);
-  match_token(token_iter, Token::SemiColon, "Last token in a transient_decl must be a semicolon.");
-  return TransientDecl {identifier, var_type};
-}
-
 // Retrieve bit width of bit vector. That's the only type for now.
-fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>) -> VarType {
+fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier) -> VarType {
   match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
   match_token(token_iter, Token::Bit, "Invalid type, bit vectors are the only supported type.");
   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
@@ -198,9 +181,9 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>) -> VarType {
     match_token(token_iter, Token::SquareLeft, "Expected [ here.");
     let var_size = parse_value(token_iter).value;
     match_token(token_iter, Token::SquareRight, "Expected ] here.");
-    return VarType { var_size, bit_width };
+    return VarType { var_size, bit_width, type_qualifier };
   } else {
-    return VarType { var_size : 1, bit_width };
+    return VarType { var_size : 1, bit_width, type_qualifier };
   }
 }
 
@@ -390,52 +373,85 @@ mod tests {
   test_parser_success!(r"7%5", parse_expr, test_parse_expr);
   test_parser_success!(r"x=6+5;", parse_statement, test_parse_statement);
   test_parser_success!(r"x=6+5;y=7*8;", parse_statements, test_parse_statements);
-  test_parser_success!(r"transient x : bit<8>;", parse_transient_decls, test_parse_transient_decls);
+  test_parser_success!(r"transient x : bit<8>;", parse_variable_decls, test_parse_transient_decls);
   test_parser_success!(r"persistent x : bit<3> = 6; persistent y : bit<3> = 7;",
-                       parse_persistent_decls, test_parse_persistent_decls); 
+                       parse_variable_decls, test_parse_persistent_decls); 
   test_parser_success!(r"persistent x : bit<3>[4] = {4, 5, 6, 7, }; persistent y: bit<3> = 7;",
-                       parse_persistent_decls, test_parse_persistent_decls2);
+                       parse_variable_decls, test_parse_persistent_decls2);
   test_parser_fail!   (r"persistent x : bit<3> ={4, 5, 6, 7};persistent y : bit<3> =7;",
-                       parse_persistent_decls, test_parse_persistent_decls2_fail,
+                       parse_variable_decls, test_parse_persistent_decls2_fail,
                        "Invalid token: BraceRight, expected Comma.\nError message: \"Expected comma as separator between values.\""); 
-  test_parser_fail!   (r"persistent x : bit<2> = 4;", parse_persistent_decls,
+  test_parser_fail!   (r"persistent x : bit<2> = 4;", parse_variable_decls,
                        test_parse_persistent_decls_outside_range,
                        "Initial value 4 is outside the range [0, 3] of 2-bit vector.");
-  test_parser_fail!   (r"persistent x : bit<0> = 4;", parse_persistent_decls,
+  test_parser_fail!   (r"persistent x : bit<0> = 4;", parse_variable_decls,
                        test_parse_persistent_decls_bitwidth0, "Bit width must be at least 1.");
-  test_parser_fail!   (r"persistent x : bit<31> = 4;", parse_persistent_decls,
+  test_parser_fail!   (r"persistent x : bit<31> = 4;", parse_variable_decls,
                        test_parse_persistent_decls_bitwidth31, "Bit width can be at most 30.");
-  test_parser_success!(r"persistent x : bit<30>[4] = {1, 2, 3, 4,};", parse_persistent_decls,
+  test_parser_success!(r"persistent x : bit<30>[4] = {1, 2, 3, 4,};", parse_variable_decls,
                        test_parse_persistent_decls_arrays);
-  test_parser_fail!   (r"persistent x : bit<30>[2] = {1, 2, 3,};", parse_persistent_decls,
+  test_parser_fail!   (r"persistent x : bit<30>[2] = {1, 2, 3,};", parse_variable_decls,
                        test_parse_persistent_decls_arrays_fail,
                        "Found 3 initial values. Need 2 initial values for variable x.");
-  test_parser_success!(r"snippet fun(a : bit<2>, b : bit<2>, c : bit<2>,)
-                       { persistent x : bit<3> =6;persistent y : bit<3> =7;}",
+  test_parser_success!(r"snippet fun() {
+                           input a : bit<2>;
+                           input b : bit<2>;
+                           input c : bit<2>;
+                           persistent x : bit<3> = 6;
+                           persistent y : bit<3> = 7;
+                         }",
                        parse_snippet, test_parse_snippet1);
-  test_parser_success!(r"snippet fun(a : bit<2>, b : bit<2>, c : bit<2>,)
-                       { persistent x : bit<3> =6;x=y+5;}",
+  test_parser_success!(r"snippet fun() {
+                           input a : bit<2>;
+                           input b : bit<2>;
+                           input c : bit<2>;
+                           persistent x : bit<3> = 6;
+                           x=y+5;
+                        }",
                        parse_snippet, test_parse_snippet2); 
-  test_parser_success!(r"snippet fun(a : bit<2>, b : bit<2>, c : bit<2>,)
-                         { persistent x : bit<3> =6;x=y+5;}
-                         snippet fun(a : bit<2>, b : bit<2>, c : bit<2>,)
-                         { persistent x : bit<3> =6;x=y+5;}",
+  test_parser_success!(r"snippet fun() {
+                           input a : bit<2>;
+                           input b : bit<2>;
+                           input c : bit<2>;
+                           persistent x : bit<3> = 6;
+                           x=y+5;
+                         }
+                         snippet fun() {
+                           input a : bit<2>;
+                           input b : bit<2>;
+                           input c : bit<2>;
+                           persistent x : bit<3> =6;
+                           x=y+5;
+                         }",
                        parse_snippets, test_parse_snippets);
   test_parser_success!(r"(foo, fun) (bar, foobar)", parse_connections, test_parse_connections); 
   test_parser_success!(r"(foo, fun): a->b, c->x, (bar, foobar)", parse_connections, test_parse_connections2);
-  test_parser_success!(r"snippet fun ( a : bit<2> , b : bit<2>, c : bit<2> , x : bit<2>, y : bit<2>, ) {
+  test_parser_success!(r"snippet fun () {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                            input c : bit<2>;
+                            input x : bit<2>;
+                            input y : bit<2>;
                             persistent x : bit<3> = 0;
                             a = x;
                             b = y;
                             m = 5;
                           }
-                          snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
+                          snippet foo() {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                            input c : bit<2>;
                             persistent x : bit<3> = 1;
                             x = 5;
                           }
                           (foo, fun)
                           ", parse_prog, test_parse_prog);
-  test_parser_success!(r"snippet fun ( a : bit<2> , b : bit<2>, c : bit<2> , x : bit<2>, y : bit<2>, ) {
+  test_parser_success!(r"snippet fun () {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                            input c : bit<2>;
+                            input x : bit<2>;
+                            input y : bit<2>;
                             persistent x : bit<3> = 0 ;
                             transient k : bit<5>;
                             t1 = a >= b;
@@ -445,7 +461,10 @@ mod tests {
                             t3 = t2 and t1;
                             e = t2 ? m : 5;
                           }
-                          snippet foo(a : bit<2>, b : bit<2>, c : bit<2>, ) {
+                          snippet foo() {
+                            input a : bit<2>;
+                            input b : bit<2>;
+                            input c : bit<2>;
                             persistent x : bit<3> = 1;
                             x = 5;
                           }

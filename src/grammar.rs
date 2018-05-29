@@ -11,11 +11,9 @@ pub struct Snippets<'a> {
 
 #[derive(Debug)]
 pub struct Snippet<'a> {
-  pub snippet_id : Identifier<'a>,
-  pub arg_list   : TransientDecls<'a>,
-  pub persistent_decls : PersistentDecls<'a>,
-  pub transient_decls : TransientDecls<'a>,
-  pub statements : Statements<'a>
+  pub snippet_id       : Identifier<'a>,
+  pub variable_decls   : VariableDecls<'a>,
+  pub statements       : Statements<'a>
 }
 
 #[derive(Debug)]
@@ -37,33 +35,33 @@ pub struct VariablePair<'a> {
 }
 
 #[derive(Debug)]
-pub struct PersistentDecls<'a> {
-  pub decl_vector : Vec<PersistentDecl<'a>>
+pub struct VariableDecls<'a> {
+  pub decl_vector : Vec<VariableDecl<'a>>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub enum TypeQualifier {
+  Input,
+  Output,
+  Persistent,
+  Transient,
+  Const
 }
 
 #[derive(Debug)]
 pub struct VarType {
   pub bit_width : u32,
-  pub var_size  : u32
+  pub var_size  : u32,
+  pub type_qualifier : TypeQualifier,
   // var_size 1 is a scalar, > 1 is an array.
 }
 
 #[derive(Debug)]
-pub struct PersistentDecl<'a> {
+pub struct VariableDecl<'a> {
   pub identifier     : Identifier<'a>,
   pub initial_values : Vec<Value>,
   pub var_type       : VarType
-}
-
-#[derive(Debug)]
-pub struct TransientDecls<'a> {
-  pub decl_vector : Vec<TransientDecl<'a>>
-}
-
-#[derive(Debug)]
-pub struct TransientDecl<'a> {
-  pub identifier : Identifier<'a>,
-  pub var_type   : VarType
 }
 
 #[derive(Debug)]

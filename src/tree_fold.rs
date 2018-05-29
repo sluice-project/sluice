@@ -16,10 +16,8 @@ pub trait TreeFold<'a, Acc> {
   }
  
   fn visit_snippet(tree : &'a Snippet, collector : &mut Acc) {
-    // TODO: do something with transient_decls
     Self::visit_identifier(&tree.snippet_id, collector);
-    Self::visit_arglist(&tree.arg_list, collector);
-    Self::visit_persistent_decls(&tree.persistent_decls, collector);
+    Self::visit_variable_decls(&tree.variable_decls, collector);
     Self::visit_statements(&tree.statements, collector);
   }
 
@@ -28,27 +26,22 @@ pub trait TreeFold<'a, Acc> {
       Self::visit_identifier(&connection.from_snippet, collector);
       Self::visit_identifier(&connection.to_snippet, collector);
     }
-  }
+  } 
   
-  fn visit_arglist(tree : &'a TransientDecls, collector : &mut Acc) {
-    Self::visit_transient_decls(tree, collector);
-  }
-  
-  fn visit_persistent_decls(tree : &'a PersistentDecls, collector : &mut Acc ) {
-    for init in &tree.decl_vector { Self::visit_persistent_decl(init, collector); }
+  fn visit_variable_decls(tree : &'a VariableDecls, collector : &mut Acc ) {
+    for init in &tree.decl_vector { Self::visit_variable_decl(init, collector); }
   }
 
-  fn visit_persistent_decl(tree : &'a PersistentDecl, collector : &mut Acc) {
+  fn visit_variable_decl(tree : &'a VariableDecl, collector : &mut Acc) {
     Self::visit_identifier(&tree.identifier, collector);
     for value in &(tree.initial_values) { Self::visit_value(value, collector); };
+    Self::visit_var_type(&tree.var_type, collector);
   }
 
-  fn visit_transient_decls(tree : &'a TransientDecls, collector : &mut Acc ) {
-    for init in &tree.decl_vector { Self::visit_transient_decl(init, collector); }
-  }
-
-  fn visit_transient_decl(tree : &'a TransientDecl, collector : &mut Acc) {
-    Self::visit_identifier(&tree.identifier, collector);
+  fn visit_var_type(tree : &'a VarType, collector : &mut Acc) {
+    let _ = tree;
+    let _ = collector;
+    // Do nothing here.    
   }
 
   fn visit_statements(tree : &'a Statements, collector : &mut Acc) {

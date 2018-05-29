@@ -40,7 +40,8 @@ mod tests {
 
   #[test]
   fn test_code_gen(){
-    let input_program = r"snippet fun(x : bit<2>, ) {
+    let input_program = r"snippet fun() {
+                            input x : bit<2>;
                             b = y;
                             m = 5;
                           }
