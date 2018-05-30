@@ -219,244 +219,166 @@ mod tests {
                                                     snippet_set : HashSet::new() };
     DefUse::visit_prog(&parse_tree, &mut def_use_collector);
   }
-  
-  #[test]
-  #[should_panic(expected="y used before definition")]
-  fn test_def_use_undefined_fail(){
-    let input_program = r"snippet fun() {
-                            input x : bit<2>;
-                            b = y;
-                            m = 5;
-                          }
-                          ";
-    run_def_use(input_program);
+
+  macro_rules! test_pass {
+    ($input_code:expr,$test_name:ident) => (
+      #[test]
+      fn $test_name() {
+        let input_program = $input_code;
+        run_def_use(input_program);
+      }
+    )
   }
 
-  #[test]
-  #[should_panic(expected="x used before definition")]
-  fn test_def_use_undefined2_fail(){
-    let input_program = r"snippet fun() {
-                            input a : bit<2>;
-                            x = x + 1;
-                          }
-                          ";
-    run_def_use(input_program);
-  }
-
-
-  #[test]
-  #[should_panic(expected="Can't have two snippets named foo.")]
-  fn test_def_use_duplicate_snippets_fail() {
-    let input_program = r"snippet foo() {} snippet foo() {}";
-    run_def_use(input_program);
+  macro_rules! test_fail {
+    ($input_code:expr,$test_name:ident,$panic_msg:expr) => (
+      #[test]
+      #[should_panic(expected=$panic_msg)]
+      fn $test_name() {
+        let input_program = $input_code;
+        run_def_use(input_program);
+      }
+    )
   }
  
-  #[test]
-  #[should_panic(expected="Defining variable x that isn't declared in foo.")]
-  fn test_def_use_undeclared_fail(){
-    let input_program = r"snippet foo() {
-                            input a : bit<2>;
-                            input b : bit<2>;
-                            input c : bit<2>;
-                            x = a;
-                          }
-                          ";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet fun() {
+                 input x : bit<2>;
+                 b = y;
+                 m = 5;
+               }
+             ", test_def_use_undefined_fail,
+             "y used before definition");
 
-  #[test]
-  fn test_def_use1(){
-    let input_program = r"snippet foo() {
-                            input a : bit<2>;
-                            input b : bit<2>;
-                            input c : bit<2>;
-                            transient x: bit<2>; 
-                            x = a;
-                          }
-                          ";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet fun() {
+                 input a : bit<2>;
+                 x = x + 1;
+               }
+             ", test_def_use_undefined2_fail,
+             "x used before definition");
 
+  test_fail!(r"snippet foo() {} snippet foo() {}",
+             test_def_use_duplicate_snippets_fail,      
+             "Can't have two snippets named foo.");
+
+  test_fail!(r"snippet foo() {
+                 input a : bit<2>;
+                 input b : bit<2>;
+                 input c : bit<2>;
+                 x = a;
+             }", test_def_use_undeclared_fail,
+             "Defining variable x that isn't declared in foo.");
+
+  test_pass!(r"snippet foo() {
+                 input a : bit<2>;
+                 input b : bit<2>;
+                 input c : bit<2>;
+                 transient x: bit<2>; 
+                 x = a;
+             }", test_def_use1);
   
-  #[test]
-  fn test_def_use2(){
-    let input_program = r"snippet foo() {
-                            transient d : bit<2>;
-                            transient x : bit<2>;
-                            d = 1;
-                            x = d;
-                          }
-                          ";
-    run_def_use(input_program);
-  }
+  test_pass!(r"snippet foo() {
+                 transient d : bit<2>;
+                 transient x : bit<2>;
+                 d = 1;
+                 x = d;
+             }", test_def_use2);
 
-  #[test]
-  fn test_def_use3(){
-    let input_program = r"snippet foo() {
-                            transient x : bit<1> = 1;
-                            persistent d : bit<1> = 1;
-                            x = d;
-                          }
-                          ";
-    run_def_use(input_program);
-  }
+  test_pass!(r"snippet foo() {
+                 transient x : bit<1> = 1;
+                 persistent d : bit<1> = 1;
+                 x = d;
+             }", test_def_use3);
 
-  #[test]
-  fn test_def_use4(){
-    let input_program = r"snippet foo() {
-                            input a : bit<2>;
-                            input b : bit<2>;
-                            persistent d : bit<1> = 1;
-                            transient x : bit<1>;
-                            transient y : bit<1>;
-                            y = d + a;
-                            x = d ? a : b;
-                          }
-                          ";
-    run_def_use(input_program);
-  }
+  test_pass!(r"snippet foo() {
+                input a : bit<2>;
+                input b : bit<2>;
+                persistent d : bit<1> = 1;
+                transient x : bit<1>;
+                transient y : bit<1>;
+                y = d + a;
+                x = d ? a : b;
+             }", test_def_use4);
 
-  #[test]
-  #[should_panic(expected="Variable x is declared twice in fun.")]
-  fn test_def_use_redefined_persistent_arglist_fail(){
-    let input_program = r"snippet fun() {
-                            input c : bit<2>;
-                            input x : bit<2>;
-                            persistent x : bit<1> = 0;
-                          }
-                          ";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet fun() {
+                 input c : bit<2>;
+                 input x : bit<2>;
+                 persistent x : bit<1> = 0;
+             }", test_def_use_redefined_persistent_arglist_fail,
+             "Variable x is declared twice in fun.");
 
-  #[test]
-  fn test_def_use_connections_empty(){
-    let input_program = r"snippet foo() {} snippet bar() {}";
-    run_def_use(input_program);
-  }
+  test_pass!(r"snippet foo() {} snippet bar() {}",
+             test_def_use_connections_empty);
 
-  #[test]
-  fn test_def_use_connections(){
-    let input_program = r"snippet foo() {output c : bit<2>;} snippet fun() { input d : bit<2>;} (foo, fun):c->d,";
-    run_def_use(input_program);
-  }
+  test_pass!(r"snippet foo() {output c : bit<2>;} snippet fun() { input d : bit<2>;} (foo, fun):c->d,",
+             test_def_use_connections);
 
-  #[test]
-  fn test_def_use_connections2(){
-    let input_program = r"snippet foo() {output c : bit<2>[1];} snippet fun() { input d : bit<2>;} (foo, fun):c->d,";
-    run_def_use(input_program);
-  }
+  test_pass!(r"snippet foo() {output c : bit<2>[1];} snippet fun() { input d : bit<2>;} (foo, fun):c->d,",
+             test_def_use_connections2);
 
-  #[test]
-  #[should_panic(expected="Bit widths differ in the connection from foo.c to fun.d.")]
-  fn test_def_use_connections_bitwidth_fail(){
-    let input_program = r"snippet foo() {output c : bit<1>;} snippet fun() { input d : bit<2>;} (foo, fun):c->d,";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet foo() {output c : bit<1>;} snippet fun() { input d : bit<2>;} (foo, fun):c->d,",
+             test_def_use_connections_bitwidth_fail,
+             "Bit widths differ in the connection from foo.c to fun.d.");
 
-  #[test]
-  #[should_panic(expected="Var sizes differ in the connection from foo.c to fun.d")]
-  fn test_def_use_connections_varsize_fail(){
-    let input_program = r"snippet foo() {output c : bit<1>[2];} snippet fun() { input d : bit<1>;} (foo, fun):c->d,";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet foo() {output c : bit<1>[2];} snippet fun() { input d : bit<1>;} (foo, fun):c->d,",
+             test_def_use_connections_varsize_fail,
+             "Var sizes differ in the connection from foo.c to fun.d");
 
-  #[test]
-  #[should_panic(expected="Trying to connect non-output variable c in origin snippet foo")]
-  fn test_def_use_connection_fail1(){
-    let input_program = r"snippet foo() {input c : bit<2>;} snippet fun() { input d : bit<2>;} (foo, fun):c->d,";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet foo() {input c : bit<2>;} snippet fun() { input d : bit<2>;} (foo, fun):c->d,",
+             test_def_use_connection_fail1,
+             "Trying to connect non-output variable c in origin snippet foo");
 
-  #[test]
-  #[should_panic(expected="Trying to connect non-input variable d in destination snippet fun")]
-  fn test_def_use_connection_fail2(){
-    let input_program = r"snippet foo() {output c : bit<2>;} snippet fun() { output d : bit<2>;} (foo, fun):c->d,";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet foo() {output c : bit<2>;} snippet fun() { output d : bit<2>;} (foo, fun):c->d,",
+             test_def_use_connection_fail2,
+             "Trying to connect non-input variable d in destination snippet fun");
 
-  #[test]
-  #[should_panic(expected="foo connected, but undefined")]
-  fn test_def_use_connections_undefined_snippet_fail() {
-    let input_program = r"(foo, fun)";
-    run_def_use(input_program);
-  }
+  test_fail!(r"(foo, fun)", test_def_use_connections_undefined_snippet_fail,
+             "foo connected, but undefined");
 
-  #[test]
-  #[should_panic(expected="Trying to connect non-existent variable c from snippet foo")]
-  fn test_def_use_connections_undefined_variable_fail() {
-    let input_program = r"snippet foo() {
-                            input a : bit<2>;
-                            input b : bit<2>;
-                          }
-                          snippet fun() {
-                            input c : bit<2>;
-                            input d : bit<2>;
-                          } (foo, fun):c->d,";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet foo() {
+               }
+               snippet fun() {
+                 input d : bit<2>;
+               } (foo, fun):c->d,
+             ", test_def_use_connections_undefined_variable_fail,
+             "Trying to connect non-existent variable c from snippet foo");
 
-  #[test]
-  #[should_panic(expected="Variable a is declared twice in foo.")]
-  fn test_def_use_repeated_arguments_fail() {
-    let input_program = r"snippet foo() {
-                            input a : bit<2>;
-                            input a : bit<2>;
-                          }";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet foo() {
+                 input a : bit<2>;
+                 input a : bit<2>;
+             }", test_def_use_repeated_arguments_fail, "Variable a is declared twice in foo.");
 
-  #[test]
-  fn test_def_use_two_arguments() {
-    let input_program = r"snippet foo() {
-                            input a : bit<2>;
-                            input b : bit<2>;
-                          }";
-    run_def_use(input_program);
-  }
+  test_pass!(r"snippet foo() {
+                 input a : bit<2>;
+                 input b : bit<2>;
+             }", test_def_use_two_arguments);
 
-  #[test]
-  #[should_panic(expected="Trying to update input variable a in foo. Inputs are implicity defined by caller.")]
-  fn test_def_use_redefine_input_fail() {
-    let input_program = r"snippet foo() {
-                            input a : bit<2>;
-                            a = 1;
-                          }";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet foo() {
+                 input a : bit<2>;
+                 a = 1;
+             }", test_def_use_redefine_input_fail,
+             "Trying to update input variable a in foo. Inputs are implicity defined by caller.");
 
-  #[test]
-  fn test_def_use_redefine_persistent() {
-    let input_program = r"snippet foo() {
-                            input a : bit<2>;
-                            input b : bit<2>;
-                            persistent d : bit<2> = 1;
-                            d = 5;
-                          }";
-    run_def_use(input_program);
-  }
+  test_pass!(r"snippet foo() {
+                 input a : bit<2>;
+                 input b : bit<2>;
+                 persistent d : bit<2> = 1;
+                 d = 5;
+             }", test_def_use_redefine_persistent);
 
-  #[test]
-  #[should_panic(expected="Can update a persistent variable at most once.")]
-  fn test_def_use_reupdate_persistent_fail() {
-    let input_program = r"snippet foo() {
-                            input a : bit<2>;
-                            input b : bit<2>;
-                            persistent d : bit<2> = 1;
-                            d = 5;
-                            d = 6;
-                          }";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet foo() {
+                 input a : bit<2>;
+                 input b : bit<2>;
+                 persistent d : bit<2> = 1;
+                 d = 5;
+                 d = 6;
+             }", test_def_use_reupdate_persistent_fail,
+             "Can update a persistent variable at most once.");
 
-  #[test]
-  #[should_panic(expected="Trying to update const variable x in foo.")]
-  fn test_def_use_const_update_fail() {
-    let input_program = r"snippet foo() {
-                            input a : bit<2>;
-                            input b : bit<2>;
-                            const x : bit<2> = 1;
-                            x = 1;
-                          }";
-    run_def_use(input_program);
-  }
+  test_fail!(r"snippet foo() {
+                 input a : bit<2>;
+                 input b : bit<2>;
+                 const x : bit<2> = 1;
+                 x = 1;
+             }", test_def_use_const_update_fail,
+             "Trying to update const variable x in foo.");
 }
