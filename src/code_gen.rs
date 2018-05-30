@@ -5,6 +5,7 @@
 //4. Top SystemVerilog file for running specific snippets on an FPGA/simulation quickly.
 //5. Specifying which module to run on FPGA or in simulation.
 //6. Specification for simplified version of constraints file.
+//7. Reset logic for all variables.
 
 use super::grammar::*;
 use tree_fold::TreeFold;
