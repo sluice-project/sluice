@@ -64,7 +64,7 @@ impl<'a> TreeFold<'a, SymTableCollector<'a>> for DefUse {
 
   fn visit_snippet(tree : &'a Snippet, collector: &mut SymTableCollector<'a>) {
     // Initialize symbol table for this snippet
-    collector.current_snippet = &tree.snippet_id.get_string();
+    collector.current_snippet = &tree.snippet_id.get_str();
     if collector.snippet_set.get(collector.current_snippet) != None {
       panic!("Can't have two snippets named {}.", collector.current_snippet);
     } else {
@@ -149,8 +149,8 @@ impl<'a> TreeFold<'a, SymTableCollector<'a>> for DefUse {
   //    are output/input variables in the source/destination snippets respectively.
   fn visit_connections(tree : &'a Connections, collector: &mut SymTableCollector<'a>) {
     for connection in &tree.connection_vector {
-      let from_snippet = connection.from_snippet.get_string();
-      let to_snippet   = connection.to_snippet.get_string();
+      let from_snippet = connection.from_snippet.get_str();
+      let to_snippet   = connection.to_snippet.get_str();
       if collector.snippet_set.get(from_snippet) == None {
         panic!("{} connected, but undefined", from_snippet);
       }
@@ -158,8 +158,8 @@ impl<'a> TreeFold<'a, SymTableCollector<'a>> for DefUse {
         panic!("{} connected, but undefined", to_snippet);
       }
       for variable_pair in &connection.variable_pairs {
-        let from_var = variable_pair.from_var.get_string();
-        let to_var   = variable_pair.to_var.get_string();
+        let from_var = variable_pair.from_var.get_str();
+        let to_var   = variable_pair.to_var.get_str();
         if collector.symbol_table.get(from_snippet).unwrap().get(from_var).is_none() {
           panic!("Trying to connect non-existent variable {} from snippet {}", from_var, from_snippet);
         } else {

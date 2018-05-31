@@ -120,7 +120,7 @@ pub struct Identifier<'a> {
 }
 
 impl<'a> Identifier<'a> {
-  pub fn get_string(&self) -> &str{
+  pub fn get_str(&self) -> &str{
     return self.id_name;
   }
 }
@@ -154,7 +154,7 @@ impl<'a> Operand<'a>{
   pub fn is_val(&self) -> bool { !self.is_id() }
   pub fn get_id(&self) -> &str {
     match self {
-      &Operand::LValue(LValue::Identifier(ref id)) => id.get_string(),
+      &Operand::LValue(LValue::Identifier(ref id)) => id.get_str(),
       _ =>  { assert!(false, "Can't call get_id if operand isn't identifier.");"" }
     }
   }
@@ -183,9 +183,9 @@ pub enum LValue<'a> {
 impl<'a> LValue<'a> {
   pub fn get_string(&self) -> String {
     match self {
-      &LValue::Identifier(ref id) => id.get_string().to_owned(),
+      &LValue::Identifier(ref id) => id.get_str().to_owned(),
       &LValue::Array(ref id, ref address) => {
-        id.get_string().to_owned() + " [ " + &address.get_string() + " ] "
+        id.get_str().to_owned() + " [ " + &address.get_string() + " ] "
       }
     }
   }

@@ -6,7 +6,7 @@ pub struct PrettyPrinter;
 impl<'a> TreeFold<'a, String> for PrettyPrinter {
   fn visit_snippet(tree : &'a Snippet, collector : &mut String) {
     collector.push_str("snippet ");
-    collector.push_str(tree.snippet_id.get_string());
+    collector.push_str(tree.snippet_id.get_str());
     collector.push_str("() {");
     Self::visit_variable_decls(&tree.variable_decls, collector);
     Self::visit_statements(&tree.statements, collector);
@@ -15,16 +15,16 @@ impl<'a> TreeFold<'a, String> for PrettyPrinter {
 
   fn visit_connection(tree : &'a Connection, collector : &mut String) {
     collector.push_str("(");
-    collector.push_str(tree.from_snippet.get_string());
+    collector.push_str(tree.from_snippet.get_str());
     collector.push_str(",");
-    collector.push_str(tree.to_snippet.get_string());
+    collector.push_str(tree.to_snippet.get_str());
     if !tree.variable_pairs.is_empty() {
       collector.push_str(":");
       for pair in &tree.variable_pairs {
         collector.push_str("(");
-        collector.push_str(pair.from_var.get_string());
+        collector.push_str(pair.from_var.get_str());
         collector.push_str("->");
-        collector.push_str(pair.to_var.get_string());
+        collector.push_str(pair.to_var.get_str());
         collector.push_str("),");
       }
     }
@@ -79,7 +79,7 @@ impl<'a> TreeFold<'a, String> for PrettyPrinter {
         TypeQualifier::Transient => "transient",
       });
     collector.push_str(" ");
-    collector.push_str(tree.identifier.get_string());
+    collector.push_str(tree.identifier.get_str());
     collector.push_str(" : bit<");
     collector.push_str(&tree.var_type.bit_width.to_string());
     collector.push_str(">[");
