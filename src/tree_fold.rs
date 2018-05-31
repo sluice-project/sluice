@@ -23,11 +23,15 @@ pub trait TreeFold<'a, Acc> {
 
   fn visit_connections(tree : &'a Connections, collector : &mut Acc) {
     for connection in &tree.connection_vector {
-      Self::visit_identifier(&connection.from_snippet, collector);
-      Self::visit_identifier(&connection.to_snippet, collector);
+      Self::visit_connection(&connection, collector);
     }
-  } 
-  
+  }
+
+  fn visit_connection(tree : &'a Connection, collector : &mut Acc) {
+    Self::visit_identifier(&tree.from_snippet, collector);
+    Self::visit_identifier(&tree.to_snippet, collector);
+  }
+
   fn visit_variable_decls(tree : &'a VariableDecls, collector : &mut Acc ) {
     for init in &tree.decl_vector { Self::visit_variable_decl(init, collector); }
   }
