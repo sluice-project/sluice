@@ -11,23 +11,37 @@ use std::collections::HashSet;
 // Main compiler binary
 // Takes an input sculpt program and produces a refined program
 fn main() {
-  let input_program = r"snippet fun(a, b, c, x, y, ) {
+  let input_program = r"snippet fun(){
+                          input a : bit<2>;
+                          input b : bit<2>;
+                          input c : bit<2>;
+                          input x : bit<2>;
+                          input y : bit<2>;
+                          transient z : bit<2>;
+                          transient r : bit<2>;
+                          transient q : bit<2>;
+                          transient m : bit<2>;
                           z = a + b;
                           q = x;
                           r = y;
                           m = 5;
                         }
-                        snippet foo(a, b, c, ) {
-                          persistent p = 1;
-                          persistent m = {1, 2, 3, };
+                        snippet foo() {
+                          input a : bit<2>;
+                          input b : bit<2>;
+                          input c : bit<2>;
+                          persistent p : bit<2> = 1;
+                          persistent m : bit<2>[3] = {1, 2, 3, };
+                          transient z : bit<2>;
+                          transient h : bit<2>;
+                          transient q : bit<2>;
                           q = 5;
                           z[5] = 6;
                           h = z[7];
                           m = 5;
                         }
                         (foo, fun)
-                        ";
-  // Lexing
+                        ";  // Lexing
   let tokens = & mut lexer::get_tokens(input_program);
 
   // parsing
