@@ -164,6 +164,13 @@ impl<'a> Operand<'a>{
       _ => { assert!(false, "Can't call get_val if operand isn't a value."); return String::new();}
     }
   }
+
+  pub fn get_string(&self) -> String {
+    match self {
+      &Operand::Value(ref val) => val.get_string(),
+      &Operand::LValue(ref lval) => lval.get_string()
+    }
+  }
 }
 
 #[derive(Debug)]
@@ -171,4 +178,15 @@ impl<'a> Operand<'a>{
 pub enum LValue<'a> {
   Identifier(Identifier<'a>),
   Array(Identifier<'a>, Box<Operand<'a>>)
+}
+
+impl<'a> LValue<'a> {
+  pub fn get_string(&self) -> String {
+    match self {
+      &LValue::Identifier(ref id) => id.get_string().to_owned(),
+      &LValue::Array(ref id, ref address) => {
+        id.get_string().to_owned() + " [ " + &address.get_string() + " ] "
+      }
+    }
+  }
 }
