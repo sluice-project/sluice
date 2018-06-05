@@ -4,8 +4,6 @@ use sculpt::lexer;
 use sculpt::parser;
 use sculpt::def_use::DefUse;
 use sculpt::tree_fold::TreeFold;
-use std::collections::HashMap;
-use std::collections::HashSet;
 
 // Main compiler binary
 // Takes an input sculpt program and produces a refined program
@@ -50,8 +48,6 @@ fn main() {
   println!("Parse tree: {:?}\n", parse_tree);
 
   // Check that identifiers are defined before use
-  let mut def_use = DefUse{ current_snippet : "",
-                            symbol_table : HashMap::new(),
-                            snippet_set : HashSet::new() };
+  let mut def_use = DefUse::new();
   def_use.visit_prog(&parse_tree);
 }

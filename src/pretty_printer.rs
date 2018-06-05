@@ -2,7 +2,13 @@ use super::grammar::*;
 use tree_fold::TreeFold;
 
 pub struct PrettyPrinter {
-  pub pretty_print_str : String,
+  pretty_print_str : String,
+}
+
+impl PrettyPrinter {
+  pub fn new() -> PrettyPrinter {
+    PrettyPrinter{ pretty_print_str : "".to_string() }
+  }
 }
 
 impl<'a> TreeFold<'a> for PrettyPrinter {
@@ -119,7 +125,7 @@ mod tests {
     println!("Parse tree: {:?}\n", parse_tree);
 
     // Run pretty printer
-    let mut pretty_printer = PrettyPrinter{ pretty_print_str : "".to_string() };
+    let mut pretty_printer = PrettyPrinter::new();
     pretty_printer.visit_prog(&parse_tree);
     println!("Pretty printed code: {}", pretty_printer.pretty_print_str);
 

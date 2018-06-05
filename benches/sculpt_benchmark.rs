@@ -8,8 +8,6 @@ use sculpt::parser;
 use sculpt::def_use::DefUse;
 use sculpt::pretty_printer::PrettyPrinter;
 use sculpt::tree_fold::TreeFold;
-use std::collections::HashMap;
-use std::collections::HashSet;
 use test::Bencher;
 
 fn create_test_input(size : u32) -> String {
@@ -54,9 +52,7 @@ fn bench_def_use(b : &mut Bencher) {
   b.iter(|| { let tokens = & mut lexer::get_tokens(input_program);
               let token_iter = & mut tokens.iter().peekable();
               let parse_tree = parser::parse_prog(token_iter);
-              let mut def_use = DefUse { current_snippet : "",
-                                         symbol_table : HashMap::new(),
-                                         snippet_set : HashSet::new() };
+              let mut def_use = DefUse::new();
               def_use.visit_prog(&parse_tree);} );
 }
 
@@ -66,6 +62,6 @@ fn bench_pretty_printer(b : &mut Bencher) {
   b.iter(|| { let tokens = & mut lexer::get_tokens(input_program);
               let token_iter = & mut tokens.iter().peekable();
               let parse_tree = parser::parse_prog(token_iter);
-              let mut pretty_printer = PrettyPrinter{ pretty_print_str : "".to_string() };
+              let mut pretty_printer = PrettyPrinter::new();
               pretty_printer.visit_prog(&parse_tree);} );
 }

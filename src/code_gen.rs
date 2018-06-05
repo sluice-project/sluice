@@ -11,12 +11,18 @@
 use super::grammar::*;
 use tree_fold::TreeFold;
 
-pub struct CodeGen {
-  pub snippet_name : String,
-  pub generated_string : String
+pub struct CodeGen<'a> {
+  snippet_name : &'a str,
+  generated_string : String
 }
 
-impl<'a> TreeFold<'a> for  CodeGen {
+impl<'a> CodeGen<'a> {
+  pub fn new(t_snippet_name : &'a str) -> CodeGen<'a> {
+    CodeGen{snippet_name : t_snippet_name, generated_string : "".to_string()}
+  }
+}
+
+impl<'a> TreeFold<'a> for  CodeGen<'a> {
   fn visit_snippet(&mut self, tree : &'a Snippet) {
     if tree.snippet_id.get_str() == self.snippet_name {
       println!("Visit found snippet of interest.");
@@ -35,8 +41,6 @@ mod tests {
   use super::CodeGen;
   use super::super::tree_fold::TreeFold;
   use super::super::def_use::DefUse;
-  use std::collections::HashSet;
-  use std::collections::HashMap;
  
   fn run_code_gen(input_program : &str) {
     // Lexing
@@ -49,13 +53,11 @@ mod tests {
     println!("Parse tree: {:?}\n", parse_tree);
 
     // Check that identifiers are defined before use
-    let mut def_use = DefUse { current_snippet : "",
-                               symbol_table : HashMap::new(),
-                               snippet_set : HashSet::new() };
+    let mut def_use = DefUse::new();
     def_use.visit_prog(&parse_tree);
 
     // Run code generator
-    let mut code_gen = CodeGen{ generated_string : "".to_string(), snippet_name : "fun".to_string() };
+    let mut code_gen = CodeGen::new("fun");
     code_gen.visit_prog(&parse_tree);
   }
 

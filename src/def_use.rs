@@ -12,14 +12,14 @@ pub enum VarState {
 }
 
 pub struct VariableMetadata<'a> {
-  pub var_type  : &'a VarType,
-  pub var_state : VarState 
+  var_type  : &'a VarType,
+  var_state : VarState
 }
 
 pub struct DefUse<'a> {
-  pub current_snippet : &'a str,
-  pub symbol_table    : HashMap<&'a str, HashMap<&'a str, VariableMetadata<'a>>>,
-  pub snippet_set     : HashSet<&'a str>
+  current_snippet : &'a str,
+  symbol_table    : HashMap<&'a str, HashMap<&'a str, VariableMetadata<'a>>>,
+  snippet_set     : HashSet<&'a str>
 }
 
 impl<'a> DefUse<'a> {
@@ -37,6 +37,14 @@ impl<'a> DefUse<'a> {
     } else {
       assert!(sym_table.get(id_name).unwrap().var_state == VarState::Defined, "var_state should be VarState::Defined.");
       return true;
+    }
+  }
+
+  pub fn new() -> DefUse<'a> {
+    DefUse {
+      current_snippet : "",
+      symbol_table : HashMap::new(),
+      snippet_set  : HashSet::new(),
     }
   }
 }
@@ -196,9 +204,7 @@ mod tests {
   use super::super::parser;
   use super::DefUse;
   use super::super::tree_fold::TreeFold;
-  use std::collections::HashMap;
-  use std::collections::HashSet;
-  
+
   fn run_def_use(input_program : &str) {
     // Lexing
     let tokens = & mut lexer::get_tokens(input_program);
@@ -210,9 +216,7 @@ mod tests {
     println!("Parse tree: {:?}\n", parse_tree);
   
     // Check that identifiers are defined before use
-    let mut def_use = DefUse { current_snippet : "",
-                               symbol_table : HashMap::new(),
-                               snippet_set : HashSet::new() };
+    let mut def_use = DefUse::new();
     def_use.visit_prog(&parse_tree);
   }
 
