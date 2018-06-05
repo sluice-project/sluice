@@ -11,20 +11,19 @@
 use super::grammar::*;
 use tree_fold::TreeFold;
 
-pub struct CodeGen;
-pub struct CodeGenCollector {
+pub struct CodeGen {
   pub snippet_name : String,
   pub generated_string : String
 }
 
-impl<'a> TreeFold<'a, CodeGenCollector> for  CodeGen {
-  fn visit_snippet(tree : &'a Snippet, collector : &mut CodeGenCollector) {
-    if tree.snippet_id.get_str() == collector.snippet_name {
+impl<'a> TreeFold<'a> for  CodeGen {
+  fn visit_snippet(&mut self, tree : &'a Snippet) {
+    if tree.snippet_id.get_str() == self.snippet_name {
       println!("Visit found snippet of interest.");
-      collector.generated_string.push_str("module ");
-      collector.generated_string.push_str(tree.snippet_id.get_str());
-      collector.generated_string.push_str("()\n");
-      collector.generated_string.push_str("\nendmodule");
+      self.generated_string.push_str("module ");
+      self.generated_string.push_str(tree.snippet_id.get_str());
+      self.generated_string.push_str("()\n");
+      self.generated_string.push_str("\nendmodule");
     }
   }
 }
@@ -34,10 +33,8 @@ mod tests {
   use super::super::lexer;
   use super::super::parser;
   use super::CodeGen;
-  use super::CodeGenCollector;
   use super::super::tree_fold::TreeFold;
   use super::super::def_use::DefUse;
-  use super::super::def_use::SymTableCollector;
   use std::collections::HashSet;
   use std::collections::HashMap;
  
@@ -52,14 +49,14 @@ mod tests {
     println!("Parse tree: {:?}\n", parse_tree);
 
     // Check that identifiers are defined before use
-    let mut def_use_collector = SymTableCollector { current_snippet : "",
-                                                    symbol_table : HashMap::new(),
-                                                    snippet_set : HashSet::new() };
-    DefUse::visit_prog(&parse_tree, &mut def_use_collector);
+    let mut def_use = DefUse { current_snippet : "",
+                               symbol_table : HashMap::new(),
+                               snippet_set : HashSet::new() };
+    def_use.visit_prog(&parse_tree);
 
     // Run code generator
-    let mut collector = CodeGenCollector{ generated_string : "".to_string(), snippet_name : "fun".to_string() };
-    CodeGen::visit_prog(&parse_tree, &mut collector);
+    let mut code_gen = CodeGen{ generated_string : "".to_string(), snippet_name : "fun".to_string() };
+    code_gen.visit_prog(&parse_tree);
   }
 
   #[test]

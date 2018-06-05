@@ -1,98 +1,98 @@
-// A tree fold trait. This trait walks through an immutable tree and updates an
-// accumulator of type Acc in place. Implementations of this trait can override
+// A tree fold trait. This trait walks through an immutable tree and updates self.
+// Implementations of this trait can override
 // methods that process specific types of tree nodes, while using default
 // methods for other types of tree nodes.
 
 use super::grammar::*;
 
-pub trait TreeFold<'a, Acc> {
-  fn visit_prog(tree : &'a Prog, collector : &mut Acc) {
-    Self::visit_snippets(&tree.snippets, collector);
-    Self::visit_connections(&tree.connections, collector);
+pub trait TreeFold<'a> {
+  fn visit_prog(&mut self, tree : &'a Prog) {
+    self.visit_snippets(&tree.snippets);
+    self.visit_connections(&tree.connections);
   }
 
-  fn visit_snippets(tree : &'a Snippets, collector : &mut Acc) {
-    for snippet in &tree.snippet_vector { Self::visit_snippet(snippet, collector); }
+  fn visit_snippets(&mut self, tree : &'a Snippets) {
+    for snippet in &tree.snippet_vector { self.visit_snippet(snippet); }
   }
  
-  fn visit_snippet(tree : &'a Snippet, collector : &mut Acc) {
-    Self::visit_identifier(&tree.snippet_id, collector);
-    Self::visit_variable_decls(&tree.variable_decls, collector);
-    Self::visit_statements(&tree.statements, collector);
+  fn visit_snippet(&mut self, tree : &'a Snippet) {
+    self.visit_identifier(&tree.snippet_id);
+    self.visit_variable_decls(&tree.variable_decls);
+    self.visit_statements(&tree.statements);
   }
 
-  fn visit_connections(tree : &'a Connections, collector : &mut Acc) {
+  fn visit_connections(&mut self, tree : &'a Connections) {
     for connection in &tree.connection_vector {
-      Self::visit_connection(&connection, collector);
+      self.visit_connection(&connection);
     }
   }
 
-  fn visit_connection(tree : &'a Connection, collector : &mut Acc) {
-    Self::visit_identifier(&tree.from_snippet, collector);
-    Self::visit_identifier(&tree.to_snippet, collector);
+  fn visit_connection(&mut self, tree : &'a Connection) {
+    self.visit_identifier(&tree.from_snippet);
+    self.visit_identifier(&tree.to_snippet);
   }
 
-  fn visit_variable_decls(tree : &'a VariableDecls, collector : &mut Acc ) {
-    for init in &tree.decl_vector { Self::visit_variable_decl(init, collector); }
+  fn visit_variable_decls(&mut self, tree : &'a VariableDecls) {
+    for init in &tree.decl_vector { self.visit_variable_decl(init); }
   }
 
-  fn visit_variable_decl(tree : &'a VariableDecl, collector : &mut Acc) {
-    Self::visit_identifier(&tree.identifier, collector);
-    for value in &(tree.initial_values) { Self::visit_value(value, collector); };
-    Self::visit_var_type(&tree.var_type, collector);
+  fn visit_variable_decl(&mut self, tree : &'a VariableDecl) {
+    self.visit_identifier(&tree.identifier);
+    for value in &(tree.initial_values) { self.visit_value(value); };
+    self.visit_var_type(&tree.var_type);
   }
 
-  fn visit_var_type(tree : &'a VarType, collector : &mut Acc) {
+  fn visit_var_type(&mut self, tree : &'a VarType) {
     let _ = tree;
-    let _ = collector;
+    let _ = self;
     // Do nothing here.    
   }
 
-  fn visit_statements(tree : &'a Statements, collector : &mut Acc) {
-    for stmt in &tree.stmt_vector { Self::visit_statement(stmt, collector); }
+  fn visit_statements(&mut self, tree : &'a Statements) {
+    for stmt in &tree.stmt_vector { self.visit_statement(stmt); }
   }
   
-  fn visit_statement(tree : &'a Statement, collector : &mut Acc) {
-    Self::visit_lvalue(&tree.lvalue, collector);
-    Self::visit_expr(&tree.expr, collector);
+  fn visit_statement(&mut self, tree : &'a Statement) {
+    self.visit_lvalue(&tree.lvalue);
+    self.visit_expr(&tree.expr);
   }
   
-  fn visit_expr(tree : &'a Expr, collector : &mut Acc) {
-    Self::visit_operand(&tree.op1, collector);
-    Self::visit_expr_right(&tree.expr_right, collector);
+  fn visit_expr(&mut self, tree : &'a Expr) {
+    self.visit_operand(&tree.op1);
+    self.visit_expr_right(&tree.expr_right);
   }
   
-  fn visit_expr_right(tree : &'a ExprRight, collector : &mut Acc) {
+  fn visit_expr_right(&mut self, tree : &'a ExprRight) {
     match tree {
-      &ExprRight::BinOp(_, ref operand) => Self::visit_operand(operand, collector),
+      &ExprRight::BinOp(_, ref operand) => self.visit_operand(operand),
       &ExprRight::Cond(ref operand_true, ref operand_false) => {
-        Self::visit_operand(operand_true, collector);
-        Self::visit_operand(operand_false, collector);
+        self.visit_operand(operand_true);
+        self.visit_operand(operand_false);
       },
       &ExprRight::Empty() => ()
     }
   }
   
-  fn visit_operand(tree : &'a Operand, collector : &mut Acc) {
+  fn visit_operand(&mut self, tree : &'a Operand) {
     match tree {
-      &Operand::LValue(ref lvalue) => Self::visit_lvalue(lvalue, collector),
-      &Operand::Value(ref value)   => Self::visit_value(value, collector)
+      &Operand::LValue(ref lvalue) => self.visit_lvalue(lvalue),
+      &Operand::Value(ref value)   => self.visit_value(value)
     }
   }
 
-  fn visit_lvalue(tree : &'a LValue, collector : &mut Acc) {
+  fn visit_lvalue(&mut self, tree : &'a LValue) {
     match tree {
-      &LValue::Identifier(ref identifier) => Self::visit_identifier(identifier, collector),
+      &LValue::Identifier(ref identifier) => self.visit_identifier(identifier),
       &LValue::Array(ref array, ref operand) => {
-        Self::visit_identifier(array, collector);
-        Self::visit_operand(operand, collector);
+        self.visit_identifier(array);
+        self.visit_operand(operand);
       }
     }
   }
  
   // The awkward let _ is required to suppress the unused variables warning
   // https://github.com/rust-lang/rust/issues/26487
-  fn visit_identifier(tree : &'a Identifier, collector : &mut Acc) { let _ = tree; let _ = collector; }
+  fn visit_identifier(&mut self, tree : &'a Identifier) { let _ = tree; let _ = self; }
   
-  fn visit_value(tree : &'a Value, collector : &mut Acc) { let _ = tree; let _ = collector; }
+  fn visit_value(&mut self, tree : &'a Value) { let _ = tree; let _ = self; }
 }

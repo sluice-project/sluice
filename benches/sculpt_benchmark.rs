@@ -7,7 +7,6 @@ use sculpt::lexer;
 use sculpt::parser;
 use sculpt::def_use::DefUse;
 use sculpt::pretty_printer::PrettyPrinter;
-use sculpt::def_use::SymTableCollector;
 use sculpt::tree_fold::TreeFold;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -55,10 +54,10 @@ fn bench_def_use(b : &mut Bencher) {
   b.iter(|| { let tokens = & mut lexer::get_tokens(input_program);
               let token_iter = & mut tokens.iter().peekable();
               let parse_tree = parser::parse_prog(token_iter);
-              let mut def_use_collector = SymTableCollector { current_snippet : "",
-                                                              symbol_table : HashMap::new(),
-                                                              snippet_set : HashSet::new() };
-              DefUse::visit_prog(&parse_tree, &mut def_use_collector);} );
+              let mut def_use = DefUse { current_snippet : "",
+                                         symbol_table : HashMap::new(),
+                                         snippet_set : HashSet::new() };
+              def_use.visit_prog(&parse_tree);} );
 }
 
 #[bench]
@@ -67,6 +66,6 @@ fn bench_pretty_printer(b : &mut Bencher) {
   b.iter(|| { let tokens = & mut lexer::get_tokens(input_program);
               let token_iter = & mut tokens.iter().peekable();
               let parse_tree = parser::parse_prog(token_iter);
-              let mut pretty_printed_code = String::new();
-              PrettyPrinter::visit_prog(&parse_tree, &mut pretty_printed_code);} );
+              let mut pretty_printer = PrettyPrinter{ pretty_print_str : "".to_string() };
+              pretty_printer.visit_prog(&parse_tree);} );
 }

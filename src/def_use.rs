@@ -3,14 +3,6 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 use tree_fold::TreeFold;
 
-// Compiler pass to check that identifiers are defined before being used in a snippet
-pub struct DefUse;
-
-pub struct VariableMetadata<'a> {
-  pub var_type  : &'a VarType,
-  pub var_state : VarState 
-}
-
 // Defined => Declared, but not the other way around.
 #[derive(PartialEq)]
 pub enum VarState {
@@ -19,13 +11,18 @@ pub enum VarState {
   Updated,
 }
 
-pub struct SymTableCollector<'a> {
+pub struct VariableMetadata<'a> {
+  pub var_type  : &'a VarType,
+  pub var_state : VarState 
+}
+
+pub struct DefUse<'a> {
   pub current_snippet : &'a str,
   pub symbol_table    : HashMap<&'a str, HashMap<&'a str, VariableMetadata<'a>>>,
   pub snippet_set     : HashSet<&'a str>
 }
 
-impl<'a> SymTableCollector <'a> {
+impl<'a> DefUse<'a> {
   pub fn get_symbol_table(&'a self) -> &'a HashMap<&'a str, VariableMetadata<'a>> {
     self.symbol_table.get(self.current_snippet).unwrap()
   }
@@ -44,13 +41,13 @@ impl<'a> SymTableCollector <'a> {
   }
 }
 
-impl<'a> TreeFold<'a, SymTableCollector<'a>> for DefUse {
-  fn visit_variable_decl(tree : &'a VariableDecl, collector : &mut SymTableCollector<'a>) {
+impl<'a> TreeFold<'a> for DefUse<'a> {
+  fn visit_variable_decl(&mut self, tree : &'a VariableDecl) {
     let id_name = &tree.identifier.id_name;
-    if collector.symbol_table.get_mut(collector.current_snippet).unwrap().get(id_name).is_some() {
+    if self.symbol_table.get_mut(self.current_snippet).unwrap().get(id_name).is_some() {
       panic!("Variable {} is declared twice in {}.",
              id_name,
-             collector.current_snippet);
+             self.current_snippet);
     } else {
       let var_type = &tree.var_type;
       let type_qualifier = &var_type.type_qualifier;
@@ -58,24 +55,24 @@ impl<'a> TreeFold<'a, SymTableCollector<'a>> for DefUse {
                          (*type_qualifier == TypeQualifier::Const) ||
                          (*type_qualifier == TypeQualifier::Persistent) { VarState::Defined }
                       else { VarState::Declared };
-      collector.symbol_table.get_mut(collector.current_snippet).unwrap().insert(id_name, VariableMetadata{var_type, var_state});
+      self.symbol_table.get_mut(self.current_snippet).unwrap().insert(id_name, VariableMetadata{var_type, var_state});
     }
   }
 
-  fn visit_snippet(tree : &'a Snippet, collector: &mut SymTableCollector<'a>) {
+  fn visit_snippet(&mut self, tree : &'a Snippet) {
     // Initialize symbol table for this snippet
-    collector.current_snippet = &tree.snippet_id.get_str();
-    if collector.snippet_set.get(collector.current_snippet) != None {
-      panic!("Can't have two snippets named {}.", collector.current_snippet);
+    self.current_snippet = &tree.snippet_id.get_str();
+    if self.snippet_set.get(self.current_snippet) != None {
+      panic!("Can't have two snippets named {}.", self.current_snippet);
     } else {
-      collector.symbol_table.insert(collector.current_snippet, HashMap::new());
-      collector.snippet_set.insert(collector.current_snippet);
+      self.symbol_table.insert(self.current_snippet, HashMap::new());
+      self.snippet_set.insert(self.current_snippet);
     }
-    Self::visit_variable_decls(&tree.variable_decls, collector);
-    Self::visit_statements(&tree.statements, collector);
+    self.visit_variable_decls(&tree.variable_decls);
+    self.visit_statements(&tree.statements);
   }
 
-  fn visit_statement(tree : &'a Statement, collector : &mut SymTableCollector<'a>) {
+  fn visit_statement(&mut self, tree : &'a Statement) {
     let id_name =
       match &tree.lvalue {
         &LValue::Identifier(ref identifier) => { identifier.id_name },
@@ -83,23 +80,23 @@ impl<'a> TreeFold<'a, SymTableCollector<'a>> for DefUse {
       };
 
     // First visit expression because that is conceptually processed first
-    Self::visit_expr(&tree.expr, collector);
+    self.visit_expr(&tree.expr);
 
-    // Update var_state in collector for id_name
-    let sym_table = collector.symbol_table.get_mut(collector.current_snippet).unwrap();
+    // Update var_state in self for id_name
+    let sym_table = self.symbol_table.get_mut(self.current_snippet).unwrap();
     match sym_table.get(id_name) {
       None
-      => panic!("Defining variable {} that isn't declared in {}.", id_name, collector.current_snippet),
+      => panic!("Defining variable {} that isn't declared in {}.", id_name, self.current_snippet),
 
       Some(&VariableMetadata{var_type, var_state : VarState::Defined})
       =>  if var_type.type_qualifier == TypeQualifier::Persistent { sym_table.get_mut(id_name).unwrap().var_state = VarState::Updated;
           } else {
             if var_type.type_qualifier == TypeQualifier::Const {
-              panic!("Trying to update const variable {} in {}.", id_name, collector.current_snippet);
+              panic!("Trying to update const variable {} in {}.", id_name, self.current_snippet);
             } else if var_type.type_qualifier == TypeQualifier::Input {
-              panic!("Trying to update input variable {} in {}. Inputs are implicity defined by caller.", id_name, collector.current_snippet);
+              panic!("Trying to update input variable {} in {}. Inputs are implicity defined by caller.", id_name, self.current_snippet);
             } else {
-              panic!("Redefining variable {} that is already defined in {}.", id_name, collector.current_snippet);
+              panic!("Redefining variable {} that is already defined in {}.", id_name, self.current_snippet);
             }
           },
 
@@ -114,10 +111,10 @@ impl<'a> TreeFold<'a, SymTableCollector<'a>> for DefUse {
     }
   }
 
-  fn visit_expr(tree : &'a Expr, collector : &mut SymTableCollector<'a>) {
+  fn visit_expr(&mut self, tree : &'a Expr) {
     // Check def-before-use for first operand
     if tree.op1.is_id() &&
-       !collector.is_defined(tree.op1.get_id()) {
+       !self.is_defined(tree.op1.get_id()) {
       panic!("{} used before definition", &tree.op1.get_id());
     }
 
@@ -125,18 +122,18 @@ impl<'a> TreeFold<'a, SymTableCollector<'a>> for DefUse {
     match &tree.expr_right {
       &ExprRight::BinOp(_, ref op2) => {
         if op2.is_id() &&
-           !collector.is_defined(op2.get_id()) {
+           !self.is_defined(op2.get_id()) {
           panic!("{} used before definition", op2.get_id());
         }
       }
       &ExprRight::Cond(ref true_op, ref false_op) => {
         if true_op.is_id()  &&
-           !collector.is_defined(true_op.get_id()) {
+           !self.is_defined(true_op.get_id()) {
           panic!("{} used before definition", true_op.get_id());
         }
 
         if false_op.is_id() &&
-           !collector.is_defined(false_op.get_id()) {
+           !self.is_defined(false_op.get_id()) {
           panic!("{} used before definition", false_op.get_id());
         }
       }
@@ -147,45 +144,45 @@ impl<'a> TreeFold<'a, SymTableCollector<'a>> for DefUse {
   // 1. Make sure snippets that are connected are defined.
   // 2. Make sure that variables within a connection are defined in their respective snippets and
   //    are output/input variables in the source/destination snippets respectively.
-  fn visit_connections(tree : &'a Connections, collector: &mut SymTableCollector<'a>) {
+  fn visit_connections(&mut self, tree : &'a Connections) {
     for connection in &tree.connection_vector {
       let from_snippet = connection.from_snippet.get_str();
       let to_snippet   = connection.to_snippet.get_str();
-      if collector.snippet_set.get(from_snippet) == None {
+      if self.snippet_set.get(from_snippet) == None {
         panic!("{} connected, but undefined", from_snippet);
       }
-      if collector.snippet_set.get(to_snippet) == None {
+      if self.snippet_set.get(to_snippet) == None {
         panic!("{} connected, but undefined", to_snippet);
       }
       for variable_pair in &connection.variable_pairs {
         let from_var = variable_pair.from_var.get_str();
         let to_var   = variable_pair.to_var.get_str();
-        if collector.symbol_table.get(from_snippet).unwrap().get(from_var).is_none() {
+        if self.symbol_table.get(from_snippet).unwrap().get(from_var).is_none() {
           panic!("Trying to connect non-existent variable {} from snippet {}", from_var, from_snippet);
         } else {
-          if collector.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.type_qualifier !=
+          if self.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.type_qualifier !=
              TypeQualifier::Output {
             panic!("Trying to connect non-output variable {} in origin snippet {}", from_var, from_snippet);
           }
         }
 
-        if collector.symbol_table.get(to_snippet).unwrap().get(to_var).is_none() {
+        if self.symbol_table.get(to_snippet).unwrap().get(to_var).is_none() {
           panic!("Trying to connect non-existent variable {} from snippet {}", to_var, to_snippet);
         } else {
-          if collector.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.type_qualifier !=
+          if self.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.type_qualifier !=
              TypeQualifier::Input {
             panic!("Trying to connect non-input variable {} in destination snippet {}", to_var, to_snippet);
           }
         }
 
-        assert!(collector.symbol_table.get(to_snippet).unwrap().get(to_var).is_some(), "to_var undefined");
-        assert!(collector.symbol_table.get(from_snippet).unwrap().get(from_var).is_some(), "from_var undefined");
-        if collector.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.bit_width !=
-           collector.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.bit_width {
+        assert!(self.symbol_table.get(to_snippet).unwrap().get(to_var).is_some(), "to_var undefined");
+        assert!(self.symbol_table.get(from_snippet).unwrap().get(from_var).is_some(), "from_var undefined");
+        if self.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.bit_width !=
+           self.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.bit_width {
           panic!("Bit widths differ in the connection from {}.{} to {}.{}.", from_snippet, from_var, to_snippet, to_var);
         }
-        if collector.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.var_size !=
-           collector.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.var_size {
+        if self.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.var_size !=
+           self.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.var_size {
           panic!("Var sizes differ in the connection from {}.{} to {}.{}.", from_snippet, from_var, to_snippet, to_var);
         }
       }
@@ -198,7 +195,6 @@ mod tests {
   use super::super::lexer;
   use super::super::parser;
   use super::DefUse;
-  use super::SymTableCollector;
   use super::super::tree_fold::TreeFold;
   use std::collections::HashMap;
   use std::collections::HashSet;
@@ -214,10 +210,10 @@ mod tests {
     println!("Parse tree: {:?}\n", parse_tree);
   
     // Check that identifiers are defined before use
-    let mut def_use_collector = SymTableCollector { current_snippet : "",
-                                                    symbol_table : HashMap::new(),
-                                                    snippet_set : HashSet::new() };
-    DefUse::visit_prog(&parse_tree, &mut def_use_collector);
+    let mut def_use = DefUse { current_snippet : "",
+                               symbol_table : HashMap::new(),
+                               snippet_set : HashSet::new() };
+    def_use.visit_prog(&parse_tree);
   }
 
   macro_rules! test_pass {

@@ -1,76 +1,78 @@
 use super::grammar::*;
 use tree_fold::TreeFold;
 
-pub struct PrettyPrinter;
+pub struct PrettyPrinter {
+  pub pretty_print_str : String,
+}
 
-impl<'a> TreeFold<'a, String> for PrettyPrinter {
-  fn visit_snippet(tree : &'a Snippet, collector : &mut String) {
-    collector.push_str("snippet ");
-    collector.push_str(tree.snippet_id.get_str());
-    collector.push_str("() {");
-    Self::visit_variable_decls(&tree.variable_decls, collector);
-    Self::visit_statements(&tree.statements, collector);
-    collector.push_str("}");
+impl<'a> TreeFold<'a> for PrettyPrinter {
+  fn visit_snippet(&mut self, tree : &'a Snippet) {
+    self.pretty_print_str.push_str("snippet ");
+    self.pretty_print_str.push_str(tree.snippet_id.get_str());
+    self.pretty_print_str.push_str("() {");
+    self.visit_variable_decls(&tree.variable_decls);
+    self.visit_statements(&tree.statements);
+    self.pretty_print_str.push_str("}");
   }
 
-  fn visit_connection(tree : &'a Connection, collector : &mut String) {
-    collector.push_str("(");
-    collector.push_str(tree.from_snippet.get_str());
-    collector.push_str(",");
-    collector.push_str(tree.to_snippet.get_str());
+  fn visit_connection(&mut self, tree : &'a Connection) {
+    self.pretty_print_str.push_str("(");
+    self.pretty_print_str.push_str(tree.from_snippet.get_str());
+    self.pretty_print_str.push_str(",");
+    self.pretty_print_str.push_str(tree.to_snippet.get_str());
     if !tree.variable_pairs.is_empty() {
-      collector.push_str(":");
+      self.pretty_print_str.push_str(":");
       for pair in &tree.variable_pairs {
-        collector.push_str("(");
-        collector.push_str(pair.from_var.get_str());
-        collector.push_str("->");
-        collector.push_str(pair.to_var.get_str());
-        collector.push_str("),");
+        self.pretty_print_str.push_str("(");
+        self.pretty_print_str.push_str(pair.from_var.get_str());
+        self.pretty_print_str.push_str("->");
+        self.pretty_print_str.push_str(pair.to_var.get_str());
+        self.pretty_print_str.push_str("),");
       }
     }
-    collector.push_str(")");
+    self.pretty_print_str.push_str(")");
   }
 
-  fn visit_statement(tree : &'a Statement, collector : &mut String) {
-    collector.push_str(&tree.lvalue.get_string());
-    collector.push_str(" = ");
-    Self::visit_expr(&tree.expr, collector);
-    collector.push_str(";");
+  fn visit_statement(&mut self, tree : &'a Statement) {
+    self.pretty_print_str.push_str(&tree.lvalue.get_string());
+    self.pretty_print_str.push_str(" = ");
+    self.visit_expr(&tree.expr);
+    self.pretty_print_str.push_str(";");
   }
 
-  fn visit_expr(tree : &'a Expr, collector : &mut String) {
-    collector.push_str(&tree.op1.get_string());
+  fn visit_expr(&mut self, tree : &'a Expr) {
+    self.pretty_print_str.push_str(&tree.op1.get_string());
     match &tree.expr_right {
       ExprRight::Empty() => {},
       ExprRight::BinOp(btype, op2) => {
         match btype {
-          BinOpType::BooleanAnd => collector.push_str(" and "),
-          BinOpType::BooleanOr  => collector.push_str(" or "),
-          BinOpType::Plus       => collector.push_str(" + "),
-          BinOpType::Minus      => collector.push_str(" - "),
-          BinOpType::Mul        => collector.push_str(" * "),
-          BinOpType::Div        => collector.push_str(" / "),
-          BinOpType::Modulo     => collector.push_str(" % "),
-          BinOpType::Equal      => collector.push_str(" = "),
-          BinOpType::NotEqual   => collector.push_str(" != "),
-          BinOpType::LTEQOp     => collector.push_str(" <= "),
-          BinOpType::GTEQOp     => collector.push_str(" >= "),
-          BinOpType::LessThan   => collector.push_str(" < "),
-          BinOpType::GreaterThan=> collector.push_str(" > "),
+          BinOpType::BooleanAnd => self.pretty_print_str.push_str(" and "),
+          BinOpType::BooleanOr  => self.pretty_print_str.push_str(" or "),
+          BinOpType::Plus       => self.pretty_print_str.push_str(" + "),
+          BinOpType::Minus      => self.pretty_print_str.push_str(" - "),
+          BinOpType::Mul        => self.pretty_print_str.push_str(" * "),
+          BinOpType::Div        => self.pretty_print_str.push_str(" / "),
+          BinOpType::Modulo     => self.pretty_print_str.push_str(" % "),
+          BinOpType::Equal      => self.pretty_print_str.push_str(" = "),
+          BinOpType::NotEqual   => self.pretty_print_str.push_str(" != "),
+          BinOpType::LTEQOp     => self.pretty_print_str.push_str(" <= "),
+          BinOpType::GTEQOp     => self.pretty_print_str.push_str(" >= "),
+          BinOpType::LessThan   => self.pretty_print_str.push_str(" < "),
+          BinOpType::GreaterThan=> self.pretty_print_str.push_str(" > "),
         };
-        collector.push_str(&op2.get_string());
+        self.pretty_print_str.push_str(&op2.get_string());
       },
       ExprRight::Cond(op_true, op_false) => {
-        collector.push_str(" ? ");
-        collector.push_str(&op_true.get_string());
-        collector.push_str(" : ");
-        collector.push_str(&op_false.get_string());
+        self.pretty_print_str.push_str(" ? ");
+        self.pretty_print_str.push_str(&op_true.get_string());
+        self.pretty_print_str.push_str(" : ");
+        self.pretty_print_str.push_str(&op_false.get_string());
       }
     }
   }
 
-  fn visit_variable_decl(tree : &'a VariableDecl, collector : &mut String) {
-    collector.push_str(
+  fn visit_variable_decl(&mut self, tree : &'a VariableDecl) {
+    self.pretty_print_str.push_str(
       match tree.var_type.type_qualifier {
         TypeQualifier::Const => "const",
         TypeQualifier::Persistent => "persistent",
@@ -78,23 +80,23 @@ impl<'a> TreeFold<'a, String> for PrettyPrinter {
         TypeQualifier::Output => "output",
         TypeQualifier::Transient => "transient",
       });
-    collector.push_str(" ");
-    collector.push_str(tree.identifier.get_str());
-    collector.push_str(" : bit<");
-    collector.push_str(&tree.var_type.bit_width.to_string());
-    collector.push_str(">[");
-    collector.push_str(&tree.var_type.var_size.to_string());
-    collector.push_str("]");
+    self.pretty_print_str.push_str(" ");
+    self.pretty_print_str.push_str(tree.identifier.get_str());
+    self.pretty_print_str.push_str(" : bit<");
+    self.pretty_print_str.push_str(&tree.var_type.bit_width.to_string());
+    self.pretty_print_str.push_str(">[");
+    self.pretty_print_str.push_str(&tree.var_type.var_size.to_string());
+    self.pretty_print_str.push_str("]");
     if tree.initial_values.is_empty() {
-      collector.push_str(";");
+      self.pretty_print_str.push_str(";");
     } else {
-      collector.push_str(" = {");
+      self.pretty_print_str.push_str(" = {");
       for val in &tree.initial_values {
-        collector.push_str(&val.get_string());
-        collector.push_str(", ");
+        self.pretty_print_str.push_str(&val.get_string());
+        self.pretty_print_str.push_str(", ");
       }
-      collector.push_str("}");
-      collector.push_str(";");
+      self.pretty_print_str.push_str("}");
+      self.pretty_print_str.push_str(";");
     }
   }
 }
@@ -117,12 +119,12 @@ mod tests {
     println!("Parse tree: {:?}\n", parse_tree);
 
     // Run pretty printer
-    let mut pretty_printed_code = String::new();
-    PrettyPrinter::visit_prog(&parse_tree, &mut pretty_printed_code);
-    println!("Pretty printed code: {}", pretty_printed_code);
+    let mut pretty_printer = PrettyPrinter{ pretty_print_str : "".to_string() };
+    pretty_printer.visit_prog(&parse_tree);
+    println!("Pretty printed code: {}", pretty_printer.pretty_print_str);
 
     // Reparse pretty printed code
-    let new_tokens = &mut lexer::get_tokens(&pretty_printed_code);
+    let new_tokens = &mut lexer::get_tokens(&pretty_printer.pretty_print_str);
     let new_token_iter = &mut new_tokens.iter().peekable();
     let new_parse_tree = parser::parse_prog(new_token_iter);
     assert!(new_token_iter.peek().is_none(), "new_token_iter is not empty.");

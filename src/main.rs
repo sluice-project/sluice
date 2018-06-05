@@ -3,7 +3,6 @@ extern crate sculpt;
 use sculpt::lexer;
 use sculpt::parser;
 use sculpt::def_use::DefUse;
-use sculpt::def_use::SymTableCollector;
 use sculpt::tree_fold::TreeFold;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -51,8 +50,8 @@ fn main() {
   println!("Parse tree: {:?}\n", parse_tree);
 
   // Check that identifiers are defined before use
-  let mut def_use_collector = SymTableCollector { current_snippet : "",
-                                                  symbol_table : HashMap::new(),
-                                                  snippet_set : HashSet::new() };
-  DefUse::visit_prog(&parse_tree, &mut def_use_collector);
+  let mut def_use = DefUse{ current_snippet : "",
+                            symbol_table : HashMap::new(),
+                            snippet_set : HashSet::new() };
+  def_use.visit_prog(&parse_tree);
 }
