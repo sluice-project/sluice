@@ -3,8 +3,8 @@
 // this trait can be thought of as a parser combinator.
 
 use std;
-use super::grammar::*;
-use super::token::Token;
+use grammar::*;
+use token::Token;
 use std::iter::Peekable;
 
 type TokenIterator<'a> = Peekable<std::slice::Iter<'a, Token<'a>>>;

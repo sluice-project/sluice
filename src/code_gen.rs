@@ -8,7 +8,7 @@
 //7. Reset logic for all variables.
 
 // Generate everything (top file, clk, xdc file, tcl script) that is required to test a single snippet.
-use super::grammar::*;
+use grammar::*;
 use tree_fold::TreeFold;
 
 pub struct CodeGen<'a> {

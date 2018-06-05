@@ -1,4 +1,4 @@
-use super::grammar::*;
+use grammar::*;
 use tree_fold::TreeFold;
 
 pub struct PrettyPrinter {

@@ -1,4 +1,4 @@
-use super::grammar::*;
+use grammar::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use tree_fold::TreeFold;
