@@ -4,43 +4,20 @@ use sculpt::lexer;
 use sculpt::parser;
 use sculpt::def_use::DefUse;
 use sculpt::tree_fold::TreeFold;
-
+use std::env;
+use std::fs::File;
+use std::io::prelude::*;
 // Main compiler binary
 // Takes an input sculpt program and produces a refined program
 fn main() {
-  let input_program = r"snippet fun(){
-                          input a : bit<2>;
-                          input b : bit<2>;
-                          input c : bit<2>;
-                          input x : bit<2>;
-                          input y : bit<2>;
-                          transient z : bit<2>;
-                          transient r : bit<2>;
-                          transient q : bit<2>;
-                          transient m : bit<2>;
-                          z = a + b;
-                          q = x;
-                          r = y;
-                          m = 5;
-                        }
-                        snippet foo() {
-                          input a : bit<2>;
-                          input b : bit<2>;
-                          input c : bit<2>;
-                          persistent p : bit<2> = 1;
-                          persistent m : bit<2>[3] = {1, 2, 3, };
-                          transient z : bit<2>;
-                          transient h : bit<2>;
-                          transient q : bit<2>;
-                          q = 5;
-                          z[5] = 6;
-                          h = z[7];
-                          m = 5;
-                        }
-                        (foo, fun)
-                        ";  // Lexing
-  let tokens = & mut lexer::get_tokens(input_program);
+  let args: Vec<String> = env::args().collect();
+  let filename = &args[1];
+  println!("In file {}", filename);
+  let mut f = File::open(filename).expect("File not found");
+  let mut contents = String::new();
+  f.read_to_string(&mut contents).expect("Something went wrong reading the file");
 
+  let tokens = & mut lexer::get_tokens(&contents);
   // parsing
   let token_iter = & mut tokens.iter().peekable();
   let parse_tree = parser::parse_prog(token_iter);

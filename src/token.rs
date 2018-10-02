@@ -49,4 +49,9 @@ pub enum Token<'a> {
 
   // Assignment
   Assign,
+
+  // Additions for Network Model
+  Packet,
+  Global,
+  Call,
 }

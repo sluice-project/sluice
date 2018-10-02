@@ -113,7 +113,7 @@ mod tests {
   use super::super::parser;
   use super::PrettyPrinter;
   use super::super::tree_fold::TreeFold;
- 
+
   fn run_pretty_printer_and_reparse(input_program : &str) {
     // Lexing
     let tokens = & mut lexer::get_tokens(input_program);

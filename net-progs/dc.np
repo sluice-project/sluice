@@ -1,0 +1,90 @@
+global PROTO_TCP = 6;
+global PROTO_UDP = 17;
+
+global THRESHOLD = 10000;
+
+field_list flowkeys {
+    ipv4.srcAddr;
+    ipv4.dstAddr;
+    ipv4.protocol;
+    tcp.srcPort;
+    tcp.dstPort;
+}
+
+packet p;
+
+snippet start () {
+  classify();
+}
+
+snippet classify () {
+  if (p.ipv4.protocol == PROTO_TCP) {
+    tcp_cong_ctrl();
+  } else if (p.ipv4.protocol == PROTO_UDP) {
+    udp_cong_ctrl();
+  }
+}
+
+snippet tcp_cong_ctrl () {
+  // Do Cong Ctrl
+  tx_offload();
+}
+
+snippet udp_cong_ctrl () {
+  // Do Cong Ctrl
+  tx_offload();
+}
+
+snippet tx_offload () {
+  // Do Tx offload
+  update_checksum();
+  encap();
+}
+
+snippet encap () {
+  add_header(p, gre);
+  prioritize();
+}
+
+snippet prioritize () {
+  // Set QoS flags for e.g. HTTP
+  if (p.tcp.dstPort == 80 || p.tcp.dstPort == 443) {
+    p.tcp.urg = 1;
+  }
+  netcore();
+}
+
+snippet netcore () {
+  core {
+    verify_checksum();
+    if (p.tcp.urg == 1) {
+      enqueue(2);
+    }
+    counter(flowkeys);
+    routing(p.ipv4.dest_ip);
+    microburst_detection();
+  }
+  decap();
+}
+
+snippet microburst_detection () {
+  persistent bytesRemaining : bit<32>;
+  if (queue.depth > THRESHOLD) {
+    // Mirror to cpu for further analysis
+    // More complex things can be done by using timer
+    bytesRemaining = queue.depth - p.ipv4.totalLen;
+  }
+  if (bytesRemaining > 0) {
+    mirror_to_cpu();
+    bytesRemaining = bytesRemaining - p.ipv4.totalLen;
+  }
+}
+
+snippet decap () {
+  remove_header(p, gre);
+  rx_offload();
+}
+
+snippet rx_offload () {
+  verify_checksum(p);
+}

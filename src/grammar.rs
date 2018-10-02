@@ -1,8 +1,30 @@
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct Prog<'a> {
+  pub globals : Globals<'a>,
+  pub packet : Packet<'a>,
   pub snippets : Snippets<'a>,
   pub connections : Connections<'a>
+}
+
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct Globals<'a> {
+  pub global_vector : Vec<Global<'a>>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct Global<'a> {
+  pub identifier       : Identifier<'a>,
+  pub initial_values   : Vec<Value>,
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct Packet<'a> {
+  pub identifier       : Identifier<'a>,
 }
 
 #[derive(Debug)]
@@ -16,7 +38,8 @@ pub struct Snippets<'a> {
 pub struct Snippet<'a> {
   pub snippet_id       : Identifier<'a>,
   pub variable_decls   : VariableDecls<'a>,
-  pub statements       : Statements<'a>
+  pub statements       : Statements<'a>,
+  pub callstacks       : CallStacks<'a>
 }
 
 #[derive(Debug)]
@@ -53,7 +76,7 @@ pub enum TypeQualifier {
   Output,
   Persistent,
   Transient,
-  Const
+  Const,
 }
 
 #[derive(Debug)]
@@ -84,6 +107,19 @@ pub struct Statements<'a> {
 pub struct Statement<'a> {
   pub lvalue : LValue<'a>,
   pub expr   : Expr<'a>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct CallStacks<'a> {
+  pub callstack_vector : Vec<CallStack<'a>>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct CallStack<'a> {
+  pub next_snippet : Identifier<'a>,
+//  pub condition    : Expr<'a>
 }
 
 #[derive(Debug)]

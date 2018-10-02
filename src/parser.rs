@@ -27,9 +27,11 @@ fn match_token<'a>(token_iter : & mut TokenIterator<'a>, expected : Token<'a>, e
 }
 
 pub fn parse_prog<'a>(token_iter : &mut TokenIterator<'a>) -> Prog<'a> {
+  let globals     = parse_globals(token_iter);
+  let packet      = parse_packet(token_iter);
   let snippets    = parse_snippets(token_iter);
   let connections = parse_connections(token_iter);
-  return Prog { snippets, connections };
+  return Prog { globals, packet, snippets, connections };
 }
 
 fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a>) -> Snippets<'a> {
@@ -46,7 +48,7 @@ fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a>) -> Snippets<'a> {
     }
   }
 }
-  
+
 fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
   let snippet_id  = parse_identifier(token_iter);
@@ -54,9 +56,10 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   match_token(token_iter, Token::ParenRight, "Snippet argument list must end with a right parenthesis.");
   match_token(token_iter, Token::BraceLeft, "Snippet body must begin with a left brace.");
   let variable_decls    = parse_variable_decls(token_iter);
-  let statements      = parse_statements(token_iter);
+  let statements        = parse_statements(token_iter);
+  let callstacks         = parse_callstacks(token_iter);
   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
-  return Snippet{snippet_id, variable_decls, statements};
+  return Snippet{snippet_id, variable_decls, statements, callstacks};
 }
 
 fn parse_connections<'a>(token_iter : &mut TokenIterator<'a>) -> Connections<'a> {
@@ -97,7 +100,7 @@ fn parse_connection<'a>(token_iter : &mut TokenIterator<'a>) -> Connection<'a> {
 
 fn parse_variable_decls<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecls<'a> {
   // Helper function to determine if the keyword starts a declaration
-  let is_decl = |token| { match token { &Token::Persistent | &Token::Transient | &Token::Const | &Token::Input | &Token::Output => true, _ => false, } };
+  let is_decl = |token| { match token { &Token::Persistent | &Token::Transient | &Token::Const | &Token::Input | &Token::Output | &Token::Packet => true, _ => false, } };
 
   let mut decl_vector = Vec::<VariableDecl>::new();
   loop {
@@ -110,9 +113,45 @@ fn parse_variable_decls<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecl
   }
 }
 
+fn parse_globals<'a>(token_iter : &mut TokenIterator<'a>) -> Globals<'a> {
+  let is_global = |token| { match token { &Token::Global => true, _ => false, } };
+  let mut global_vector = Vec::<Global>::new();
+  loop {
+    if !token_iter.peek().is_some() || !is_global(*token_iter.peek().unwrap()) {
+      return Globals{global_vector};
+    } else {
+      let global = parse_global(token_iter);
+      global_vector.push(global);
+    }
+  }
+}
+
+fn parse_global<'a>(token_iter : &mut TokenIterator<'a>) -> Global<'a> {
+  match_token(token_iter, Token::Global, "Global declaration should start with keyword global.");
+  let identifier = parse_identifier(token_iter);
+  let is_assign = |token| { match token { &Token::Assign => true, _ => false, } };
+  let initial_values = if is_assign(*token_iter.peek().unwrap())  {
+                         match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
+                         parse_initial_values(token_iter)
+                       } else {
+                         Vec::<Value>::new()
+                       };
+  match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
+
+  return Global {identifier, initial_values};
+}
+
+fn parse_packet<'a>(token_iter : &mut TokenIterator<'a>) -> Packet<'a> {
+  match_token(token_iter, Token::Packet, "Packet declaration?");
+  let identifier = parse_identifier(token_iter);
+  match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
+  return Packet {identifier};
+}
+
 fn parse_variable_decl<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecl<'a> {
   let type_qualifier =  parse_type_qualifier(token_iter);
   let identifier = parse_identifier(token_iter);
+
   let var_type   = parse_type_annotation(token_iter, type_qualifier);
   let is_assign = |token| { match token { &Token::Assign => true, _ => false, } };
   let initial_values = if is_assign(*token_iter.peek().unwrap())  {
@@ -165,6 +204,7 @@ fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifie
 
 // Retrieve bit width of bit vector. That's the only type for now.
 fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier) -> VarType {
+
   match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
   match_token(token_iter, Token::Bit, "Invalid type, bit vectors are the only supported type.");
   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
@@ -190,9 +230,14 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
 fn parse_statements<'a>(token_iter : &mut TokenIterator<'a>) -> Statements<'a> {
   // Helper function to identify beginning of statements
   let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false } };
+  let is_callstack = |token| { println!("{:?}", token); match token { &Token::Call => true, _ => false } };
 
   let mut stmt_vector = Vec::<Statement>::new();
   loop {
+    println!("is callstack={}", is_callstack(*token_iter.peek().unwrap()));
+    if is_callstack(*token_iter.peek().unwrap()) {
+      return Statements{stmt_vector};
+    }
     if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
       return Statements{stmt_vector};
     } else {
@@ -208,6 +253,31 @@ fn parse_statement<'a>(token_iter : &mut TokenIterator<'a>) -> Statement<'a> {
   let expr       = parse_expr(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in a statement must be a semicolon.");
   return Statement{lvalue, expr};
+}
+
+fn parse_callstacks<'a>(token_iter : &mut TokenIterator<'a>) -> CallStacks<'a> {
+  // Helper function to identify beginning of statements
+  let is_ident = |token| { match token { &Token::Call => true, _ => false } };
+
+  let mut callstack_vector = Vec::<CallStack>::new();
+  loop {
+    if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
+      return CallStacks{callstack_vector};
+    } else {
+      let callstack = parse_callstack(token_iter);
+      callstack_vector.push(callstack);
+    }
+  }
+}
+
+fn parse_callstack<'a>(token_iter : &mut TokenIterator<'a>) -> CallStack<'a> {
+  match_token(token_iter, Token::Call, "Missing keyword call");
+  let next_snippet = parse_identifier(token_iter);
+  match_token(token_iter, Token::ParenLeft,  "Snippet argument list must start with a left  parenthesis.");
+  match_token(token_iter, Token::ParenRight, "Snippet argument list must start with a right parenthesis.");
+
+  match_token(token_iter, Token::SemiColon, "Last token in a statement must be a semicolon.");
+  return CallStack{next_snippet};
 }
 
 fn parse_expr<'a>(token_iter : &mut TokenIterator<'a>) -> Expr<'a> {
@@ -375,12 +445,12 @@ mod tests {
   test_parser_success!(r"x=6+5;y=7*8;", parse_statements, test_parse_statements);
   test_parser_success!(r"transient x : bit<8>;", parse_variable_decls, test_parse_transient_decls);
   test_parser_success!(r"persistent x : bit<3> = 6; persistent y : bit<3> = 7;",
-                       parse_variable_decls, test_parse_persistent_decls); 
+                       parse_variable_decls, test_parse_persistent_decls);
   test_parser_success!(r"persistent x : bit<3>[4] = {4, 5, 6, 7, }; persistent y: bit<3> = 7;",
                        parse_variable_decls, test_parse_persistent_decls2);
   test_parser_fail!   (r"persistent x : bit<3> ={4, 5, 6, 7};persistent y : bit<3> =7;",
                        parse_variable_decls, test_parse_persistent_decls2_fail,
-                       "Invalid token: BraceRight, expected Comma.\nError message: \"Expected comma as separator between values.\""); 
+                       "Invalid token: BraceRight, expected Comma.\nError message: \"Expected comma as separator between values.\"");
   test_parser_fail!   (r"persistent x : bit<2> = 4;", parse_variable_decls,
                        test_parse_persistent_decls_outside_range,
                        "Initial value 4 is outside the range [0, 3] of 2-bit vector.");
@@ -408,7 +478,7 @@ mod tests {
                            persistent x : bit<3> = 6;
                            x=y+5;
                         }",
-                       parse_snippet, test_parse_snippet2); 
+                       parse_snippet, test_parse_snippet2);
   test_parser_success!(r"snippet fun() {
                            input a : bit<2>;
                            input b : bit<2>;
@@ -424,7 +494,7 @@ mod tests {
                            x=y+5;
                          }",
                        parse_snippets, test_parse_snippets);
-  test_parser_success!(r"(foo, fun) (bar, foobar)", parse_connections, test_parse_connections); 
+  test_parser_success!(r"(foo, fun) (bar, foobar)", parse_connections, test_parse_connections);
   test_parser_success!(r"(foo, fun): a->b, c->x, (bar, foobar)", parse_connections, test_parse_connections2);
   test_parser_success!(r"snippet fun () {
                             input a : bit<2>;

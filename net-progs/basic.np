@@ -1,0 +1,38 @@
+global threshold = 111;
+
+packet n;
+
+snippet foo() {
+  input a : bit<2>;
+  input b : bit<2>;
+  input c : bit<2>;
+  persistent p : bit<2> = 1;
+  persistent m : bit<2>[3] = {1, 2, 3, };
+  transient z : bit<2>;
+  transient h : bit<2>;
+  transient q : bit<2>;
+  q = 5;
+  z[5] = 6;
+  h = z[7];
+  m = 5;
+}
+
+snippet fun(){
+  input a : bit<1>;
+  input b : bit<2>;
+  input c : bit<2>;
+  input x : bit<2>;
+  input y : bit<2>;
+  transient z : bit<2>;
+  transient r : bit<2>;
+  transient q : bit<2>;
+  transient m : bit<2>;
+  z = a + b;
+  q = x;
+  r = y;
+  m = 5;
+  call foo();
+}
+
+
+(foo, fun)

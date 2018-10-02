@@ -3,7 +3,7 @@ use self::regex::Regex;
 
 lazy_static! {
   static ref TOKENS      : Regex = Regex::new(r"[0-9]+|[A-Za-z_][A-Za-z0-9_]*|->|==|!=|>=|<=|>|<|\+|-|/|\*|%|\{|\}|\(|\)|\[|\]|=|;|,|\?|:|\S+").unwrap();
-  static ref KEYWORDS    : Regex = Regex::new(r"^(snippet|and|or|not|persistent|transient|input|output|snippet|const|bit)$").unwrap();
+  static ref KEYWORDS    : Regex = Regex::new(r"^(snippet|and|or|not|persistent|transient|input|output|packet|snippet|const|bit|global)$").unwrap();
   static ref IDENTIFIERS : Regex = Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").unwrap();
   static ref VALUES      : Regex = Regex::new(r"^([0-9]+)$").unwrap();
 }
@@ -17,11 +17,14 @@ fn get_single_token(tok_str : &str) -> Token {
      "snippet"=> Token::Snippet,
      "input"  => Token::Input,
      "output" => Token::Output,
+     "packet" => Token::Packet,
      "const"  => Token::Const,
      "and"    => Token::BooleanAnd,
      "or"     => Token::BooleanOr,
      "not"    => Token::BooleanNot,
      "bit"    => Token::Bit,
+     "global" => Token::Global,
+     "call"   => Token::Call,
      _        => panic!("Unrecognized token string: {}", tok_str)
     }
   } else if IDENTIFIERS.is_match(tok_str) {
@@ -56,7 +59,7 @@ fn get_single_token(tok_str : &str) -> Token {
       "<" => Token::LessThan,
       ">" => Token::GreaterThan,
 
-      "=" => Token::Assign, 
+      "=" => Token::Assign,
       _   => panic!("Unrecognized token string: {}", tok_str)
     }
   }
@@ -74,7 +77,7 @@ pub fn get_tokens(input_program : &str) -> Vec<Token> {
 #[cfg(test)]
 mod tests {
   use super::get_tokens;
-  
+
   #[test]
   fn test_lexer_full_prog() {
     let input_program = r"snippet fun ( a , b , c , x , y, ) {
@@ -90,7 +93,7 @@ mod tests {
                             persistent x = 1;
                             x = 5;
                           }
-                          (foo, fun) 
+                          (foo, fun)
                           ";
     println!("{:?}", get_tokens(input_program));
   }
