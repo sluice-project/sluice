@@ -12,9 +12,11 @@ snippet foo() {
   transient h : bit<2>;
   transient q : bit<2>;
   q = 5;
-  z[5] = 6;
-  h = z[7];
-  m = 5;
+  if (q > 5) {
+    z[5] = 6;
+    h = z[7];
+    m = 5;
+  }
 }
 
 snippet fun(){

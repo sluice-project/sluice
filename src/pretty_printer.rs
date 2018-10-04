@@ -17,7 +17,7 @@ impl<'a> TreeFold<'a> for PrettyPrinter {
     self.pretty_print_str.push_str(tree.snippet_id.get_str());
     self.pretty_print_str.push_str("() {");
     self.visit_variable_decls(&tree.variable_decls);
-    self.visit_statements(&tree.statements);
+    self.visit_ifblocks(&tree.ifblocks);
     self.pretty_print_str.push_str("}");
   }
 

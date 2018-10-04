@@ -38,9 +38,34 @@ pub struct Snippets<'a> {
 pub struct Snippet<'a> {
   pub snippet_id       : Identifier<'a>,
   pub variable_decls   : VariableDecls<'a>,
-  pub statements       : Statements<'a>,
-  pub callstacks       : CallStacks<'a>
+  pub ifblocks         : IfBlocks<'a>,
+  // pub statements       : Statements<'a>,
+  // pub callstacks       : CallStacks<'a>
 }
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct IfBlocks<'a> {
+  pub ifblock_vector : Vec<IfBlock<'a>>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct IfBlock<'a> {
+  pub id         : u32,
+  pub condtype   : u32,
+  pub condition  : Condition<'a>,
+  pub statements : Statements<'a>,
+  pub callstacks : CallStacks<'a>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct Condition<'a> {
+//    pub lvalue : LValue<'a>,
+    pub expr   : Expr<'a>,
+}
+
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -125,7 +150,7 @@ pub struct CallStack<'a> {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct Expr<'a> {
-  pub op1        : Operand<'a>,
+  pub op1         : Operand<'a>,
   pub expr_right : ExprRight<'a>
 }
 

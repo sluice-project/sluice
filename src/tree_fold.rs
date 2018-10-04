@@ -14,11 +14,12 @@ pub trait TreeFold<'a> {
   fn visit_snippets(&mut self, tree : &'a Snippets) {
     for snippet in &tree.snippet_vector { self.visit_snippet(snippet); }
   }
- 
+
   fn visit_snippet(&mut self, tree : &'a Snippet) {
     self.visit_identifier(&tree.snippet_id);
     self.visit_variable_decls(&tree.variable_decls);
-    self.visit_statements(&tree.statements);
+    self.visit_ifblocks(&tree.ifblocks);
+    //self.visit_statements(&tree.statements);
   }
 
   fn visit_connections(&mut self, tree : &'a Connections) {
@@ -45,23 +46,47 @@ pub trait TreeFold<'a> {
   fn visit_var_type(&mut self, tree : &'a VarType) {
     let _ = tree;
     let _ = self;
-    // Do nothing here.    
+    // Do nothing here.
+  }
+
+  fn visit_ifblocks(&mut self, tree : &'a IfBlocks) {
+    for ifblock in &tree.ifblock_vector { self.visit_ifblock(ifblock); }
+  }
+
+  fn visit_ifblock(&mut self, tree : &'a IfBlock) {
+      self.visit_id(&tree.id);
+      self.visit_statements(&tree.statements);
+      self.visit_callstacks(&tree.callstacks);
+      self.visit_condition(&tree.condition);
+      self.visit_condtype(&tree.condtype);
   }
 
   fn visit_statements(&mut self, tree : &'a Statements) {
     for stmt in &tree.stmt_vector { self.visit_statement(stmt); }
   }
-  
+
   fn visit_statement(&mut self, tree : &'a Statement) {
     self.visit_lvalue(&tree.lvalue);
     self.visit_expr(&tree.expr);
   }
-  
+
+  fn visit_callstacks(&mut self, tree : &'a CallStacks) {
+    for callstack in &tree.callstack_vector { self.visit_callstack(callstack); }
+  }
+
+  fn visit_callstack(&mut self, tree : &'a CallStack) {
+    self.visit_nextsnippet(&tree.next_snippet);
+  }
+
+  fn visit_condition(&mut self, tree : &'a Condition) {
+    self.visit_expr(&tree.expr);
+  }
+
   fn visit_expr(&mut self, tree : &'a Expr) {
     self.visit_operand(&tree.op1);
     self.visit_expr_right(&tree.expr_right);
   }
-  
+
   fn visit_expr_right(&mut self, tree : &'a ExprRight) {
     match tree {
       &ExprRight::BinOp(_, ref operand) => self.visit_operand(operand),
@@ -72,7 +97,7 @@ pub trait TreeFold<'a> {
       &ExprRight::Empty() => ()
     }
   }
-  
+
   fn visit_operand(&mut self, tree : &'a Operand) {
     match tree {
       &Operand::LValue(ref lvalue) => self.visit_lvalue(lvalue),
@@ -89,10 +114,16 @@ pub trait TreeFold<'a> {
       }
     }
   }
- 
+
   // The awkward let _ is required to suppress the unused variables warning
   // https://github.com/rust-lang/rust/issues/26487
+  fn visit_id(&mut self, tree : &'a u32) { let _ = tree; let _ = self; }
+
+  fn visit_condtype(&mut self, tree : &'a u32) { let _ = tree; let _ = self; }
+
+  fn visit_nextsnippet(&mut self, tree : &'a Identifier) { let _ = tree; let _ = self; }
+
   fn visit_identifier(&mut self, tree : &'a Identifier) { let _ = tree; let _ = self; }
-  
+
   fn visit_value(&mut self, tree : &'a Value) { let _ = tree; let _ = self; }
 }

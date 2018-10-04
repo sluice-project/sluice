@@ -77,8 +77,9 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
       self.snippet_set.insert(self.current_snippet);
     }
     self.visit_variable_decls(&tree.variable_decls);
-    self.visit_statements(&tree.statements);
+    self.visit_ifblocks(&tree.ifblocks);
   }
+
 
   fn visit_statement(&mut self, tree : &'a Statement) {
     let id_name =
@@ -112,7 +113,7 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
       =>  {assert!(var_type.type_qualifier == TypeQualifier::Persistent, "Only persistent variables can be in updated state.");
            panic!("Can update a persistent variable at most once.");},
 
-      _ 
+      _
       => {assert!(sym_table.get(id_name).unwrap().var_state == VarState::Declared,
          "var_state should be VarState::Declared.");
           sym_table.get_mut(id_name).unwrap().var_state = VarState::Defined;}
@@ -208,13 +209,13 @@ mod tests {
   fn run_def_use(input_program : &str) {
     // Lexing
     let tokens = & mut lexer::get_tokens(input_program);
-  
+
     // parsing
     let token_iter = & mut tokens.iter().peekable();
     let parse_tree = parser::parse_prog(token_iter);
     assert!(token_iter.peek().is_none(), "token_iter is not empty.");
     println!("Parse tree: {:?}\n", parse_tree);
-  
+
     // Check that identifiers are defined before use
     let mut def_use = DefUse::new();
     def_use.visit_prog(&parse_tree);
@@ -240,7 +241,7 @@ mod tests {
       }
     )
   }
- 
+
   test_fail!(r"snippet fun() {
                  input x : bit<2>;
                  b = y;
@@ -257,7 +258,7 @@ mod tests {
              "x used before definition");
 
   test_fail!(r"snippet foo() {} snippet foo() {}",
-             test_def_use_duplicate_snippets_fail,      
+             test_def_use_duplicate_snippets_fail,
              "Can't have two snippets named foo.");
 
   test_fail!(r"snippet foo() {
@@ -272,10 +273,10 @@ mod tests {
                  input a : bit<2>;
                  input b : bit<2>;
                  input c : bit<2>;
-                 transient x: bit<2>; 
+                 transient x: bit<2>;
                  x = a;
              }", test_def_use1);
-  
+
   test_pass!(r"snippet foo() {
                  transient d : bit<2>;
                  transient x : bit<2>;

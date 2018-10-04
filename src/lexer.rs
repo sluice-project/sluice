@@ -3,7 +3,7 @@ use self::regex::Regex;
 
 lazy_static! {
   static ref TOKENS      : Regex = Regex::new(r"[0-9]+|[A-Za-z_][A-Za-z0-9_]*|->|==|!=|>=|<=|>|<|\+|-|/|\*|%|\{|\}|\(|\)|\[|\]|=|;|,|\?|:|\S+").unwrap();
-  static ref KEYWORDS    : Regex = Regex::new(r"^(snippet|and|or|not|persistent|transient|input|output|packet|snippet|const|bit|global)$").unwrap();
+  static ref KEYWORDS    : Regex = Regex::new(r"^(snippet|and|or|not|persistent|transient|input|output|packet|snippet|const|bit|global|call|if|else)$").unwrap();
   static ref IDENTIFIERS : Regex = Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").unwrap();
   static ref VALUES      : Regex = Regex::new(r"^([0-9]+)$").unwrap();
 }
@@ -25,6 +25,8 @@ fn get_single_token(tok_str : &str) -> Token {
      "bit"    => Token::Bit,
      "global" => Token::Global,
      "call"   => Token::Call,
+     "if"     => Token::If,
+     "else"   => Token::Else,
      _        => panic!("Unrecognized token string: {}", tok_str)
     }
   } else if IDENTIFIERS.is_match(tok_str) {
