@@ -1,0 +1,70 @@
+global DPORT = 3490;
+global IMPR_PORT = 11111; 
+global CLICK_PORT = 22222; 
+
+packet impr {
+    transient ipv4srcAddr : bit<32>;
+    transient ipv4dstAddr : bit<32>;
+    transient ipv4protocol : bit<8>;
+    transient tcpSrcPort : bit<16>;
+    transient tcpDstPort : bit<16>;
+    transient adId : bit<32>;
+    transient impr_time : bit<32>;    
+}
+
+packet click {
+    transient ipv4srcAddr : bit<32>;
+    transient ipv4dstAddr : bit<32>;
+    transient ipv4protocol : bit<8>;
+    transient tcpSrcPort : bit<16>;
+    transient tcpDstPort : bit<16>;
+    transient adId : bit<32>;
+    transient click_time : bit<32>;    
+}
+
+packet result {
+    transient ipv4srcAddr : bit<32>;
+    transient ipv4dstAddr : bit<32>;
+    transient ipv4protocol : bit<8>;
+    transient tcpSrcPort : bit<16>;
+    transient tcpDstPort : bit<16>;
+    transient adId : bit<32>;
+    transient impr_time : bit<32>;    
+    transient click_time : bit<32>;    
+}
+
+
+snippet send_impr() {
+  output a : bit<30>;
+  impr_srcPort = IMPR_PORT;
+  impr_dstPort = DPORT;
+  call join();
+}
+
+snippet send_click() {
+  output b : bit<30>;
+  transient t : bit<7>;
+  click_srcPort = CLICK_PORT;
+  click_dstPort = DPORT;
+  call join();
+}
+
+snippet join () {
+  input p : bit<30>;
+  input q : bit<30>;
+  output r : bit<30>;
+  if (p_adId == q_adId) {
+    r_adId = p_adId;
+    r_impr_timestamp = p_impr_timestamp;
+    r_click_timestamp = q_click_timestamp;
+    call receive();
+  }
+}
+
+snippet receive() {
+    input x : bit<30>;
+}
+(join, receive):r->x,
+(send_impr, join):a->p,
+(send_click, join):b->q,
+
