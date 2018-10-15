@@ -1,0 +1,232 @@
+"
+global DPORT = 3490;
+global IMPR_PORT = 11111; // srcPort of ad impression stream
+global CLICK_PORT = 22222; // srcPort of ad click stream
+
+packet impr {
+    transient ipv4srcAddr : bit<32>;
+    transient ipv4dstAddr : bit<32>;
+    transient ipv4protocol : bit<8>;
+    transient tcpSrcPort : bit<16>;
+    transient tcpDstPort : bit<16>;
+    transient adId : bit<32>;
+    transient impr_time : bit<32>;    
+}
+
+packet click {
+    transient ipv4srcAddr : bit<32>;
+    transient ipv4dstAddr : bit<32>;
+    transient ipv4protocol : bit<8>;
+    transient tcpSrcPort : bit<16>;
+    transient tcpDstPort : bit<16>;
+    transient adId : bit<32>;
+    transient click_time : bit<32>;    
+}
+
+packet result {
+    transient ipv4srcAddr : bit<32>;
+    transient ipv4dstAddr : bit<32>;
+    transient ipv4protocol : bit<8>;
+    transient tcpSrcPort : bit<16>;
+    transient tcpDstPort : bit<16>;
+    transient adId : bit<32>;
+    transient impr_time : bit<32>;    
+    transient click_time : bit<32>;    
+}
+
+
+// annotate to run on host
+snippet send_impr() {
+  output a : impr;
+  impr.tcp.srcPort = IMPR_PORT;
+  impr.tcp.dstPort = DPORT;
+  call join();
+}
+
+// annotate to run on host
+snippet send_click() {
+  output b : click;
+  click.tcp.srcPort = CLICK_PORT;
+  click.tcp.dstPort = DPORT;
+  call join();
+}
+
+// annotate to run on switch
+// maybe convert the if block to join primitive in sculpt syntax itself
+snippet join () {
+  input p : impr;
+  input q : click;
+  output r : result;
+  if (p.adId == q.adId) {
+    r.adId = p.adId;
+    r.impr_time = p.impr_time;
+    r.click_time = q.click_time;
+    call receive();
+  }
+}
+
+
+// annotate to run on host or another router dependng on if there are more queries or nodes in the dag
+snippet receive() {
+    input x : result;
+    // do something with packet x
+}
+(send_impr, join):a->p,
+(send_click, join):b->q,
+(join, receive):r->x,
+
+
+---------------------------------------------------------------------------------------------------------
+
+
+// more examples
+
+global threshold = 111;
+
+packet n;
+
+snippet foo() {
+  input a : bit<2>;
+  input b : bit<2>;
+  input c : bit<2>;
+  persistent p : bit<2> = 1;
+  persistent m : bit<2>[3] = {1, 2, 3, };
+  transient z : bit<2>;
+  transient h : bit<2>;
+  transient q : bit<2>;
+  q = 5;
+  if (q > 5) {
+    z[5] = 6; // why is this legal? z was defined earlier with var_size  = 1
+    h = z[7];
+    m = 5;
+  }
+}
+
+snippet fun(){
+  input a : bit<1>;
+  input b : bit<2>;
+  input c : bit<2>;
+  input x : bit<2>;
+  input y : bit<2>;
+  transient z : bit<2>;
+  transient r : bit<2>;
+  transient q : bit<2>;
+  transient m : bit<2>;
+  z = a + b;
+  q = x;
+  r = y;
+  m = 5;
+  call foo();
+}
+
+
+(foo, fun)
+
+
+
+  snippet foo() {
+    output c : bit<2>;
+  } 
+  snippet fun() { 
+    input d : bit<2>;
+  } 
+  (foo, fun):c->d,
+
+
+
+
+snippet join () {
+    persistent last_impr : bit<32>[2] = {null, null};
+    persistent last_click : bit<32>[2] = {null, null};
+    output r : packet result;
+    b1 = impr.adId != last_impr[0];
+    b2 = click.adId != last_click[0];
+    a = b1 and b2;
+    b3 = 
+    if (b1 and b2)) {
+
+    } 
+
+
+
+
+
+
+
+
+  global PROTO_TCP = 6;
+  global PROTO_UDP = 17;
+   global THRESHOLD = 10000;
+   field_list flowkeys {
+      ipv4.srcAddr;
+      ipv4.dstAddr;
+      ipv4.protocol;
+      tcp.srcPort;
+      tcp.dstPort;
+  }
+   packet p;
+   snippet start () {
+    classify();
+  }
+   snippet classify () {
+    if (p.ipv4.protocol == PROTO_TCP) {
+      tcp_cong_ctrl();
+    } else if (p.ipv4.protocol == PROTO_UDP) {
+      udp_cong_ctrl();
+    }
+  }
+   snippet tcp_cong_ctrl () {
+    // Do Cong Ctrl
+    tx_offload();
+  }
+   snippet udp_cong_ctrl () {
+    // Do Cong Ctrl
+    tx_offload();
+  }
+   snippet tx_offload () {
+    // Do Tx offload
+    update_checksum();
+    encap();
+  }
+   snippet encap () {
+    add_header(p, gre);
+    prioritize();
+  }
+   snippet prioritize () {
+    // Set QoS flags for e.g. HTTP
+    if (p.tcp.dstPort == 80 || p.tcp.dstPort == 443) {
+      p.tcp.urg = 1;
+    }
+    netcore();
+  }
+   snippet netcore () {
+    core {
+      verify_checksum();
+      if (p.tcp.urg == 1) {
+        enqueue(2);
+      }
+      counter(flowkeys);
+      routing(p.ipv4.dest_ip);
+      microburst_detection();
+    }
+    decap();
+  }
+   snippet microburst_detection () {
+    persistent bytesRemaining : bit<32>;
+    if (queue.depth > THRESHOLD) {
+      // Mirror to cpu for further analysis
+      // More complex things can be done by using timer
+      bytesRemaining = queue.depth - p.ipv4.totalLen;
+    }
+    if (bytesRemaining > 0) {
+      mirror_to_cpu();
+      bytesRemaining = bytesRemaining - p.ipv4.totalLen;
+    }
+  }
+   snippet decap () {
+    remove_header(p, gre);
+    rx_offload();
+  }
+   snippet rx_offload () {
+    verify_checksum(p);
+  }"
