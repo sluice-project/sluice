@@ -29,10 +29,10 @@ fn match_token<'a>(token_iter : & mut TokenIterator<'a>, expected : Token<'a>, e
 
 pub fn parse_prog<'a>(token_iter : &mut TokenIterator<'a>) -> Prog<'a> {
   let globals     = parse_globals(token_iter);
-  let packet      = parse_packet(token_iter);
+  let packets      = parse_packets(token_iter);
   let snippets    = parse_snippets(token_iter);
   let connections = parse_connections(token_iter);
-  return Prog { globals, packet, snippets, connections };
+  return Prog { globals, packets, snippets, connections };
 }
 
 fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a>) -> Snippets<'a> {
@@ -108,7 +108,7 @@ fn parse_variable_decls<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecl
   let mut decl_vector = Vec::<VariableDecl>::new();
   loop {
     if !token_iter.peek().is_some() || (!is_decl(*token_iter.peek().unwrap())) {
-      return VariableDecls{decl_vector};
+      return VariableDecls{decl_vector}; // return empty decl vector if no vars declared
     } else {
       let variable_decl = parse_variable_decl(token_iter);
       decl_vector.push(variable_decl);
@@ -145,12 +145,47 @@ fn parse_global<'a>(token_iter : &mut TokenIterator<'a>) -> Global<'a> {
   return Global {identifier, initial_values};
 }
 
-fn parse_packet<'a>(token_iter : &mut TokenIterator<'a>) -> Packet<'a> {
-  match_token(token_iter, Token::Packet, "Packet declaration?");
-  let identifier = parse_identifier(token_iter);
-  match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
-  return Packet {identifier};
+
+fn parse_packets<'a>(token_iter : &mut TokenIterator<'a>) -> Packets<'a> {
+  // Internal helper function to check if it's a snippet or not
+  let is_packet = |token| { match token { &Token::Packet => true, _ => false, } };
+
+  let mut packet_vector = Vec::<Packet>::new();
+  loop {
+    if !token_iter.peek().is_some() || !is_packet(*token_iter.peek().unwrap()) {
+      return Packets{packet_vector};
+    } else {
+      let packet = parse_packet(token_iter);
+      packet_vector.push(packet);
+    }
+  }
 }
+
+
+fn parse_packet<'a>(token_iter : &mut TokenIterator<'a>) -> Packet<'a> {
+  match_token(token_iter, Token::Packet, "Packet definition must start with the keyword packet");
+  let identifier = parse_identifier(token_iter);
+  match_token(token_iter, Token::BraceLeft, "Packet body must begin with a left brace.");
+  let variable_decls    = parse_variable_decls(token_iter);
+  match_token(token_iter, Token::BraceRight, "Packet body must end with a right brace.");
+  return Packet {identifier, variable_decls};
+}
+
+
+// fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
+//   let mut ifid: u32 = 0;
+//   match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
+//   let snippet_id  = parse_identifier(token_iter);
+//   match_token(token_iter, Token::ParenLeft, "Snippet argument list must start with a left parenthesis.");
+//   match_token(token_iter, Token::ParenRight, "Snippet argument list must end with a right parenthesis.");
+//   match_token(token_iter, Token::BraceLeft, "Snippet body must begin with a left brace.");
+//   let variable_decls    = parse_variable_decls(token_iter);
+//   let ifblocks          = parse_ifblocks(token_iter, &mut ifid);
+//   // let statements        = parse_statements(token_iter);
+//   // let callstacks         = parse_callstacks(token_iter);
+//   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
+//   return Snippet{snippet_id, variable_decls, ifblocks};
+// }
 
 fn parse_variable_decl<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecl<'a> {
   let type_qualifier =  parse_type_qualifier(token_iter);
@@ -213,8 +248,8 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
   match_token(token_iter, Token::Bit, "Invalid type, bit vectors are the only supported type.");
   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
   let bit_width = parse_value(token_iter).value;
-  if bit_width > 30 {
-    panic!("Bit width can be at most 30.");
+  if bit_width > 64 {
+    panic!("Bit width can be at most 64.");
   } else if bit_width < 1 {
     panic!("Bit width must be at least 1.");
   }
@@ -253,7 +288,7 @@ fn parse_ifblocks<'a>(token_iter : &mut TokenIterator<'a>, ifid :&mut u32) -> If
       *ifid += 1;
     } else if is_ident(*token_iter.peek().unwrap()) {
       *ifid += 1;
-      blocktype = 3;
+      blocktype = 3; // this 'if block' type serves as generic statements like q = 5
       let ifblock = parse_ifblock(token_iter, *ifid, blocktype);
       ifblock_vector.push(ifblock);
     } else {
@@ -293,7 +328,7 @@ fn parse_ifblock<'a>(token_iter : &mut TokenIterator<'a>, id : u32, condtype : u
       let condition = dummycondition;//parse_condition(cond_token_iter);
       match_token(token_iter, Token::BraceRight, "If Block must end with a right brace.");
       return IfBlock{id, condtype, condition, statements, callstacks};
-  } else {
+  } else { // generic statements, not if/else
       let statements = parse_statements(token_iter);
       let callstacks = parse_callstacks(token_iter);
       let condition = dummycondition;//parse_condition(cond_token_iter);
@@ -541,10 +576,10 @@ mod tests {
   test_parser_fail!   (r"persistent x : bit<0> = 4;", parse_variable_decls,
                        test_parse_persistent_decls_bitwidth0, "Bit width must be at least 1.");
   test_parser_fail!   (r"persistent x : bit<31> = 4;", parse_variable_decls,
-                       test_parse_persistent_decls_bitwidth31, "Bit width can be at most 30.");
-  test_parser_success!(r"persistent x : bit<30>[4] = {1, 2, 3, 4,};", parse_variable_decls,
+                       test_parse_persistent_decls_bitwidth31, "Bit width can be at most 64.");
+  test_parser_success!(r"persistent x : bit<64>[4] = {1, 2, 3, 4,};", parse_variable_decls,
                        test_parse_persistent_decls_arrays);
-  test_parser_fail!   (r"persistent x : bit<30>[2] = {1, 2, 3,};", parse_variable_decls,
+  test_parser_fail!   (r"persistent x : bit<64>[2] = {1, 2, 3,};", parse_variable_decls,
                        test_parse_persistent_decls_arrays_fail,
                        "Found 3 initial values. Need 2 initial values for variable x.");
   test_parser_success!(r"snippet fun() {
