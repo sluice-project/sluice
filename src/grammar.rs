@@ -2,7 +2,7 @@
 #[derive(PartialEq)]
 pub struct Prog<'a> {
   pub globals : Globals<'a>,
-  pub packet : Packet<'a>,
+  pub packets : Packets<'a>,
   pub snippets : Snippets<'a>,
   pub connections : Connections<'a>
 }
@@ -23,9 +23,17 @@ pub struct Global<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+pub struct Packets<'a> {
+  pub packet_vector : Vec<Packet<'a>>,
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
 pub struct Packet<'a> {
   pub identifier       : Identifier<'a>,
+  pub variable_decls   : VariableDecls<'a>,
 }
+
 
 #[derive(Debug)]
 #[derive(PartialEq)]
