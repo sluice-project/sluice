@@ -248,7 +248,7 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
   match_token(token_iter, Token::Bit, "Invalid type, bit vectors are the only supported type.");
   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
   let bit_width = parse_value(token_iter).value;
-  if bit_width > 64 {
+  if bit_width > 64 { 
     panic!("Bit width can be at most 64.");
   } else if bit_width < 1 {
     panic!("Bit width must be at least 1.");
