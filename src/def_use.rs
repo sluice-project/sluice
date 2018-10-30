@@ -22,7 +22,9 @@ pub struct DefUse<'a> {
   snippet_set     : HashSet<&'a str>
 }
 
+
 impl<'a> DefUse<'a> {
+
   pub fn get_symbol_table(&'a self) -> &'a HashMap<&'a str, VariableMetadata<'a>> {
     self.symbol_table.get(self.current_snippet).unwrap()
   }
@@ -49,7 +51,13 @@ impl<'a> DefUse<'a> {
   }
 }
 
+
+
+
 impl<'a> TreeFold<'a> for DefUse<'a> {
+
+
+  // why is this delcared twice? (here and in tree_fold.rs)
   fn visit_variable_decl(&mut self, tree : &'a VariableDecl) {
     let id_name = &tree.identifier.id_name;
     if self.symbol_table.get_mut(self.current_snippet).unwrap().get(id_name).is_some() {
