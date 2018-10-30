@@ -172,21 +172,6 @@ fn parse_packet<'a>(token_iter : &mut TokenIterator<'a>) -> Packet<'a> {
 }
 
 
-// fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
-//   let mut ifid: u32 = 0;
-//   match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
-//   let snippet_id  = parse_identifier(token_iter);
-//   match_token(token_iter, Token::ParenLeft, "Snippet argument list must start with a left parenthesis.");
-//   match_token(token_iter, Token::ParenRight, "Snippet argument list must end with a right parenthesis.");
-//   match_token(token_iter, Token::BraceLeft, "Snippet body must begin with a left brace.");
-//   let variable_decls    = parse_variable_decls(token_iter);
-//   let ifblocks          = parse_ifblocks(token_iter, &mut ifid);
-//   // let statements        = parse_statements(token_iter);
-//   // let callstacks         = parse_callstacks(token_iter);
-//   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
-//   return Snippet{snippet_id, variable_decls, ifblocks};
-// }
-
 fn parse_variable_decl<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecl<'a> {
   let type_qualifier =  parse_type_qualifier(token_iter);
   let identifier = parse_identifier(token_iter);
