@@ -107,10 +107,14 @@ pub trait TreeFold<'a> {
 
   fn visit_lvalue(&mut self, tree : &'a LValue) {
     match tree {
-      &LValue::Identifier(ref identifier) => self.visit_identifier(identifier),
-      &LValue::Array(ref array, ref operand) => {
-        self.visit_identifier(array);
+      &LValue::Scalar(ref scalar_name) => self.visit_identifier(scalar_name),
+      &LValue::Array(ref array_name, ref operand) => {
+        self.visit_identifier(array_name);
         self.visit_operand(operand);
+      },
+      &LValue::Field(ref struct_name, ref field_name) => {
+        self.visit_identifier(struct_name);
+        self.visit_identifier(field_name);
       }
     }
   }

@@ -12,8 +12,12 @@ pub enum VarState {
 }
 
 pub struct VariableMetadata<'a> {
-  var_type  : &'a VarType,
+  var_type  : &'a VarType<'a>,
   var_state : VarState
+}
+
+impl <'a> VariableMetadata<'a> {
+  pub fn get_var_type(&self) -> &'a VarType { self.var_type }
 }
 
 pub struct DefUse<'a> {
@@ -25,12 +29,15 @@ pub struct DefUse<'a> {
 
 impl<'a> DefUse<'a> {
 
-  pub fn get_symbol_table(&'a self) -> &'a HashMap<&'a str, VariableMetadata<'a>> {
-    self.symbol_table.get(self.current_snippet).unwrap()
+  // pub fn get_symbol_table(&'a self) -> &'a HashMap<&'a str, VariableMetadata<'a>> {
+  //   self.symbol_table.get(self.current_snippet).unwrap()
+  pub fn get_symbol_table(&'a self, snippet : &'a str) -> &'a HashMap<&'a str, VariableMetadata<'a>> {
+    self.symbol_table.get(snippet).unwrap()
   }
 
+
   pub fn is_defined(&'a self, id_name : &'a str) -> bool {
-    let sym_table = self.get_symbol_table();
+    let sym_table = self.get_symbol_table(self.current_snippet);
     if sym_table.get(id_name).is_none() {
       // It's not even declared
       return false;
@@ -92,8 +99,10 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
   fn visit_statement(&mut self, tree : &'a Statement) {
     let id_name =
       match &tree.lvalue {
-        &LValue::Identifier(ref identifier) => { identifier.id_name },
-        &LValue::Array(ref identifier, _) => { identifier.id_name }
+        &LValue::Scalar(ref identifier) => { identifier.id_name },
+        // TODO: Handle fields in def_use.rs appropriately.
+        &LValue::Array(ref identifier, _) => { identifier.id_name },
+        &LValue::Field(ref identifier, _) => { identifier.id_name }
       };
 
     // First visit expression because that is conceptually processed first
@@ -130,7 +139,7 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
 
   fn visit_expr(&mut self, tree : &'a Expr) {
     // Check def-before-use for first operand
-    if tree.op1.is_id() &&
+    if tree.op1.is_scalar() &&
        !self.is_defined(tree.op1.get_id()) {
       panic!("{} used before definition", &tree.op1.get_id());
     }
@@ -138,18 +147,18 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
     // Check for the remaining operands
     match &tree.expr_right {
       &ExprRight::BinOp(_, ref op2) => {
-        if op2.is_id() &&
+        if op2.is_scalar() &&
            !self.is_defined(op2.get_id()) {
           panic!("{} used before definition", op2.get_id());
         }
       }
       &ExprRight::Cond(ref true_op, ref false_op) => {
-        if true_op.is_id()  &&
+        if true_op.is_scalar()  &&
            !self.is_defined(true_op.get_id()) {
           panic!("{} used before definition", true_op.get_id());
         }
 
-        if false_op.is_id() &&
+        if false_op.is_scalar() &&
            !self.is_defined(false_op.get_id()) {
           panic!("{} used before definition", false_op.get_id());
         }

@@ -112,21 +112,72 @@ pub enum TypeQualifier {
   Const,
 }
 
+// #[derive(Debug)]
+// #[derive(PartialEq)]
+// pub struct VarType {
+//   pub bit_width : u32,
+//   pub var_size  : u32,
+//   pub type_qualifier : TypeQualifier,
+//   // var_size 1 is a scalar, > 1 is an array.
+// }
+
+
 #[derive(Debug)]
 #[derive(PartialEq)]
-pub struct VarType {
+pub struct VarType<'a> {
   pub bit_width : u32,
   pub var_size  : u32,
   pub type_qualifier : TypeQualifier,
+  pub packet_name : Identifier<'a>,
   // var_size 1 is a scalar, > 1 is an array.
 }
+
+// #[derive(Debug)]
+// #[derive(PartialEq)]
+// pub enum VarType<'a> {
+//   Scalar(Identifier<'a>),
+//   Array(Identifier<'a>, Box<Operand<'a>>),
+//   Field(Identifier<'a>, Identifier<'a>)
+// }
+
+// #[derive(Debug)]
+// #[derive(PartialEq)]
+// pub enum LValue<'a> {
+//   Scalar(Identifier<'a>),
+//   Array(Identifier<'a>, Box<Operand<'a>>),
+//   Field(Identifier<'a>, Identifier<'a>)
+// // }
+
+// impl<'a> LValue<'a> {
+//   pub fn get_string(&self) -> String {
+//     match self {
+//       &LValue::Scalar(ref id) => id.get_str().to_owned(),
+//       &LValue::Array(ref id, ref address) => {
+//         id.get_str().to_owned() + " [ " + &address.get_string() + " ] "
+//       },
+//       &LValue::Field(ref id, ref field_name) => {
+//         id.get_str().to_owned() + " . " + &field_name.get_str()
+//       }
+//     }
+//   }
+// }
+
+// #[derive(Debug)]
+// #[derive(PartialEq)]
+// pub struct PacketType<'a> {
+//     pub identifier     : Identifier<'a>
+//   // pub var_size  : u32,
+//   // pub type_qualifier : TypeQualifier,
+//   // var_size 1 is a scalar, > 1 is an array.
+// }
+
 
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct VariableDecl<'a> {
   pub identifier     : Identifier<'a>,
   pub initial_values : Vec<Value>,
-  pub var_type       : VarType
+  pub var_type       : VarType<'a>
 }
 
 #[derive(Debug)]
@@ -213,17 +264,17 @@ pub enum Operand<'a> {
   Value(Value),
 }
 
-impl<'a> Operand<'a>{
-  pub fn is_id(&self) -> bool {
+impl<'a> Operand<'a> {
+  pub fn is_scalar(&self) -> bool {
     match self {
-      &Operand::LValue(LValue::Identifier(_))     => true,
-      _                                           => false
+      &Operand::LValue(LValue::Scalar(_))     => true,
+      _                                       => false
     }
   }
-  pub fn is_val(&self) -> bool { !self.is_id() }
+  pub fn is_val(&self) -> bool { !self.is_scalar() }
   pub fn get_id(&self) -> &str {
     match self {
-      &Operand::LValue(LValue::Identifier(ref id)) => id.get_str(),
+      &Operand::LValue(LValue::Scalar(ref id)) => id.get_str(),
       _ =>  { assert!(false, "Can't call get_id if operand isn't identifier.");"" }
     }
   }
@@ -245,16 +296,20 @@ impl<'a> Operand<'a>{
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub enum LValue<'a> {
-  Identifier(Identifier<'a>),
-  Array(Identifier<'a>, Box<Operand<'a>>)
+  Scalar(Identifier<'a>),
+  Array(Identifier<'a>, Box<Operand<'a>>),
+  Field(Identifier<'a>, Identifier<'a>)
 }
 
 impl<'a> LValue<'a> {
   pub fn get_string(&self) -> String {
     match self {
-      &LValue::Identifier(ref id) => id.get_str().to_owned(),
+      &LValue::Scalar(ref id) => id.get_str().to_owned(),
       &LValue::Array(ref id, ref address) => {
         id.get_str().to_owned() + " [ " + &address.get_string() + " ] "
+      },
+      &LValue::Field(ref id, ref field_name) => {
+        id.get_str().to_owned() + " . " + &field_name.get_str()
       }
     }
   }

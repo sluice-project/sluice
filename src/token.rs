@@ -56,4 +56,7 @@ pub enum Token<'a> {
   Call,
   If,
   Else,
+
+  // Dot operator
+  Dot,
 }

@@ -2,13 +2,16 @@ extern crate regex;
 use self::regex::Regex;
 
 lazy_static! {
-  static ref TOKENS      : Regex = Regex::new(r"[0-9]+|[A-Za-z_][A-Za-z0-9_]*|->|==|!=|>=|<=|>|<|\+|-|/|\*|%|\{|\}|\(|\)|\[|\]|=|;|,|\?|:|\S+").unwrap();
+
+  static ref TOKENS      : Regex = Regex::new(r"[0-9]+|[A-Za-z_][A-Za-z0-9_]*|->|==|!=|>=|<=|>|<|\+|-|/|\*|%|\{|\}|\(|\)|\[|\]|=|;|,|\?|:|\.|\S+").unwrap();
   static ref KEYWORDS    : Regex = Regex::new(r"^(snippet|and|or|not|persistent|transient|input|output|packet|snippet|const|bit|global|call|if|else)$").unwrap();
   static ref IDENTIFIERS : Regex = Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").unwrap();
   static ref VALUES      : Regex = Regex::new(r"^([0-9]+)$").unwrap();
 }
-
+ 
 use token::Token;
+
+
 fn get_single_token(tok_str : &str) -> Token {
   if KEYWORDS.is_match(tok_str) {
     return match tok_str {
@@ -27,7 +30,7 @@ fn get_single_token(tok_str : &str) -> Token {
      "call"   => Token::Call,
      "if"     => Token::If,
      "else"   => Token::Else,
-     _        => panic!("Unrecognized token string: {}", tok_str)
+     _        => panic!("Unrecognized token string found when looking for keyword: {}", tok_str)
     }
   } else if IDENTIFIERS.is_match(tok_str) {
     return Token::Identifier(tok_str);
@@ -62,7 +65,8 @@ fn get_single_token(tok_str : &str) -> Token {
       ">" => Token::GreaterThan,
 
       "=" => Token::Assign,
-      _   => panic!("Unrecognized token string: {}", tok_str)
+      "." => Token::Dot,
+       _  => panic!("Unrecognized token string found when looking for other tokens: {}", tok_str)
     }
   }
 }
@@ -79,6 +83,12 @@ pub fn get_tokens(input_program : &str) -> Vec<Token> {
 #[cfg(test)]
 mod tests {
   use super::get_tokens;
+
+  #[test]
+  fn test_lexer_dot() {
+    let input_program = r".";
+    println!("{:?}", get_tokens(input_program));
+  }
 
   #[test]
   fn test_lexer_full_prog() {
