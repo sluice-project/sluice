@@ -192,27 +192,35 @@ fn parse_variable_decl<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecl<
   match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
 
   // Check that the initial values are representable using bit vector of bit_width
-  for value in &(initial_values) {
-    if value.value > 2_u32.pow(var_type.bit_width) - 1 {
-      panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
-             value.value,
-             2_u32.pow(var_type.bit_width) - 1,
-             var_type.bit_width);
+  match var_type.var_info {
+    VarInfo::BitArray(bit_width, var_size) => {
+      for value in &(initial_values) {
+        if value.value > 2_u32.pow(bit_width) - 1 {
+          panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
+                 value.value,
+                 2_u32.pow(bit_width) - 1,
+                 bit_width);
+        }
+      }
+      // Check that the number of initial values matches up with the type for persistent and const
+      // variables alone
+      if &var_type.type_qualifier == &TypeQualifier::Const || &var_type.type_qualifier == &TypeQualifier::Persistent {
+        if initial_values.len() as u32 != var_size {
+          panic!("Found {} initial values. Need {} initial values for variable {}.",
+                 initial_values.len(),
+                 var_size,
+                 identifier.id_name);
+        }
+      }
     }
+
+    VarInfo::Packet(_) => {}
   }
 
-  // Check that the number of initial values matches up with the type for persistent and const
-  // variables alone
-  if &var_type.type_qualifier == &TypeQualifier::Const || &var_type.type_qualifier == &TypeQualifier::Persistent {
-    if initial_values.len() as u32 != var_type.var_size {
-      panic!("Found {} initial values. Need {} initial values for variable {}.",
-             initial_values.len(),
-             var_type.var_size,
-             identifier.id_name);
-    }
-  }
   return VariableDecl {identifier, initial_values, var_type};
 }
+
+
 
 fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifier {
   if token_iter.peek().is_none() {
@@ -230,30 +238,65 @@ fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifie
   }
 }
 
-// Retrieve bit width of bit vector. That's the only type for now.
-// fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier) -> VarType {
 
-//   match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
-//   match_token(token_iter, Token::Bit, "Invalid type, bit vectors are the only supported type.");
-//   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
-//   let bit_width = parse_value(token_iter).value;
-//   if bit_width > 64 { 
-//     panic!("Bit width can be at most 64.");
-//   } else if bit_width < 1 {
-//     panic!("Bit width must be at least 1.");
-//   }
-//   match_token(token_iter, Token::GreaterThan, "Need angular brackets to specify width of bit vector.");
+// var_type: VarInfo {
+//     var_type : VarType, 
+//   type_qualifier: Output,
+// }, 
 
-//   // Check if it's an array
-//   if token_iter.peek().is_some() && **token_iter.peek().unwrap() == Token::SquareLeft {
-//     match_token(token_iter, Token::SquareLeft, "Expected [ here.");
-//     let var_size = parse_value(token_iter).value;
-//     match_token(token_iter, Token::SquareRight, "Expected ] here.");
-//     return VarType { var_size, bit_width, type_qualifier };
-//   } else {
-//     return VarType { var_size : 1, bit_width, type_qualifier };
+// enum VarType {
+//   Scalar(width)
+//   Array(width, int size)
+//     Struct(Name, Vec<FieldNames>)
+// }
+
+// VS 
+
+// var_type: VarType { 
+//   bit_width: 1, 
+//   var_size: 1, 
+//   type_qualifier: Output, 
+//   packet_name: Identifier { id_name: "new" } } }, 
+
+// pub struct VarType<'a> {
+//   pub var_type : VarInfo<'a>,
+//   pub type_qualifier : TypeQualifier,
+//   // var_size 1 is a scalar, > 1 is an array.
+// }
+
+
+// #[derive(Debug)]
+// #[derive(PartialEq)]
+// pub enum VarInfo<'a> {
+//   Scalar(Identifier<'a>),
+//   Array(Identifier<'a>, Box<Operand<'a>>),
+//   Packet(Identifier<'a>, VariableDecls<'a>)
+// }
+
+// fn parse_varinfo<'a>(token_iter : &mut TokenIterator<'a>) -> VarInfo<'a> {
+
+//   let varinfo_token = token_iter.next().unwrap();
+//   let is_square_left = |token| { match token { &Token::SquareLeft => true, _ => false, } };
+//   let is_dot         = |token| { match token { &Token::Dot        => true, _ => false, } };
+//   match lvalue_token {
+//     & Token::Identifier(id_name) => {
+//       if token_iter.peek().is_none() || !(is_square_left(token_iter.peek().unwrap()) || is_dot(token_iter.peek().unwrap())) {
+//         return VarInfo::Scalar(Identifier{id_name});
+//       } else if is_dot(token_iter.peek().unwrap()) {
+//         match_token(token_iter, Token::Dot, "Expected . here.");
+//         let field_name = parse_identifier(token_iter);
+//         return VarInfo::Packet(Identifier{id_name}, );
+//       } else {
+//         match_token(token_iter, Token::SquareLeft, "Expected [ here.");
+//         let array_address = parse_operand(token_iter);
+//         match_token(token_iter, Token::SquareRight, "Expected ] here.");
+//         return VarInfo::Array(Identifier{id_name}, Box::new(array_address));
+//       }
+//     }
+//     _                      => panic!("Invalid token: {:?}, expected Token::Identifier", lvalue_token)
 //   }
 // }
+
 
 
 fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier) -> VarType<'a> {
@@ -267,9 +310,9 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
     match_token(token_iter, Token::Bit, "Invalid bit type.");
  } else {
     let identifier = parse_identifier(token_iter);
-    return VarType { var_size : 1, bit_width : 1, type_qualifier, packet_name : identifier };
+    let var_info = VarInfo::Packet(identifier);
+    return VarType { var_info, type_qualifier };
   }
-
 
   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
   let bit_width = parse_value(token_iter).value;
@@ -285,12 +328,52 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
     match_token(token_iter, Token::SquareLeft, "Expected [ here.");
     let var_size = parse_value(token_iter).value;
     match_token(token_iter, Token::SquareRight, "Expected ] here.");
+    let var_info = VarInfo::BitArray(bit_width, var_size);
 
-    return VarType { var_size, bit_width, type_qualifier, packet_name : Identifier{id_name : ""} };
+    return VarType { var_info, type_qualifier };
   } else {
-    return VarType { var_size : 1, bit_width, type_qualifier, packet_name : Identifier{id_name : ""} };
+    let var_info = VarInfo::BitArray(bit_width, 1);    
+    return VarType { var_info, type_qualifier};
   }
 }
+
+
+
+// fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier) -> VarType<'a> {
+
+//   match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
+  
+//   let is_bit = |token| { match token { &Token::Bit => true, _ => false, } };
+
+
+//   if is_bit(*token_iter.peek().unwrap())  {
+//     match_token(token_iter, Token::Bit, "Invalid bit type.");
+//  } else {
+//     let identifier = parse_identifier(token_iter);
+//     return VarType { var_size : 1, bit_width : 1, type_qualifier, packet_name : identifier };
+//   }
+
+
+//   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
+//   let bit_width = parse_value(token_iter).value;
+//   if bit_width > 64 { 
+//     panic!("Bit width can be at most 64.");
+//   } else if bit_width < 1 {
+//     panic!("Bit width must be at least 1.");
+//   }
+//   match_token(token_iter, Token::GreaterThan, "Need angular brackets to specify width of bit vector.");
+
+//   // Check if it's an array
+//   if token_iter.peek().is_some() && **token_iter.peek().unwrap() == Token::SquareLeft {
+//     match_token(token_iter, Token::SquareLeft, "Expected [ here.");
+//     let var_size = parse_value(token_iter).value;
+//     match_token(token_iter, Token::SquareRight, "Expected ] here.");
+
+//     return VarType { var_size, bit_width, type_qualifier, packet_name : Identifier{id_name : ""} };
+//   } else {
+//     return VarType { var_size : 1, bit_width, type_qualifier, packet_name : Identifier{id_name : ""} };
+//   }
+// }
 
 //static ifid: u32 = 0;
 
