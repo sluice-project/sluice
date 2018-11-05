@@ -31,6 +31,7 @@ pub fn parse_prog<'a>(token_iter : &mut TokenIterator<'a>) -> Prog<'a> {
   let globals     = parse_globals(token_iter);
   let packets      = parse_packets(token_iter);
   let snippets    = parse_snippets(token_iter);
+  // let snippets    = parse_snippets(token_iter, &packets);
   let connections = parse_connections(token_iter);
   return Prog { globals, packets, snippets, connections };
 }
@@ -86,13 +87,55 @@ fn parse_packet<'a>(token_iter : &mut TokenIterator<'a>) -> Packet<'a> {
   match_token(token_iter, Token::Packet, "Packet definition must start with the keyword packet");
   let identifier = parse_identifier(token_iter);
   match_token(token_iter, Token::BraceLeft, "Packet body must begin with a left brace.");
-  let variable_decls    = parse_variable_decls(token_iter);
+  let packet_fields    = parse_packet_fields(token_iter);
   match_token(token_iter, Token::BraceRight, "Packet body must end with a right brace.");
-  return Packet {identifier, variable_decls};
+  return Packet {identifier, packet_fields};
+}
+
+ 
+fn parse_packet_fields<'a>(token_iter : &mut TokenIterator<'a>) -> PacketFields<'a> {
+  // Helper function to determine if the keyword starts a declaration
+  // let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false, } };
+  let is_field = |token| { match token { &Token::Field => true, _ => false, } };
+
+  let mut field_vector = Vec::<PacketField>::new();
+  loop {
+    if !token_iter.peek().is_some() || (!is_field(*token_iter.peek().unwrap())) {
+      return PacketFields{field_vector}; // return empty decl vector if no vars declared
+    } else {
+      let packet_field = parse_packet_field(token_iter);
+      field_vector.push(packet_field);
+    }
+  }
 }
 
 
-fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a>) -> Snippets<'a> {
+fn parse_packet_field<'a>(token_iter : &mut TokenIterator<'a>) -> PacketField<'a> {
+  let type_qualifier = parse_type_qualifier(token_iter);
+  let identifier = parse_identifier(token_iter);
+  let var_type   = parse_type_annotation(token_iter, type_qualifier);
+  match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
+  return PacketField {identifier, var_type};
+
+  // match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
+  // match_token(token_iter, Token::Bit, "Invalid bit type.");
+  // match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
+  // let bit_width = parse_value(token_iter).value;
+  // if bit_width > 64 { 
+  //   panic!("Bit width can be at most 64.");
+  // } else if bit_width < 1 {
+  //   panic!("Bit width must be at least 1.");
+  // }
+  // match_token(token_iter, Token::GreaterThan, "Need angular brackets to specify width of bit vector.");
+  // // Must end declaration with a semi colon
+  // match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
+
+  // let varinfo = VarInfo::BitArray(bit_width, 1);
+  // return PacketField {identifier, var_type : VarType { var_info : varinfo, type_qualifier : TypeQualifier::Field}};
+}
+
+
+fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a> ) -> Snippets<'a> {
   // Internal helper function to check if it's a snippet or not
   let is_snippet = |token| { match token { &Token::Snippet => true, _ => false, } };
 
@@ -232,14 +275,15 @@ fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifie
       Token::Const      => TypeQualifier::Const,
       Token::Input      => TypeQualifier::Input,
       Token::Output     => TypeQualifier::Output,
+      Token::Field     => TypeQualifier::Field,
       _                 => panic!("Unsupported for now!!!")
     }
   }
 }
 
 
+// fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier, pac_vec : &Packets<'a>) -> VarType<'a> {
 fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier) -> VarType<'a> {
-
   match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
   
   let is_bit = |token| { match token { &Token::Bit => true, _ => false, } };
@@ -247,7 +291,7 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
 
   if is_bit(*token_iter.peek().unwrap())  {
     match_token(token_iter, Token::Bit, "Invalid bit type.");
- } else {
+  } else {
     let identifier = parse_identifier(token_iter);
     let var_info = VarInfo::Packet(identifier);
     return VarType { var_info, type_qualifier };
@@ -425,11 +469,11 @@ fn parse_statement<'a>(token_iter : &mut TokenIterator<'a>) -> Statement<'a> {
 
 fn parse_callstacks<'a>(token_iter : &mut TokenIterator<'a>) -> CallStacks<'a> {
   // Helper function to identify beginning of statements
-  let is_ident = |token| { match token { &Token::Call => true, _ => false } };
+  let is_call = |token| { match token { &Token::Call => true, _ => false } };
 
   let mut callstack_vector = Vec::<CallStack>::new();
   loop {
-    if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
+    if !token_iter.peek().is_some() || (!is_call(*token_iter.peek().unwrap())) {
       return CallStacks{callstack_vector};
     } else {
       let callstack = parse_callstack(token_iter);

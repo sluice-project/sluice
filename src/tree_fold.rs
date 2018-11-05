@@ -5,7 +5,6 @@
 
 use grammar::*;
 
-// add in visit_packets
 
 pub trait TreeFold<'a> {
   fn visit_prog(&mut self, tree : &'a Prog) {
@@ -32,10 +31,17 @@ pub trait TreeFold<'a> {
 
   fn visit_packet(&mut self, tree : &'a Packet) {
     self.visit_identifier(&tree.identifier);
-    self.visit_variable_decls(&tree.variable_decls);
+    self.visit_packet_fields(&tree.packet_fields);
   }
 
+  fn visit_packet_fields(&mut self, tree : &'a PacketFields) {
+    for init in &tree.field_vector { self.visit_packet_field(init); }
+  }
 
+  fn visit_packet_field(&mut self, tree : &'a PacketField) {
+    self.visit_identifier(&tree.identifier);
+    self.visit_var_type(&tree.var_type);
+  }
 
   fn visit_snippets(&mut self, tree : &'a Snippets) {
     for snippet in &tree.snippet_vector { self.visit_snippet(snippet); }

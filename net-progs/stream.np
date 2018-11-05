@@ -1,38 +1,36 @@
-// this program compiles. Remove this comment before compiling
-
 global DPORT = 3490;
 global IMPR_PORT = 11111; 
 global CLICK_PORT = 22222;
 
 packet impr {
-    transient ipv4srcAddr : bit<32>;
-    transient ipv4dstAddr : bit<32>;
-    transient ipv4protocol : bit<8>;
-    transient tcpSrcPort : bit<16>;
-    transient tcpDstPort : bit<16>;
-    transient adId : bit<32>;
-    transient impr_time : bit<32>;    
+    field ipv4srcAddr : bit<32>;
+    field ipv4dstAddr : bit<32>;
+    field ipv4protocol : bit<8>;
+    field tcpSrcPort : bit<16>;
+    field tcpDstPort : bit<16>;
+    field adId : bit<32>;
+    field impr_time : bit<32>;    
 }
 
 packet click {
-    transient ipv4srcAddr : bit<32>;
-    transient ipv4dstAddr : bit<32>;
-    transient ipv4protocol : bit<8>;
-    transient tcpSrcPort : bit<16>;
-    transient tcpDstPort : bit<16>;
-    transient adId : bit<32>;
-    transient click_time : bit<32>;    
+    field ipv4srcAddr : bit<32>;
+    field ipv4dstAddr : bit<32>;
+    field ipv4protocol : bit<8>;
+    field tcpSrcPort : bit<16>;
+    field tcpDstPort : bit<16>;
+    field adId : bit<32>;
+    field click_time : bit<32>;    
 }
 
 packet result {
-    transient ipv4srcAddr : bit<32>;
-    transient ipv4dstAddr : bit<32>;
-    transient ipv4protocol : bit<8>;
-    transient tcpSrcPort : bit<16>;
-    transient tcpDstPort : bit<16>;
-    transient adId : bit<32>;
-    transient impr_time : bit<32>;    
-    transient click_time : bit<32>;    
+    field ipv4srcAddr : bit<32>;
+    field ipv4dstAddr : bit<32>;
+    field ipv4protocol : bit<8>;
+    field tcpSrcPort : bit<16>;
+    field tcpDstPort : bit<16>;
+    field adId : bit<32>;
+    field impr_time : bit<32>;    
+    field click_time : bit<32>;    
 }
 
 

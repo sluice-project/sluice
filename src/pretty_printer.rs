@@ -85,6 +85,7 @@ impl<'a> TreeFold<'a> for PrettyPrinter {
         TypeQualifier::Input => "input",
         TypeQualifier::Output => "output",
         TypeQualifier::Transient => "transient",
+        TypeQualifier::Field => "field",
       });
     self.pretty_print_str.push_str(" ");
     self.pretty_print_str.push_str(tree.identifier.get_str());
@@ -99,6 +100,7 @@ impl<'a> TreeFold<'a> for PrettyPrinter {
       }
 
       VarInfo::Packet(_) => {}
+      // VarInfo::Packet(_, _) => {}
     }
 
     self.pretty_print_str.push_str("]");

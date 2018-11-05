@@ -31,9 +31,21 @@ pub struct Packets<'a> {
 #[derive(PartialEq)]
 pub struct Packet<'a> {
   pub identifier       : Identifier<'a>,
-  pub variable_decls   : VariableDecls<'a>,
+  pub packet_fields   : PacketFields<'a>,
 }
 
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct PacketFields<'a> {
+  pub field_vector : Vec<PacketField<'a>>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct PacketField<'a> {
+  pub identifier     : Identifier<'a>,
+  pub var_type       : VarType<'a>
+}
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -110,6 +122,7 @@ pub enum TypeQualifier {
   Persistent,
   Transient,
   Const,
+  Field,
 }
 
 

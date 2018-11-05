@@ -63,8 +63,6 @@ impl<'a> DefUse<'a> {
 
 impl<'a> TreeFold<'a> for DefUse<'a> {
 
-
-  // why is this delcared twice? (here and in tree_fold.rs)
   fn visit_variable_decl(&mut self, tree : &'a VariableDecl) {
     let id_name = &tree.identifier.id_name;
     if self.symbol_table.get_mut(self.current_snippet).unwrap().get(id_name).is_some() {
@@ -210,6 +208,7 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
         let to_width =  match varinfo_to {
           VarInfo::BitArray(bit_width, _var_size) => bit_width,
           VarInfo::Packet(_) => {&0}
+          // VarInfo::Packet(_,_) => {&0}
         };
 
         let to_size =  match varinfo_to {
@@ -221,10 +220,10 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
           VarInfo::BitArray(bit_width, _var_size) => bit_width,
           VarInfo::Packet(_) => {&0}
         };
-        
+
         let from_size =  match varinfo_from {
           VarInfo::BitArray(_bit_width, var_size) => var_size,
-          VarInfo::Packet(_) => {&0}
+          VarInfo::Packet(_,) => {&0}
         };
 
         if to_width != from_width {
