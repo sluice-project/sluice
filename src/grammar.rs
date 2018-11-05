@@ -112,12 +112,20 @@ pub enum TypeQualifier {
   Const,
 }
 
+
+// enum VarType {
+//   Scalar(width)
+//   Array(width, int size)
+//     Struct(Name, Vec<FieldNames>)
+// }
+
 // #[derive(Debug)]
 // #[derive(PartialEq)]
-// pub struct VarType {
+// pub struct VarType<'a> {
 //   pub bit_width : u32,
 //   pub var_size  : u32,
 //   pub type_qualifier : TypeQualifier,
+//   pub packet_name : Identifier<'a>,
 //   // var_size 1 is a scalar, > 1 is an array.
 // }
 
@@ -125,52 +133,33 @@ pub enum TypeQualifier {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct VarType<'a> {
-  pub bit_width : u32,
-  pub var_size  : u32,
+  pub var_info : VarInfo<'a>,
   pub type_qualifier : TypeQualifier,
-  pub packet_name : Identifier<'a>,
-  // var_size 1 is a scalar, > 1 is an array.
 }
 
-// #[derive(Debug)]
-// #[derive(PartialEq)]
-// pub enum VarType<'a> {
-//   Scalar(Identifier<'a>),
-//   Array(Identifier<'a>, Box<Operand<'a>>),
-//   Field(Identifier<'a>, Identifier<'a>)
-// }
 
-// #[derive(Debug)]
-// #[derive(PartialEq)]
-// pub enum LValue<'a> {
-//   Scalar(Identifier<'a>),
-//   Array(Identifier<'a>, Box<Operand<'a>>),
-//   Field(Identifier<'a>, Identifier<'a>)
-// // }
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct BitArray {
+  pub bit_width : u32,
+  pub var_size  : u32,
+}
 
-// impl<'a> LValue<'a> {
-//   pub fn get_string(&self) -> String {
-//     match self {
-//       &LValue::Scalar(ref id) => id.get_str().to_owned(),
-//       &LValue::Array(ref id, ref address) => {
-//         id.get_str().to_owned() + " [ " + &address.get_string() + " ] "
-//       },
-//       &LValue::Field(ref id, ref field_name) => {
-//         id.get_str().to_owned() + " . " + &field_name.get_str()
-//       }
-//     }
-//   }
-// }
 
-// #[derive(Debug)]
-// #[derive(PartialEq)]
-// pub struct PacketType<'a> {
-//     pub identifier     : Identifier<'a>
-//   // pub var_size  : u32,
-//   // pub type_qualifier : TypeQualifier,
-//   // var_size 1 is a scalar, > 1 is an array.
-// }
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub enum VarInfo<'a> {
+  BitArray(u32, u32),
+  Packet(Identifier<'a>),
+  // Packet(Identifier<'a>, VariableDecls<'a>),
+}
 
+
+
+
+
+
+ 
 
 #[derive(Debug)]
 #[derive(PartialEq)]
