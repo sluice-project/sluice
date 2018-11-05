@@ -221,7 +221,6 @@ fn parse_variable_decl<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecl<
 }
 
 
-
 fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifier {
   if token_iter.peek().is_none() {
     panic!("No tokens left to parse in parse_type_qualifier.");
@@ -237,66 +236,6 @@ fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifie
     }
   }
 }
-
-
-// var_type: VarInfo {
-//     var_type : VarType, 
-//   type_qualifier: Output,
-// }, 
-
-// enum VarType {
-//   Scalar(width)
-//   Array(width, int size)
-//     Struct(Name, Vec<FieldNames>)
-// }
-
-// VS 
-
-// var_type: VarType { 
-//   bit_width: 1, 
-//   var_size: 1, 
-//   type_qualifier: Output, 
-//   packet_name: Identifier { id_name: "new" } } }, 
-
-// pub struct VarType<'a> {
-//   pub var_type : VarInfo<'a>,
-//   pub type_qualifier : TypeQualifier,
-//   // var_size 1 is a scalar, > 1 is an array.
-// }
-
-
-// #[derive(Debug)]
-// #[derive(PartialEq)]
-// pub enum VarInfo<'a> {
-//   Scalar(Identifier<'a>),
-//   Array(Identifier<'a>, Box<Operand<'a>>),
-//   Packet(Identifier<'a>, VariableDecls<'a>)
-// }
-
-// fn parse_varinfo<'a>(token_iter : &mut TokenIterator<'a>) -> VarInfo<'a> {
-
-//   let varinfo_token = token_iter.next().unwrap();
-//   let is_square_left = |token| { match token { &Token::SquareLeft => true, _ => false, } };
-//   let is_dot         = |token| { match token { &Token::Dot        => true, _ => false, } };
-//   match lvalue_token {
-//     & Token::Identifier(id_name) => {
-//       if token_iter.peek().is_none() || !(is_square_left(token_iter.peek().unwrap()) || is_dot(token_iter.peek().unwrap())) {
-//         return VarInfo::Scalar(Identifier{id_name});
-//       } else if is_dot(token_iter.peek().unwrap()) {
-//         match_token(token_iter, Token::Dot, "Expected . here.");
-//         let field_name = parse_identifier(token_iter);
-//         return VarInfo::Packet(Identifier{id_name}, );
-//       } else {
-//         match_token(token_iter, Token::SquareLeft, "Expected [ here.");
-//         let array_address = parse_operand(token_iter);
-//         match_token(token_iter, Token::SquareRight, "Expected ] here.");
-//         return VarInfo::Array(Identifier{id_name}, Box::new(array_address));
-//       }
-//     }
-//     _                      => panic!("Invalid token: {:?}, expected Token::Identifier", lvalue_token)
-//   }
-// }
-
 
 
 fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier) -> VarType<'a> {
