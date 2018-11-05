@@ -203,12 +203,34 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
 
         assert!(self.symbol_table.get(to_snippet).unwrap().get(to_var).is_some(), "to_var undefined");
         assert!(self.symbol_table.get(from_snippet).unwrap().get(from_var).is_some(), "from_var undefined");
-        if self.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.bit_width !=
-           self.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.bit_width {
+        
+        let varinfo_to =  &self.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.var_info;
+        let varinfo_from = &self.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.var_info;
+
+        let to_width =  match varinfo_to {
+          VarInfo::BitArray(bit_width, _var_size) => bit_width,
+          VarInfo::Packet(_) => {&0}
+        };
+
+        let to_size =  match varinfo_to {
+          VarInfo::BitArray(_bit_width, var_size) => var_size,
+          VarInfo::Packet(_) => {&0}
+        };
+
+        let from_width =  match varinfo_from {
+          VarInfo::BitArray(bit_width, _var_size) => bit_width,
+          VarInfo::Packet(_) => {&0}
+        };
+        
+        let from_size =  match varinfo_from {
+          VarInfo::BitArray(_bit_width, var_size) => var_size,
+          VarInfo::Packet(_) => {&0}
+        };
+
+        if to_width != from_width {
           panic!("Bit widths differ in the connection from {}.{} to {}.{}.", from_snippet, from_var, to_snippet, to_var);
         }
-        if self.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.var_size !=
-           self.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.var_size {
+        if to_size != from_size {
           panic!("Var sizes differ in the connection from {}.{} to {}.{}.", from_snippet, from_var, to_snippet, to_var);
         }
       }
