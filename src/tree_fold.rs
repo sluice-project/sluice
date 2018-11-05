@@ -5,11 +5,37 @@
 
 use grammar::*;
 
+// add in visit_packets
+
 pub trait TreeFold<'a> {
   fn visit_prog(&mut self, tree : &'a Prog) {
+    self.visit_globals(&tree.globals);
+    self.visit_packets(&tree.packets);
     self.visit_snippets(&tree.snippets);
     self.visit_connections(&tree.connections);
   }
+
+
+
+  fn visit_globals(&mut self, tree : &'a Globals) {
+    for global in &tree.global_vector { self.visit_global(global); }
+  }
+
+  fn visit_global(&mut self, tree : &'a Global) {
+    self.visit_identifier(&tree.identifier);
+    for value in &(tree.initial_values) { self.visit_value(value); };
+  }
+
+  fn visit_packets(&mut self, tree : &'a Packets) {
+    for packet in &tree.packet_vector { self.visit_packet(packet); }
+  }
+
+  fn visit_packet(&mut self, tree : &'a Packet) {
+    self.visit_identifier(&tree.identifier);
+    self.visit_variable_decls(&tree.variable_decls);
+  }
+
+
 
   fn visit_snippets(&mut self, tree : &'a Snippets) {
     for snippet in &tree.snippet_vector { self.visit_snippet(snippet); }
