@@ -89,9 +89,18 @@ impl<'a> TreeFold<'a> for PrettyPrinter {
     self.pretty_print_str.push_str(" ");
     self.pretty_print_str.push_str(tree.identifier.get_str());
     self.pretty_print_str.push_str(" : bit<");
-    self.pretty_print_str.push_str(&tree.var_type.bit_width.to_string());
-    self.pretty_print_str.push_str(">[");
-    self.pretty_print_str.push_str(&tree.var_type.var_size.to_string());
+
+    let varinfo =  &tree.var_type.var_info;
+    match varinfo {
+      VarInfo::BitArray(bit_width, var_size) => {
+        self.pretty_print_str.push_str(&bit_width.to_string());
+        self.pretty_print_str.push_str(">[");
+        self.pretty_print_str.push_str(&var_size.to_string());
+      }
+
+      VarInfo::Packet(_) => {}
+    }
+
     self.pretty_print_str.push_str("]");
     if tree.initial_values.is_empty() {
       self.pretty_print_str.push_str(";");
