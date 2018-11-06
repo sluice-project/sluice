@@ -1,6 +1,6 @@
-global DPORT = 3490;
-global IMPR_PORT = 11111; 
-global CLICK_PORT = 22222;
+global DPORT : bit<16> = 3490;
+global IMPR_PORT : bit<16> = 11111; 
+global CLICK_PORT : bit<16> = 22222;
 
 packet impr {
     field ipv4srcAddr : bit<32>;
@@ -36,15 +36,15 @@ packet result {
 
 snippet send_impr() {
   output a : impr;
-  a.tcpsrcPort = IMPR_PORT;
-  a.tcpdstPort = DPORT;
+  a.tcpSrcPort = IMPR_PORT;
+  a.tcpDstPort = DPORT;
   call join();
 }
 
 snippet send_click() {
   output b : click;
-  b.tcpsrcPort = CLICK_PORT;
-  b.tcpdstPort = DPORT;
+  b.tcpSrcPort = CLICK_PORT;
+  b.tcpDstPort = DPORT;
   call join();
 }
 
