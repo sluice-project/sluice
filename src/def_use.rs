@@ -44,7 +44,7 @@ impl<'a> DefUse<'a> {
   }
 
   pub fn is_defined(&'a self, id_name : &'a str) -> bool {
-
+    // check if var is global
     if self.global_table.get(id_name).is_some() { 
       return true;
     }
@@ -142,61 +142,125 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
 
     let id_name = &tree.identifier.id_name;
     let type_qualifier = &tree.var_type.type_qualifier;
-
-    if *type_qualifier != TypeQualifier::Field {
+    // print!("Hii {}\n", id_name);
+    // print!("Hii {:?}\n", type_qualifier);
+    // print!("YOUUU\n");
+    if *type_qualifier == TypeQualifier::Field {
       if self.packet_table.get_mut(self.current_packet).unwrap().get(id_name).is_some() {
         panic!("Field {} is declared twice in {}.",
                id_name,
                self.current_packet);
       } else {
         let var_type = &tree.var_type;
+            // print!("You {:?}\n", var_type);
         let var_state =  VarState::Declared ;
         self.packet_table.get_mut(self.current_packet).unwrap().insert(id_name, VariableMetadata{var_type, var_state});
       }
+    } else {
+      panic!("Packets can only have field variables.\n");
     } 
   }
 
 
   fn visit_statement(&mut self, tree : &'a Statement) {
+    // println!("{}", self.packet_table.get("impr").unwrap().get("tcpSrcPort"));    
     let id_name =
       match &tree.lvalue {
         &LValue::Scalar(ref identifier) => { identifier.id_name },
-        // TODO: Handle fields in def_use.rs appropriately.
         &LValue::Array(ref identifier, _) => { identifier.id_name },
         &LValue::Field(ref identifier, _) => { identifier.id_name }
       };
 
+    let field_name =
+      match &tree.lvalue {
+        &LValue::Scalar(ref _identifier) => { "" },
+        &LValue::Array(ref _identifier, _) => { "" },
+        &LValue::Field(_, ref identifier) => { identifier.id_name }
+      };
+
     // First visit expression because that is conceptually processed first
     self.visit_expr(&tree.expr);
-
-    // Update var_state in self for id_name
     let sym_table = self.symbol_table.get_mut(self.current_snippet).unwrap();
-    match sym_table.get(id_name) {
-      None
-      => panic!("Defining variable {} that isn't declared in {}.", id_name, self.current_snippet),
 
-      Some(&VariableMetadata{var_type, var_state : VarState::Defined})
-      =>  if var_type.type_qualifier == TypeQualifier::Persistent { sym_table.get_mut(id_name).unwrap().var_state = VarState::Updated;
-          } else {
-            if var_type.type_qualifier == TypeQualifier::Const {
-              panic!("Trying to update const variable {} in {}.", id_name, self.current_snippet);
-            } else if var_type.type_qualifier == TypeQualifier::Input {
-              panic!("Trying to update input variable {} in {}. Inputs are implicity defined by caller.", id_name, self.current_snippet);
+ // [VariableDecl { 
+ //  identifier: Identifier { id_name: "a" }, 
+ //  initial_values: [], 
+ //  var_type: VarType { 
+ //    var_info: Packet(Identifier { id_name: "impr" }), 
+ //    type_qualifier: Output 
+ //  } 
+ // }
+
+    if field_name != "" {
+
+      print!("{} {:?}\n", id_name, field_name);
+      print!("{:?}\n", self.packet_table.get("impr").unwrap().get(field_name).is_some());
+
+      match sym_table.get(id_name) {
+        None
+        => panic!("Defining variable {} that isn't declared in {}.", id_name, self.current_snippet),
+
+        Some(&VariableMetadata{var_type, var_state : VarState::Declared})
+        =>  match var_type.var_info {
+
+               VarInfo::Packet(ref identifier) 
+               =>  if self.packet_table.get(identifier.id_name).is_some() {
+                      if self.packet_table.get(identifier.id_name).unwrap().get(field_name).is_some() {
+                          sym_table.get_mut(id_name).unwrap().var_state = VarState::Defined;
+                          print!("Hello {:?} {} \n",identifier.id_name, field_name );
+                      } else {
+                          panic!("Packet {} has no field named {}.", identifier.id_name, field_name);
+                      }
+                    } else {
+                        panic!("Packet {} not declared.", identifier.id_name);
+                    },
+
+               _ => {panic!("Only packets can have fields");}
+
+            },
+
+        Some(&VariableMetadata{var_type: _, var_state : VarState::Defined})
+        => {assert!(sym_table.get(id_name).unwrap().var_state == VarState::Defined,
+           "var_state should be VarState::Defined.");
+            print!("Yes \n");
+            sym_table.get_mut(id_name).unwrap().var_state = VarState::Updated;}
+
+        _ 
+        => {panic!("Trying to update const variable {} in {}.", id_name, self.current_snippet);}
+      }
+
+      print!("\n");
+
+    } else {
+    // Update var_state in self for id_name
+      match sym_table.get(id_name) {
+        None
+        => panic!("Defining variable {} that isn't declared in {}.", id_name, self.current_snippet),
+
+        Some(&VariableMetadata{var_type, var_state : VarState::Defined})
+        =>  if var_type.type_qualifier == TypeQualifier::Persistent { sym_table.get_mut(id_name).unwrap().var_state = VarState::Updated;
             } else {
-              panic!("Redefining variable {} that is already defined in {}.", id_name, self.current_snippet);
-            }
-          },
+              if var_type.type_qualifier == TypeQualifier::Const {
+                panic!("Trying to update const variable {} in {}.", id_name, self.current_snippet);
+              } else if var_type.type_qualifier == TypeQualifier::Input {
+                panic!("Trying to update input variable {} in {}. Inputs are implicity defined by caller.", id_name, self.current_snippet);
+              } else {
+                panic!("Redefining variable {} that is already defined in {}.", id_name, self.current_snippet);
+              }
+            },
 
-      Some(&VariableMetadata{var_type, var_state : VarState::Updated})
-      =>  {assert!(var_type.type_qualifier == TypeQualifier::Persistent, "Only persistent variables can be in updated state.");
-           panic!("Can update a persistent variable at most once.");},
+        Some(&VariableMetadata{var_type, var_state : VarState::Updated})
+        =>  {assert!(var_type.type_qualifier == TypeQualifier::Persistent, "Only persistent variables can be in updated state.");
+             panic!("Can update a persistent variable at most once.");},
 
-      _
-      => {assert!(sym_table.get(id_name).unwrap().var_state == VarState::Declared,
-         "var_state should be VarState::Declared.");
-          sym_table.get_mut(id_name).unwrap().var_state = VarState::Defined;}
+        _
+        => {assert!(sym_table.get(id_name).unwrap().var_state == VarState::Declared,
+           "var_state should be VarState::Declared.");
+            sym_table.get_mut(id_name).unwrap().var_state = VarState::Defined;}
+      }
     }
   }
+
 
   fn visit_expr(&mut self, tree : &'a Expr) {
     // Check def-before-use for first operand
