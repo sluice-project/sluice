@@ -23,6 +23,7 @@ impl <'a> VariableMetadata<'a> {
 pub struct DefUse<'a> {
   current_snippet : &'a str,
   symbol_table    : HashMap<&'a str, HashMap<&'a str, VariableMetadata<'a>>>,
+  global_table    : HashMap<&'a str, VariableMetadata<'a>>,
   snippet_set     : HashSet<&'a str>
 }
 
@@ -35,8 +36,12 @@ impl<'a> DefUse<'a> {
     self.symbol_table.get(snippet).unwrap()
   }
 
-
   pub fn is_defined(&'a self, id_name : &'a str) -> bool {
+
+    if self.global_table.get(id_name).is_some() { 
+      return true;
+    }
+
     let sym_table = self.get_symbol_table(self.current_snippet);
     if sym_table.get(id_name).is_none() {
       // It's not even declared
@@ -53,6 +58,7 @@ impl<'a> DefUse<'a> {
     DefUse {
       current_snippet : "",
       symbol_table : HashMap::new(),
+      global_table : HashMap::new(),
       snippet_set  : HashSet::new(),
     }
   }
@@ -64,21 +70,35 @@ impl<'a> DefUse<'a> {
 impl<'a> TreeFold<'a> for DefUse<'a> {
 
   fn visit_variable_decl(&mut self, tree : &'a VariableDecl) {
+
     let id_name = &tree.identifier.id_name;
-    if self.symbol_table.get_mut(self.current_snippet).unwrap().get(id_name).is_some() {
-      panic!("Variable {} is declared twice in {}.",
-             id_name,
-             self.current_snippet);
+    let type_qualifier = &tree.var_type.type_qualifier;
+
+    if *type_qualifier != TypeQualifier::Global {
+      if self.symbol_table.get_mut(self.current_snippet).unwrap().get(id_name).is_some() {
+        panic!("Variable {} is declared twice in {}.",
+               id_name,
+               self.current_snippet);
+      } else {
+        let var_type = &tree.var_type;
+        let type_qualifier = &var_type.type_qualifier;
+        let var_state = if (*type_qualifier == TypeQualifier::Input) ||
+                           (*type_qualifier == TypeQualifier::Const) ||
+                           (*type_qualifier == TypeQualifier::Persistent) { VarState::Defined }
+                        else { VarState::Declared };
+        self.symbol_table.get_mut(self.current_snippet).unwrap().insert(id_name, VariableMetadata{var_type, var_state});
+      }
     } else {
-      let var_type = &tree.var_type;
-      let type_qualifier = &var_type.type_qualifier;
-      let var_state = if (*type_qualifier == TypeQualifier::Input) ||
-                         (*type_qualifier == TypeQualifier::Const) ||
-                         (*type_qualifier == TypeQualifier::Persistent) { VarState::Defined }
-                      else { VarState::Declared };
-      self.symbol_table.get_mut(self.current_snippet).unwrap().insert(id_name, VariableMetadata{var_type, var_state});
+        if self.global_table.get(id_name).is_some() {
+          panic!("Global variable {} is declared twice", id_name);
+        } else {
+          let var_type = &tree.var_type;
+          let var_state =  VarState::Defined;
+          self.global_table.insert(id_name, VariableMetadata{var_type, var_state});
+        }
     }
   }
+
 
   fn visit_snippet(&mut self, tree : &'a Snippet) {
     // Initialize symbol table for this snippet
@@ -202,6 +222,7 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
         assert!(self.symbol_table.get(to_snippet).unwrap().get(to_var).is_some(), "to_var undefined");
         assert!(self.symbol_table.get(from_snippet).unwrap().get(from_var).is_some(), "from_var undefined");
         
+        // check if toand from variables have matching bit width and var size
         let varinfo_to =  &self.symbol_table.get(to_snippet).unwrap().get(to_var).unwrap().var_type.var_info;
         let varinfo_from = &self.symbol_table.get(from_snippet).unwrap().get(from_var).unwrap().var_type.var_info;
 
