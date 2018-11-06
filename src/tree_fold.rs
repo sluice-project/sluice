@@ -14,16 +14,14 @@ pub trait TreeFold<'a> {
     self.visit_connections(&tree.connections);
   }
 
-
-
   fn visit_globals(&mut self, tree : &'a Globals) {
-    for global in &tree.global_vector { self.visit_global(global); }
+    for global in &tree.global_vector { self.visit_variable_decl(global); }
   }
 
-  fn visit_global(&mut self, tree : &'a Global) {
-    self.visit_identifier(&tree.identifier);
-    for value in &(tree.initial_values) { self.visit_value(value); };
-  }
+  // fn visit_global(&mut self, tree : &'a Global) {
+  //   self.visit_identifier(&tree.identifier);
+  //   for value in &(tree.initial_values) { self.visit_value(value); };
+  // }
 
   fn visit_packets(&mut self, tree : &'a Packets) {
     for packet in &tree.packet_vector { self.visit_packet(packet); }
@@ -42,6 +40,8 @@ pub trait TreeFold<'a> {
     self.visit_identifier(&tree.identifier);
     self.visit_var_type(&tree.var_type);
   }
+
+
 
   fn visit_snippets(&mut self, tree : &'a Snippets) {
     for snippet in &tree.snippet_vector { self.visit_snippet(snippet); }
