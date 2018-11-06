@@ -39,32 +39,33 @@ pub fn parse_prog<'a>(token_iter : &mut TokenIterator<'a>) -> Prog<'a> {
 
 fn parse_globals<'a>(token_iter : &mut TokenIterator<'a>) -> Globals<'a> {
   let is_global = |token| { match token { &Token::Global => true, _ => false, } };
-  let mut global_vector = Vec::<Global>::new();
+  let mut global_vector = Vec::<VariableDecl>::new();
   loop {
     //println!("is global={}", is_global(*token_iter.peek().unwrap()));
     if !token_iter.peek().is_some() || !is_global(*token_iter.peek().unwrap()) {
       return Globals{global_vector};
     } else {
-      let global = parse_global(token_iter);
+      // let global = parse_global(token_iter);
+      let global = parse_variable_decl(token_iter);
       global_vector.push(global);
     }
   }
 }
 
-fn parse_global<'a>(token_iter : &mut TokenIterator<'a>) -> Global<'a> {
-  match_token(token_iter, Token::Global, "Global declaration should start with keyword global.");
-  let identifier = parse_identifier(token_iter);
-  let is_assign = |token| { match token { &Token::Assign => true, _ => false, } };
-  let initial_values = if is_assign(*token_iter.peek().unwrap())  {
-                         match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
-                         parse_initial_values(token_iter)
-                       } else {
-                         Vec::<Value>::new()
-                       };
-  match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
+// fn parse_global<'a>(token_iter : &mut TokenIterator<'a>) -> Global<'a> {
+//   match_token(token_iter, Token::Global, "Global declaration should start with keyword global.");
+//   let identifier = parse_identifier(token_iter);
+//   let is_assign = |token| { match token { &Token::Assign => true, _ => false, } };
+//   let initial_values = if is_assign(*token_iter.peek().unwrap())  {
+//                          match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
+//                          parse_initial_values(token_iter)
+//                        } else {
+//                          Vec::<Value>::new()
+//                        };
+//   match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
 
-  return Global {identifier, initial_values};
-}
+//   return Global {identifier, initial_values};
+// }
 
 
 fn parse_packets<'a>(token_iter : &mut TokenIterator<'a>) -> Packets<'a> {
@@ -276,6 +277,7 @@ fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifie
       Token::Input      => TypeQualifier::Input,
       Token::Output     => TypeQualifier::Output,
       Token::Field     => TypeQualifier::Field,
+      Token::Global     => TypeQualifier::Global,
       _                 => panic!("Unsupported for now!!!")
     }
   }
