@@ -11,14 +11,7 @@ pub struct Prog<'a> {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct Globals<'a> {
-  pub global_vector : Vec<Global<'a>>
-}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-pub struct Global<'a> {
-  pub identifier       : Identifier<'a>,
-  pub initial_values   : Vec<Value>,
+  pub global_vector : Vec<VariableDecl<'a>>,
 }
 
 #[derive(Debug)]
@@ -123,6 +116,7 @@ pub enum TypeQualifier {
   Transient,
   Const,
   Field,
+  Global,
 }
 
 
