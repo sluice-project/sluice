@@ -22,9 +22,12 @@ impl <'a> VariableMetadata<'a> {
 
 pub struct DefUse<'a> {
   current_snippet : &'a str,
+  current_packet : &'a str,
   symbol_table    : HashMap<&'a str, HashMap<&'a str, VariableMetadata<'a>>>,
   global_table    : HashMap<&'a str, VariableMetadata<'a>>,
-  snippet_set     : HashSet<&'a str>
+  packet_table    : HashMap<&'a str, HashMap<&'a str, VariableMetadata<'a>>>,
+  snippet_set     : HashSet<&'a str>,
+  packet_set     : HashSet<&'a str>
 }
 
 
@@ -34,6 +37,10 @@ impl<'a> DefUse<'a> {
   //   self.symbol_table.get(self.current_snippet).unwrap()
   pub fn get_symbol_table(&'a self, snippet : &'a str) -> &'a HashMap<&'a str, VariableMetadata<'a>> {
     self.symbol_table.get(snippet).unwrap()
+  }
+
+  pub fn get_packet_table(&'a self, packet : &'a str) -> &'a HashMap<&'a str, VariableMetadata<'a>> {
+    self.packet_table.get(packet).unwrap()
   }
 
   pub fn is_defined(&'a self, id_name : &'a str) -> bool {
@@ -57,9 +64,12 @@ impl<'a> DefUse<'a> {
   pub fn new() -> DefUse<'a> {
     DefUse {
       current_snippet : "",
+      current_packet : "",
       symbol_table : HashMap::new(),
       global_table : HashMap::new(),
+      packet_table : HashMap::new(),
       snippet_set  : HashSet::new(),
+      packet_set   : HashSet::new(),
     }
   }
 }
@@ -68,6 +78,21 @@ impl<'a> DefUse<'a> {
 
 
 impl<'a> TreeFold<'a> for DefUse<'a> {
+
+
+  fn visit_snippet(&mut self, tree : &'a Snippet) {
+    // Initialize symbol table for this snippet
+    self.current_snippet = &tree.snippet_id.get_str();
+    if self.snippet_set.get(self.current_snippet) != None {
+      panic!("Can't have two snippets named {}.", self.current_snippet);
+    } else {
+      self.symbol_table.insert(self.current_snippet, HashMap::new());
+      self.snippet_set.insert(self.current_snippet);
+    }
+    self.visit_variable_decls(&tree.variable_decls);
+    self.visit_ifblocks(&tree.ifblocks);
+  }
+
 
   fn visit_variable_decl(&mut self, tree : &'a VariableDecl) {
 
@@ -100,17 +125,35 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
   }
 
 
-  fn visit_snippet(&mut self, tree : &'a Snippet) {
-    // Initialize symbol table for this snippet
-    self.current_snippet = &tree.snippet_id.get_str();
-    if self.snippet_set.get(self.current_snippet) != None {
-      panic!("Can't have two snippets named {}.", self.current_snippet);
+  fn visit_packet(&mut self, tree : &'a Packet) {
+    // Initialize field list for this packet
+    self.current_packet = &tree.packet_id.get_str();
+    if self.packet_set.get(self.current_packet) != None {
+      panic!("Can't have two snippets named {}.", self.current_packet);
     } else {
-      self.symbol_table.insert(self.current_snippet, HashMap::new());
-      self.snippet_set.insert(self.current_snippet);
+      self.packet_table.insert(self.current_packet, HashMap::new());
+      self.packet_set.insert(self.current_packet);
     }
-    self.visit_variable_decls(&tree.variable_decls);
-    self.visit_ifblocks(&tree.ifblocks);
+    self.visit_packet_fields(&tree.packet_fields);
+  }
+
+
+  fn visit_packet_field(&mut self, tree : &'a PacketField) {
+
+    let id_name = &tree.identifier.id_name;
+    let type_qualifier = &tree.var_type.type_qualifier;
+
+    if *type_qualifier != TypeQualifier::Field {
+      if self.packet_table.get_mut(self.current_packet).unwrap().get(id_name).is_some() {
+        panic!("Field {} is declared twice in {}.",
+               id_name,
+               self.current_packet);
+      } else {
+        let var_type = &tree.var_type;
+        let var_state =  VarState::Declared ;
+        self.packet_table.get_mut(self.current_packet).unwrap().insert(id_name, VariableMetadata{var_type, var_state});
+      }
+    } 
   }
 
 
@@ -244,7 +287,7 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
 
         let from_size =  match varinfo_from {
           VarInfo::BitArray(_bit_width, var_size) => var_size,
-          VarInfo::Packet(_,) => {&0}
+          VarInfo::Packet(_) => {&0}
         };
 
         if to_width != from_width {
