@@ -118,39 +118,20 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
         // check if variable is a packet and if so, add its fields to field table for this snippet, with state 'Declared'
         match var_type.var_info {
 
-           VarInfo::Packet(ref packet_name) 
-
-             =>  {
-
-                      if self.packet_table.get_mut(packet_name.id_name).is_some() {
-                        for (field_name, var_meta_data) in self.packet_table.get_mut(packet_name.id_name).unwrap() {
-                        // let mut f = String::new();
-                        // f.push_str(&id_name);
-                        // f.push_str(&field_name);
-                        // // println!("{}", f);
-                        // let v = VariableMetadata{var_type : var_meta_data.var_type, var_state : VarState::Declared};
-                        // self.field_table.get_mut(self.current_snippet).unwrap().insert(f.to_owned(), v);
-                        // println!("{}", self.field_table.get_mut(self.current_snippet).unwrap().get(&f.to_owned()).is_some());
-                        // let mut f1 = String::new();
-                        // f1.push_str(&id_name);
-                        // let mut f2 = String::new();
-                        // f2.push_str(&field_name);
-
-                        // let mut f1 = id_name.to_string();
-                        // let mut f2 = field_name.to_string();
-                        // print!("{} {} ", f1, f2);
-                        let v = VariableMetadata{var_type : var_meta_data.var_type, var_state : VarState::Declared};
-                        self.field_table.get_mut(self.current_snippet).unwrap().insert((id_name.to_string(),field_name.to_string()), v);
-                        // println!("{}", self.field_table.get_mut(self.current_snippet).unwrap().get(
-                        //   &(id_name.to_string(),field_name.to_string())).is_some());
-
-                      }
-                    } else {
-                        panic!("Packet {} not declared.", packet_name.id_name);
-                    }
+          VarInfo::Packet(ref packet_name) 
+             =>  
+             {
+                if self.packet_table.get_mut(packet_name.id_name).is_some() {
+                  for (field_name, var_meta_data) in self.packet_table.get_mut(packet_name.id_name).unwrap() {
+                    let v = VariableMetadata{var_type : var_meta_data.var_type, var_state : VarState::Declared};
+                    self.field_table.get_mut(self.current_snippet).unwrap().insert((id_name.to_string(),field_name.to_string()), v);
+                  }
+                } else {
+                    panic!("Packet {} not declared.", packet_name.id_name);
+                }
               },      
         
-           _ => {panic!("Only packets can have fields");}
+          _ => {panic!("Only packets can have fields");}
         }
       }
     } else {
@@ -189,7 +170,6 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
                self.current_packet);
       } else {
         let var_type = &tree.var_type;
-            // print!("You {:?}\n", var_type);
         let var_state =  VarState::Declared ;
         self.packet_table.get_mut(self.current_packet).unwrap().insert(id_name, VariableMetadata{var_type, var_state});
       }
@@ -200,7 +180,7 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
 
 
   fn visit_statement(&mut self, tree : &'a Statement) {
-    // println!("{}", self.packet_table.get("impr").unwrap().get("tcpSrcPort"));    
+
     let id_name =
       match &tree.lvalue {
         &LValue::Scalar(ref identifier) => { identifier.id_name },
@@ -219,17 +199,7 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
     self.visit_expr(&tree.expr);
     let sym_table = self.symbol_table.get_mut(self.current_snippet).unwrap();
 
- // [VariableDecl { 
- //  identifier: Identifier { id_name: "a" }, 
- //  initial_values: [], 
- //  var_type: VarType { 
- //    var_info: Packet(Identifier { id_name: "impr" }), 
- //    type_qualifier: Output 
- //  } 
- // }
-
     // if the lvalue is a field, check its validity
-
     if field_name != "" {
 
       let f_table = self.field_table.get_mut(self.current_snippet).unwrap();
@@ -253,9 +223,6 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
         _ => ()
       }
 
-      // print!("hi {} {:?}\n", id_name, field_name);
-      // // print!("hii {:?}\n", self.packet0_table.get().unwrap().get(field_name).is_some());
-
       // check that the field is a BitArray and update its var_state to defined in the field_table for the current snippet
       match f_table.get(&(id_name.to_string(), field_name.to_string())) {
         None
@@ -267,16 +234,14 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
                VarInfo::BitArray(_,_) 
                =>  {
                       f_table.get_mut(&(id_name.to_string(), field_name.to_string())).unwrap().var_state = VarState::Defined;
-                      // print!("Hello {:?} {} \n",identifier.id_name, field_name );
                     }
 
-               _ => {println!("{:?}", var_type.var_info ); panic!("Only packets can have fields");}
+               _ => {panic!("Only packets can have fields");}
             },
 
         Some(&VariableMetadata{var_type : _, var_state : VarState::Defined})
         => {  
               assert!(f_table.get(&(id_name.to_string(), field_name.to_string())).unwrap().var_state == VarState::Defined, "var_state should be VarState::Defined.");
-              // print!("Yes \n");
               f_table.get_mut(&(id_name.to_string(), field_name.to_string())).unwrap().var_state = VarState::Updated;
             },
         _ 
@@ -286,31 +251,31 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
 
     } else {
     // Update var_state in self for id_name
-      match sym_table.get(id_name) {
-        None
-        => panic!("Defining variable {} that isn't declared in {}.", id_name, self.current_snippet),
+        match sym_table.get(id_name) {
+          None
+          => panic!("Defining variable {} that isn't declared in {}.", id_name, self.current_snippet),
 
-        Some(&VariableMetadata{var_type, var_state : VarState::Defined})
-        =>  if var_type.type_qualifier == TypeQualifier::Persistent { sym_table.get_mut(id_name).unwrap().var_state = VarState::Updated;
-            } else {
-              if var_type.type_qualifier == TypeQualifier::Const {
-                panic!("Trying to update const variable {} in {}.", id_name, self.current_snippet);
-              } else if var_type.type_qualifier == TypeQualifier::Input {
-                panic!("Trying to update input variable {} in {}. Inputs are implicity defined by caller.", id_name, self.current_snippet);
+          Some(&VariableMetadata{var_type, var_state : VarState::Defined})
+          =>  if var_type.type_qualifier == TypeQualifier::Persistent { sym_table.get_mut(id_name).unwrap().var_state = VarState::Updated;
               } else {
-                panic!("Redefining variable {} that is already defined in {}.", id_name, self.current_snippet);
-              }
-            },
+                if var_type.type_qualifier == TypeQualifier::Const {
+                  panic!("Trying to update const variable {} in {}.", id_name, self.current_snippet);
+                } else if var_type.type_qualifier == TypeQualifier::Input {
+                  panic!("Trying to update input variable {} in {}. Inputs are implicity defined by caller.", id_name, self.current_snippet);
+                } else {
+                  panic!("Redefining variable {} that is already defined in {}.", id_name, self.current_snippet);
+                }
+              },
 
-        Some(&VariableMetadata{var_type, var_state : VarState::Updated})
-        =>  {assert!(var_type.type_qualifier == TypeQualifier::Persistent, "Only persistent variables can be in updated state.");
-             panic!("Can update a persistent variable at most once.");},
+          Some(&VariableMetadata{var_type, var_state : VarState::Updated})
+          =>  {assert!(var_type.type_qualifier == TypeQualifier::Persistent, "Only persistent variables can be in updated state.");
+               panic!("Can update a persistent variable at most once.");},
 
-        _
-        => {assert!(sym_table.get(id_name).unwrap().var_state == VarState::Declared,
-           "var_state should be VarState::Declared.");
-            sym_table.get_mut(id_name).unwrap().var_state = VarState::Defined;}
-      }
+          _
+          => {assert!(sym_table.get(id_name).unwrap().var_state == VarState::Declared,
+             "var_state should be VarState::Declared.");
+              sym_table.get_mut(id_name).unwrap().var_state = VarState::Defined;}
+        }
     }
   }
 
@@ -389,7 +354,6 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
         let to_width =  match varinfo_to {
           VarInfo::BitArray(bit_width, _var_size) => bit_width,
           VarInfo::Packet(_) => {&0}
-          // VarInfo::Packet(_,_) => {&0}
         };
 
         let to_size =  match varinfo_to {
