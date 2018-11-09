@@ -18,17 +18,12 @@ pub trait TreeFold<'a> {
     for global in &tree.global_vector { self.visit_variable_decl(global); }
   }
 
-  // fn visit_global(&mut self, tree : &'a Global) {
-  //   self.visit_identifier(&tree.identifier);
-  //   for value in &(tree.initial_values) { self.visit_value(value); };
-  // }
-
   fn visit_packets(&mut self, tree : &'a Packets) {
     for packet in &tree.packet_vector { self.visit_packet(packet); }
   }
 
   fn visit_packet(&mut self, tree : &'a Packet) {
-    self.visit_identifier(&tree.identifier);
+    self.visit_identifier(&tree.packet_id);
     self.visit_packet_fields(&tree.packet_fields);
   }
 
@@ -40,8 +35,6 @@ pub trait TreeFold<'a> {
     self.visit_identifier(&tree.identifier);
     self.visit_var_type(&tree.var_type);
   }
-
-
 
   fn visit_snippets(&mut self, tree : &'a Snippets) {
     for snippet in &tree.snippet_vector { self.visit_snippet(snippet); }
@@ -88,7 +81,6 @@ pub trait TreeFold<'a> {
   fn visit_ifblock(&mut self, tree : &'a IfBlock) {
       self.visit_id(&tree.id);
       self.visit_statements(&tree.statements);
-      self.visit_callstacks(&tree.callstacks);
       self.visit_condition(&tree.condition);
       self.visit_condtype(&tree.condtype);
   }
@@ -100,14 +92,6 @@ pub trait TreeFold<'a> {
   fn visit_statement(&mut self, tree : &'a Statement) {
     self.visit_lvalue(&tree.lvalue);
     self.visit_expr(&tree.expr);
-  }
-
-  fn visit_callstacks(&mut self, tree : &'a CallStacks) {
-    for callstack in &tree.callstack_vector { self.visit_callstack(callstack); }
-  }
-
-  fn visit_callstack(&mut self, tree : &'a CallStack) {
-    self.visit_nextsnippet(&tree.next_snippet);
   }
 
   fn visit_condition(&mut self, tree : &'a Condition) {

@@ -38,14 +38,12 @@ snippet send_impr() {
   output a : impr;
   a.tcpSrcPort = IMPR_PORT;
   a.tcpDstPort = DPORT;
-  call join();
 }
 
 snippet send_click() {
   output b : click;
   b.tcpSrcPort = CLICK_PORT;
   b.tcpDstPort = DPORT;
-  call join();
 }
 
 snippet join () {
@@ -56,7 +54,6 @@ snippet join () {
     r.adId = p.adId;
     r.impr_time = p.impr_time;
     r.click_time = q.click_time;
-    call receive();
   }
 }
 

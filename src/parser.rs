@@ -86,11 +86,11 @@ fn parse_packets<'a>(token_iter : &mut TokenIterator<'a>) -> Packets<'a> {
 
 fn parse_packet<'a>(token_iter : &mut TokenIterator<'a>) -> Packet<'a> {
   match_token(token_iter, Token::Packet, "Packet definition must start with the keyword packet");
-  let identifier = parse_identifier(token_iter);
+  let packet_id = parse_identifier(token_iter);
   match_token(token_iter, Token::BraceLeft, "Packet body must begin with a left brace.");
   let packet_fields    = parse_packet_fields(token_iter);
   match_token(token_iter, Token::BraceRight, "Packet body must end with a right brace.");
-  return Packet {identifier, packet_fields};
+  return Packet {packet_id, packet_fields};
 }
 
  
@@ -163,7 +163,6 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   let variable_decls    = parse_variable_decls(token_iter);
   let ifblocks          = parse_ifblocks(token_iter, &mut ifid);
   // let statements        = parse_statements(token_iter);
-  // let callstacks         = parse_callstacks(token_iter);
   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
   return Snippet{snippet_id, variable_decls, ifblocks};
 }
@@ -197,7 +196,7 @@ fn parse_connection<'a>(token_iter : &mut TokenIterator<'a>) -> Connection<'a> {
       let from_variable = parse_identifier(token_iter);
       match_token(token_iter, Token::Arrow, "Need an arrow between variables.");
       let to_variable   = parse_identifier(token_iter);
-      match_token(token_iter, Token::Comma, "Need a comma separating variable connections.");
+      match_token(token_iter, Token::Comma, "Need a comma separating variable pairings.");
       variable_pairs.push(VariablePair { from_var : from_variable, to_var : to_variable });
     }
   }
@@ -412,38 +411,30 @@ fn parse_ifblock<'a>(token_iter : &mut TokenIterator<'a>, id : u32, condtype : u
       match_token(token_iter, Token::ParenRight, "If Block must end with a right brace.");
       match_token(token_iter, Token::BraceLeft, "If Block must begin with a left brace.");
       let statements = parse_statements(token_iter);
-      let callstacks = parse_callstacks(token_iter);
       match_token(token_iter, Token::BraceRight, "If Block must end with a right brace.");
-      return IfBlock{id, condtype, condition, statements, callstacks};
+      return IfBlock{id, condtype, condition, statements};
   } else if condtype == 2 {
       match_token(token_iter, Token::Else, "Else Block must start with else statement.");
       match_token(token_iter, Token::BraceLeft, "Else Block must begin with a left brace.");
       let statements = parse_statements(token_iter);
-      let callstacks = parse_callstacks(token_iter);
       let condition = dummycondition;//parse_condition(cond_token_iter);
       match_token(token_iter, Token::BraceRight, "Else Block must end with a right brace.");
-      return IfBlock{id, condtype, condition, statements, callstacks};
+      return IfBlock{id, condtype, condition, statements};
   } else { // generic statements, not if/else
       let statements = parse_statements(token_iter);
-      let callstacks = parse_callstacks(token_iter);
       let condition = dummycondition;//parse_condition(cond_token_iter);
-      return IfBlock{id, condtype, condition, statements, callstacks};
+      return IfBlock{id, condtype, condition, statements};
   }
 }
 
 fn parse_statements<'a>(token_iter : &mut TokenIterator<'a>) -> Statements<'a> {
   // Helper function to identify beginning of statements
   let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false } };
-  let is_callstack = |token| { match token { &Token::Call => true, _ => false } };
 
   let mut stmt_vector = Vec::<Statement>::new();
   loop {
-    //println!("is callstack={}", is_callstack(*token_iter.peek().unwrap()));
     // println!("is ident={}", is_ident(*token_iter.peek().unwrap()));
 
-    if is_callstack(*token_iter.peek().unwrap()) {
-      return Statements{stmt_vector};
-    }
     if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
       return Statements{stmt_vector};
     } else {
@@ -467,31 +458,6 @@ fn parse_statement<'a>(token_iter : &mut TokenIterator<'a>) -> Statement<'a> {
   let expr       = parse_expr(token_iter);
   match_token(token_iter, Token::SemiColon, "Last token in a statement must be a semicolon.");
   return Statement{lvalue, expr};
-}
-
-fn parse_callstacks<'a>(token_iter : &mut TokenIterator<'a>) -> CallStacks<'a> {
-  // Helper function to identify beginning of statements
-  let is_call = |token| { match token { &Token::Call => true, _ => false } };
-
-  let mut callstack_vector = Vec::<CallStack>::new();
-  loop {
-    if !token_iter.peek().is_some() || (!is_call(*token_iter.peek().unwrap())) {
-      return CallStacks{callstack_vector};
-    } else {
-      let callstack = parse_callstack(token_iter);
-      callstack_vector.push(callstack);
-    }
-  }
-}
-
-fn parse_callstack<'a>(token_iter : &mut TokenIterator<'a>) -> CallStack<'a> {
-  match_token(token_iter, Token::Call, "Missing keyword call");
-  let next_snippet = parse_identifier(token_iter);
-  match_token(token_iter, Token::ParenLeft,  "Snippet argument list must start with a left  parenthesis.");
-  match_token(token_iter, Token::ParenRight, "Snippet argument list must start with a right parenthesis.");
-
-  match_token(token_iter, Token::SemiColon, "Last token in a statement must be a semicolon.");
-  return CallStack{next_snippet};
 }
 
 fn parse_expr<'a>(token_iter : &mut TokenIterator<'a>) -> Expr<'a> {

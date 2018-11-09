@@ -23,7 +23,7 @@ pub struct Packets<'a> {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct Packet<'a> {
-  pub identifier       : Identifier<'a>,
+  pub packet_id       : Identifier<'a>,
   pub packet_fields   : PacketFields<'a>,
 }
 
@@ -52,8 +52,6 @@ pub struct Snippet<'a> {
   pub snippet_id       : Identifier<'a>,
   pub variable_decls   : VariableDecls<'a>,
   pub ifblocks         : IfBlocks<'a>,
-  // pub statements       : Statements<'a>,
-  // pub callstacks       : CallStacks<'a>
 }
 
 #[derive(Debug)]
@@ -69,7 +67,6 @@ pub struct IfBlock<'a> {
   pub condtype   : u32,
   pub condition  : Condition<'a>,
   pub statements : Statements<'a>,
-  pub callstacks : CallStacks<'a>
 }
 
 #[derive(Debug)]
@@ -106,6 +103,15 @@ pub struct VariablePair<'a> {
 pub struct VariableDecls<'a> {
   pub decl_vector : Vec<VariableDecl<'a>>
 }
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct VariableDecl<'a> {
+  pub identifier     : Identifier<'a>,
+  pub initial_values : Vec<Value>,
+  pub var_type       : VarType<'a>
+}
+
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -165,17 +171,6 @@ pub enum VarInfo<'a> {
 
 
 
-
- 
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-pub struct VariableDecl<'a> {
-  pub identifier     : Identifier<'a>,
-  pub initial_values : Vec<Value>,
-  pub var_type       : VarType<'a>
-}
-
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct Statements<'a> {
@@ -189,18 +184,6 @@ pub struct Statement<'a> {
   pub expr   : Expr<'a>
 }
 
-#[derive(Debug)]
-#[derive(PartialEq)]
-pub struct CallStacks<'a> {
-  pub callstack_vector : Vec<CallStack<'a>>
-}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-pub struct CallStack<'a> {
-  pub next_snippet : Identifier<'a>,
-//  pub condition    : Expr<'a>
-}
 
 #[derive(Debug)]
 #[derive(PartialEq)]

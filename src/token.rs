@@ -54,7 +54,6 @@ pub enum Token<'a> {
   Packet,
   Field,
   Global,
-  Call,
   If,
   Else,
 
