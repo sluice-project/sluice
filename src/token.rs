@@ -52,7 +52,6 @@ pub enum Token<'a> {
 
   // Additions for Network Model
   Packet,
-  Field,
   Global,
   If,
   Else,

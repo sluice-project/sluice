@@ -3,34 +3,34 @@ global IMPR_PORT : bit<16> = 11111;
 global CLICK_PORT : bit<16> = 22222;
 
 packet impr {
-    field ipv4srcAddr : bit<32>;
-    field ipv4dstAddr : bit<32>;
-    field ipv4protocol : bit<8>;
-    field tcpSrcPort : bit<16>;
-    field tcpDstPort : bit<16>;
-    field adId : bit<32>;
-    field impr_time : bit<32>;    
+    ipv4srcAddr : bit<32>;
+    ipv4dstAddr : bit<32>;
+    ipv4protocol : bit<8>;
+    tcpSrcPort : bit<16>;
+    tcpDstPort : bit<16>;
+    adId : bit<32>;
+    impr_time : bit<32>;    
 }
 
 packet click {
-    field ipv4srcAddr : bit<32>;
-    field ipv4dstAddr : bit<32>;
-    field ipv4protocol : bit<8>;
-    field tcpSrcPort : bit<16>;
-    field tcpDstPort : bit<16>;
-    field adId : bit<32>;
-    field click_time : bit<32>;    
+    ipv4srcAddr : bit<32>;
+    ipv4dstAddr : bit<32>;
+    ipv4protocol : bit<8>;
+    tcpSrcPort : bit<16>;
+    tcpDstPort : bit<16>;
+    adId : bit<32>;
+    click_time : bit<32>;    
 }
 
 packet result {
-    field ipv4srcAddr : bit<32>;
-    field ipv4dstAddr : bit<32>;
-    field ipv4protocol : bit<8>;
-    field tcpSrcPort : bit<16>;
-    field tcpDstPort : bit<16>;
-    field adId : bit<32>;
-    field impr_time : bit<32>;    
-    field click_time : bit<32>;    
+    ipv4srcAddr : bit<32>;
+    ipv4dstAddr : bit<32>;
+    ipv4protocol : bit<8>;
+    tcpSrcPort : bit<16>;
+    tcpDstPort : bit<16>;
+    adId : bit<32>;
+    impr_time : bit<32>;    
+    click_time : bit<32>;    
 }
 
 

@@ -31,7 +31,6 @@ pub fn parse_prog<'a>(token_iter : &mut TokenIterator<'a>) -> Prog<'a> {
   let globals     = parse_globals(token_iter);
   let packets      = parse_packets(token_iter);
   let snippets    = parse_snippets(token_iter);
-  // let snippets    = parse_snippets(token_iter, &packets);
   let connections = parse_connections(token_iter);
   return Prog { globals, packets, snippets, connections };
 }
@@ -41,11 +40,9 @@ fn parse_globals<'a>(token_iter : &mut TokenIterator<'a>) -> Globals<'a> {
   let is_global = |token| { match token { &Token::Global => true, _ => false, } };
   let mut global_vector = Vec::<VariableDecl>::new();
   loop {
-    //println!("is global={}", is_global(*token_iter.peek().unwrap()));
     if !token_iter.peek().is_some() || !is_global(*token_iter.peek().unwrap()) {
       return Globals{global_vector};
     } else {
-      // let global = parse_global(token_iter);
       let global = parse_variable_decl(token_iter);
       global_vector.push(global);
     }
@@ -78,15 +75,14 @@ fn parse_packet<'a>(token_iter : &mut TokenIterator<'a>) -> Packet<'a> {
   return Packet {packet_id, packet_fields};
 }
 
- 
+
 fn parse_packet_fields<'a>(token_iter : &mut TokenIterator<'a>) -> PacketFields<'a> {
   // Helper function to determine if the keyword starts a declaration
-  // let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false, } };
-  let is_field = |token| { match token { &Token::Field => true, _ => false, } };
+  let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false, } };
 
   let mut field_vector = Vec::<PacketField>::new();
   loop {
-    if !token_iter.peek().is_some() || (!is_field(*token_iter.peek().unwrap())) {
+    if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
       return PacketFields{field_vector}; // return empty decl vector if no vars declared
     } else {
       let packet_field = parse_packet_field(token_iter);
@@ -97,9 +93,8 @@ fn parse_packet_fields<'a>(token_iter : &mut TokenIterator<'a>) -> PacketFields<
 
 
 fn parse_packet_field<'a>(token_iter : &mut TokenIterator<'a>) -> PacketField<'a> {
-  let type_qualifier = parse_type_qualifier(token_iter);
   let identifier = parse_identifier(token_iter);
-  let var_type   = parse_type_annotation(token_iter, type_qualifier);
+  let var_type   = parse_type_annotation(token_iter, TypeQualifier::Field);
   match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
   return PacketField {identifier, var_type};
 }
@@ -243,8 +238,8 @@ fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifie
       Token::Const      => TypeQualifier::Const,
       Token::Input      => TypeQualifier::Input,
       Token::Output     => TypeQualifier::Output,
-      Token::Field     => TypeQualifier::Field,
       Token::Global     => TypeQualifier::Global,
+      Token::Identifier(_)     => TypeQualifier::Field,
       _                 => panic!("Unsupported for now!!!")
     }
   }
