@@ -44,7 +44,6 @@ pub trait TreeFold<'a> {
     self.visit_identifier(&tree.snippet_id);
     self.visit_variable_decls(&tree.variable_decls);
     self.visit_ifblocks(&tree.ifblocks);
-    //self.visit_statements(&tree.statements);
   }
 
   fn visit_connections(&mut self, tree : &'a Connections) {

@@ -35,26 +35,26 @@ packet result {
 
 
 snippet send_impr() {
-  output a : impr;
-  a.tcpSrcPort = IMPR_PORT;
-  a.tcpDstPort = DPORT;
+    output a : impr;
+    a.tcpSrcPort = IMPR_PORT;
+    a.tcpDstPort = DPORT;
 }
 
 snippet send_click() {
-  output b : click;
-  b.tcpSrcPort = CLICK_PORT;
-  b.tcpDstPort = DPORT;
+    output b : click;
+    b.tcpSrcPort = CLICK_PORT;
+    b.tcpDstPort = DPORT;
 }
 
 snippet join () {
-  input p : impr;
-  input q : click;
-  output r : result;
-  if (p.adId == q.adId) {
-    r.adId = p.adId;
-    r.impr_time = p.impr_time;
-    r.click_time = q.click_time;
-  }
+    input p : impr;
+    input q : click;
+    output r : result;
+    if (p.adId == q.adId) {
+        r.adId = p.adId;
+        r.impr_time = p.impr_time;
+        r.click_time = q.click_time;
+    }
 }
 
 

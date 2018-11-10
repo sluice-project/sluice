@@ -126,23 +126,6 @@ pub enum TypeQualifier {
 }
 
 
-// enum VarType {
-//   Scalar(width)
-//   Array(width, int size)
-//     Struct(Name, Vec<FieldNames>)
-// }
-
-// #[derive(Debug)]
-// #[derive(PartialEq)]
-// pub struct VarType<'a> {
-//   pub bit_width : u64,
-//   pub var_size  : u64,
-//   pub type_qualifier : TypeQualifier,
-//   pub packet_name : Identifier<'a>,
-//   // var_size 1 is a scalar, > 1 is an array.
-// }
-
-
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct VarType<'a> {
@@ -166,9 +149,6 @@ pub enum VarInfo<'a> {
   Packet(Identifier<'a>),
   // Packet(Identifier<'a>, VariableDecls<'a>),
 }
-
-
-
 
 
 #[derive(Debug)]

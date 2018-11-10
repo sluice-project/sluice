@@ -236,7 +236,7 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
                       f_table.get_mut(&(id_name.to_string(), field_name.to_string())).unwrap().var_state = VarState::Defined;
                     }
 
-               _ => {panic!("Only packets can have fields");}
+               _ => {panic!("Field {}.{} must be a bitarray", id_name, field_name);}
             },
 
         Some(&VariableMetadata{var_type : _, var_state : VarState::Defined})
@@ -566,4 +566,70 @@ mod tests {
              }", test_def_use_const_update_fail,
              "Trying to update const variable x in foo.");
 
+  test_fail!(r"
+              snippet foo() {
+                 output a : pac;
+              }", test_def_use_packet_declared_fail,
+             "Packet pac not declared");
+
+  test_fail!(r"
+              global a : bit<1> = 1;
+              global a : bit<1> = 0;
+              ", test_def_use_redeclare_global_fail,
+             "Global variable a is declared twice");
+
+  test_fail!(r"
+              packet a {}
+              packet a {}
+              ", test_def_use_redeclare_packet_fail,
+             "Can't have two packets named a");
+ 
+  test_fail!(r"
+              packet pac {
+                a : bit<1>;
+                a : bit<1>;
+              }
+              ", test_def_use_duplicate_field_names_fail,
+             "Field a is declared twice in pac.");
+
+  test_fail!(r"
+              packet pac {
+                q : bit<1>;
+              }
+
+              snippet foo() {
+                 output x : pac;
+                 x.r = 1;
+              }", test_def_use_field_in_packet_fail,
+             "Packet pac has no field named r.");
+
+  test_fail!(r"
+              packet pac {
+                q : bit<1>;
+              }
+
+              snippet foo() {
+                 output x : bit<1>;
+                 x.r = 1;
+              }", test_def_use_field_in_bitarray_fail,
+             "Only packets can have fields");
+
+  test_fail!(r"
+              packet pac {
+                a : bit<1>;
+              }
+
+              snippet foo() {
+                 x.a = 1;
+              }", test_def_use_field_of_undeclared_var_fail,
+             "Defining variable x that isn't declared in foo");
+
+
+  test_fail!(r"
+              snippet foo() {
+                 output a : bit<1>;
+                 a = 0;
+                 a = 1;
+              }", test_def_use_field_redefining_variable_fail,
+             "Redefining variable a that is already defined in foo");
 }
