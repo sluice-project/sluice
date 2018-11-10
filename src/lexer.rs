@@ -35,7 +35,7 @@ fn get_single_token(tok_str : &str) -> Token {
   } else if IDENTIFIERS.is_match(tok_str) {
     return Token::Identifier(tok_str);
   } else if VALUES.is_match(tok_str) {
-    return Token::Value(tok_str.parse::<u32>().unwrap());
+    return Token::Value(tok_str.parse::<u64>().unwrap());
   } else {
     return match tok_str {
       ":" => Token::Colon,

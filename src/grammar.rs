@@ -63,8 +63,8 @@ pub struct IfBlocks<'a> {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct IfBlock<'a> {
-  pub id         : u32,
-  pub condtype   : u32,
+  pub id         : u64,
+  pub condtype   : u64,
   pub condition  : Condition<'a>,
   pub statements : Statements<'a>,
 }
@@ -135,8 +135,8 @@ pub enum TypeQualifier {
 // #[derive(Debug)]
 // #[derive(PartialEq)]
 // pub struct VarType<'a> {
-//   pub bit_width : u32,
-//   pub var_size  : u32,
+//   pub bit_width : u64,
+//   pub var_size  : u64,
 //   pub type_qualifier : TypeQualifier,
 //   pub packet_name : Identifier<'a>,
 //   // var_size 1 is a scalar, > 1 is an array.
@@ -154,15 +154,15 @@ pub struct VarType<'a> {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct BitArray {
-  pub bit_width : u32,
-  pub var_size  : u32,
+  pub bit_width : u64,
+  pub var_size  : u64,
 }
 
 
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub enum VarInfo<'a> {
-  BitArray(u32, u32),
+  BitArray(u64, u64),
   Packet(Identifier<'a>),
   // Packet(Identifier<'a>, VariableDecls<'a>),
 }
@@ -227,7 +227,7 @@ impl<'a> Identifier<'a> {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct Value {
-  pub value : u32
+  pub value : u64
 }
 
 impl Value {

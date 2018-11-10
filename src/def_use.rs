@@ -131,7 +131,7 @@ impl<'a> TreeFold<'a> for DefUse<'a> {
                 }
               },      
         
-          _ => {panic!("Only packets can have fields");}
+          _ => {}
         }
       }
     } else {
@@ -565,4 +565,5 @@ mod tests {
                  x = 1;
              }", test_def_use_const_update_fail,
              "Trying to update const variable x in foo.");
+
 }

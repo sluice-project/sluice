@@ -137,9 +137,9 @@ pub trait TreeFold<'a> {
 
   // The awkward let _ is required to suppress the unused variables warning
   // https://github.com/rust-lang/rust/issues/26487
-  fn visit_id(&mut self, tree : &'a u32) { let _ = tree; let _ = self; }
+  fn visit_id(&mut self, tree : &'a u64) { let _ = tree; let _ = self; }
 
-  fn visit_condtype(&mut self, tree : &'a u32) { let _ = tree; let _ = self; }
+  fn visit_condtype(&mut self, tree : &'a u64) { let _ = tree; let _ = self; }
 
   fn visit_nextsnippet(&mut self, tree : &'a Identifier) { let _ = tree; let _ = self; }
 

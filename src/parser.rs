@@ -52,21 +52,6 @@ fn parse_globals<'a>(token_iter : &mut TokenIterator<'a>) -> Globals<'a> {
   }
 }
 
-// fn parse_global<'a>(token_iter : &mut TokenIterator<'a>) -> Global<'a> {
-//   match_token(token_iter, Token::Global, "Global declaration should start with keyword global.");
-//   let identifier = parse_identifier(token_iter);
-//   let is_assign = |token| { match token { &Token::Assign => true, _ => false, } };
-//   let initial_values = if is_assign(*token_iter.peek().unwrap())  {
-//                          match_token(token_iter, Token::Assign, "Must separate identifier and value by an assignment symbol.");
-//                          parse_initial_values(token_iter)
-//                        } else {
-//                          Vec::<Value>::new()
-//                        };
-//   match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
-
-//   return Global {identifier, initial_values};
-// }
-
 
 fn parse_packets<'a>(token_iter : &mut TokenIterator<'a>) -> Packets<'a> {
   // Internal helper function to check if it's a snippet or not
@@ -117,22 +102,6 @@ fn parse_packet_field<'a>(token_iter : &mut TokenIterator<'a>) -> PacketField<'a
   let var_type   = parse_type_annotation(token_iter, type_qualifier);
   match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
   return PacketField {identifier, var_type};
-
-  // match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
-  // match_token(token_iter, Token::Bit, "Invalid bit type.");
-  // match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
-  // let bit_width = parse_value(token_iter).value;
-  // if bit_width > 64 { 
-  //   panic!("Bit width can be at most 64.");
-  // } else if bit_width < 1 {
-  //   panic!("Bit width must be at least 1.");
-  // }
-  // match_token(token_iter, Token::GreaterThan, "Need angular brackets to specify width of bit vector.");
-  // // Must end declaration with a semi colon
-  // match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
-
-  // let varinfo = VarInfo::BitArray(bit_width, 1);
-  // return PacketField {identifier, var_type : VarType { var_info : varinfo, type_qualifier : TypeQualifier::Field}};
 }
 
 
@@ -154,7 +123,7 @@ fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a> ) -> Snippets<'a> {
 }
 
 fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
-  let mut ifid: u32 = 0;
+  let mut ifid: u64 = 0;
   match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
   let snippet_id  = parse_identifier(token_iter);
   match_token(token_iter, Token::ParenLeft, "Snippet argument list must start with a left parenthesis.");
@@ -162,7 +131,6 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   match_token(token_iter, Token::BraceLeft, "Snippet body must begin with a left brace.");
   let variable_decls    = parse_variable_decls(token_iter);
   let ifblocks          = parse_ifblocks(token_iter, &mut ifid);
-  // let statements        = parse_statements(token_iter);
   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
   return Snippet{snippet_id, variable_decls, ifblocks};
 }
@@ -238,17 +206,17 @@ fn parse_variable_decl<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecl<
   match var_type.var_info {
     VarInfo::BitArray(bit_width, var_size) => {
       for value in &(initial_values) {
-        if value.value > 2_u32.pow(bit_width) - 1 {
+        if value.value > 2_u64.pow(bit_width as u32) - 1 {
           panic!("Initial value {} is outside the range [0, {}] of {}-bit vector.",
                  value.value,
-                 2_u32.pow(bit_width) - 1,
+                 2_u64.pow(bit_width as u32) - 1,
                  bit_width);
         }
       }
       // Check that the number of initial values matches up with the type for persistent and const
       // variables alone
       if &var_type.type_qualifier == &TypeQualifier::Const || &var_type.type_qualifier == &TypeQualifier::Persistent {
-        if initial_values.len() as u32 != var_size {
+        if initial_values.len() as u64 != var_size {
           panic!("Found {} initial values. Need {} initial values for variable {}.",
                  initial_values.len(),
                  var_size,
@@ -283,7 +251,6 @@ fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifie
 }
 
 
-// fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier, pac_vec : &Packets<'a>) -> VarType<'a> {
 fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier) -> VarType<'a> {
   match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
   
@@ -300,8 +267,8 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
 
   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
   let bit_width = parse_value(token_iter).value;
-  if bit_width > 64 { 
-    panic!("Bit width can be at most 64.");
+  if bit_width > 32 { 
+    panic!("Bit width can be at most 32.");
   } else if bit_width < 1 {
     panic!("Bit width must be at least 1.");
   }
@@ -322,52 +289,13 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
 }
 
 
-
-// fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier) -> VarType<'a> {
-
-//   match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
-  
-//   let is_bit = |token| { match token { &Token::Bit => true, _ => false, } };
-
-
-//   if is_bit(*token_iter.peek().unwrap())  {
-//     match_token(token_iter, Token::Bit, "Invalid bit type.");
-//  } else {
-//     let identifier = parse_identifier(token_iter);
-//     return VarType { var_size : 1, bit_width : 1, type_qualifier, packet_name : identifier };
-//   }
-
-
-//   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
-//   let bit_width = parse_value(token_iter).value;
-//   if bit_width > 64 { 
-//     panic!("Bit width can be at most 64.");
-//   } else if bit_width < 1 {
-//     panic!("Bit width must be at least 1.");
-//   }
-//   match_token(token_iter, Token::GreaterThan, "Need angular brackets to specify width of bit vector.");
-
-//   // Check if it's an array
-//   if token_iter.peek().is_some() && **token_iter.peek().unwrap() == Token::SquareLeft {
-//     match_token(token_iter, Token::SquareLeft, "Expected [ here.");
-//     let var_size = parse_value(token_iter).value;
-//     match_token(token_iter, Token::SquareRight, "Expected ] here.");
-
-//     return VarType { var_size, bit_width, type_qualifier, packet_name : Identifier{id_name : ""} };
-//   } else {
-//     return VarType { var_size : 1, bit_width, type_qualifier, packet_name : Identifier{id_name : ""} };
-//   }
-// }
-
-//static ifid: u32 = 0;
-
-fn parse_ifblocks<'a>(token_iter : &mut TokenIterator<'a>, ifid :&mut u32) -> IfBlocks<'a> {
+fn parse_ifblocks<'a>(token_iter : &mut TokenIterator<'a>, ifid :&mut u64) -> IfBlocks<'a> {
   // println!("{:?}", token);
   let is_ifblock   = |token| { match token { &Token::If => true, _ => false } };
   let is_elseblock = |token| { match token { &Token::Else => true, _ => false } };
   let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false } };
   let mut ifblock_vector = Vec::<IfBlock>::new();
-  let mut blocktype: u32;
+  let mut blocktype: u64;
 
   loop {
     if is_ifblock(*token_iter.peek().unwrap()) {
@@ -391,20 +319,18 @@ fn parse_ifblocks<'a>(token_iter : &mut TokenIterator<'a>, ifid :&mut u32) -> If
   }
 }
 
-fn parse_ifblock<'a>(token_iter : &mut TokenIterator<'a>, id : u32, condtype : u32) -> IfBlock<'a> {
-  //let mut contents = String::new();
-  // let mut contents = String::from("a=1");
-  // let cond_tokens = &mut lexer::get_tokens(&mut contents);
-  //
-  // let cond_token_iter = &mut cond_tokens.iter().peekable();
-  let val = Value {value :1};
+fn parse_ifblock<'a>(token_iter : &mut TokenIterator<'a>, id : u64, condtype : u64) -> IfBlock<'a> {
+
+  // dummyCondition causing pretty-printer problem. If the if block is condtype 2 or 3, then the dummy condition has expr with
+  // a value of 1 as default. The 1 gets printed after the last statement since visit_condition is called
+  let val = Value {value : 1};
   let op1 = Operand::Value(val);
   let expr_right = ExprRight::Empty();
   let expr = Expr{op1, expr_right};
   let dummycondition = Condition{expr};
-  //let expr= Expr{ , };
+
   if condtype == 1 {
-      //ifblock
+      // if block
       match_token(token_iter, Token::If, "If Block must start with if statement.");
       match_token(token_iter, Token::ParenLeft, "If Block must begin with a left brace.");
       let condition = parse_condition(token_iter);
@@ -414,6 +340,7 @@ fn parse_ifblock<'a>(token_iter : &mut TokenIterator<'a>, id : u32, condtype : u
       match_token(token_iter, Token::BraceRight, "If Block must end with a right brace.");
       return IfBlock{id, condtype, condition, statements};
   } else if condtype == 2 {
+      // else block
       match_token(token_iter, Token::Else, "Else Block must start with else statement.");
       match_token(token_iter, Token::BraceLeft, "Else Block must begin with a left brace.");
       let statements = parse_statements(token_iter);
@@ -641,11 +568,11 @@ mod tests {
                        "Initial value 4 is outside the range [0, 3] of 2-bit vector.");
   test_parser_fail!   (r"persistent x : bit<0> = 4;", parse_variable_decls,
                        test_parse_persistent_decls_bitwidth0, "Bit width must be at least 1.");
-  test_parser_fail!   (r"persistent x : bit<31> = 4;", parse_variable_decls,
-                       test_parse_persistent_decls_bitwidth31, "Bit width can be at most 64.");
-  test_parser_success!(r"persistent x : bit<64>[4] = {1, 2, 3, 4,};", parse_variable_decls,
+  test_parser_fail!   (r"persistent x : bit<33> = 4;", parse_variable_decls,
+                       test_parse_persistent_decls_bitwidth33, "Bit width can be at most 32.");
+  test_parser_success!(r"persistent x : bit<32>[4] = {1, 2, 3, 4,};", parse_variable_decls,
                        test_parse_persistent_decls_arrays);
-  test_parser_fail!   (r"persistent x : bit<64>[2] = {1, 2, 3,};", parse_variable_decls,
+  test_parser_fail!   (r"persistent x : bit<32>[2] = {1, 2, 3,};", parse_variable_decls,
                        test_parse_persistent_decls_arrays_fail,
                        "Found 3 initial values. Need 2 initial values for variable x.");
   test_parser_success!(r"snippet fun() {

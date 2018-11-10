@@ -46,6 +46,12 @@ impl<'a> TreeFold<'a> for PrettyPrinter {
     self.pretty_print_str.push_str(";");
   }
 
+  fn visit_condition(&mut self, tree : &'a Condition) {
+    // check that the condition isnt a dummyCondition
+    if tree.expr.expr_right == ExprRight::Empty() && tree.expr.op1 == Operand::Value(Value {value : 1}) { }
+    else {self.visit_expr(&tree.expr);} 
+  }
+
   fn visit_expr(&mut self, tree : &'a Expr) {
     self.pretty_print_str.push_str(&tree.op1.get_string());
     match &tree.expr_right {
@@ -151,7 +157,7 @@ mod tests {
 
   #[test]
   fn test_pretty_printer(){
-    let input_program = r"snippet fun(){
+    let input_program = r"snippet fun() {
                             input a : bit<2>;
                             input b : bit<2>;
                             input c : bit<2>;
@@ -166,12 +172,13 @@ mod tests {
                             r = y;
                             m = 5;
                           }
+
                           snippet foo() {
                             input a : bit<2>;
                             input b : bit<2>;
                             input c : bit<2>;
                             persistent p : bit<2> = 1;
-                            persistent m : bit<2>[3] = {1, 2, 3, };
+                            persistent m : bit<2>[3] = {1, 2, 3,};
                             transient z : bit<2>;
                             transient h : bit<2>;
                             transient q : bit<2>;
@@ -180,6 +187,7 @@ mod tests {
                             h = z[7];
                             m = 5;
                           }
+
                           (foo, fun)
                           ";
     run_pretty_printer_and_reparse(input_program);
