@@ -1,0 +1,82 @@
+// simple sculpt program for explicit congestion notification protocol
+// remove comments before compiling
+
+global queue_size : bit<32>;
+global THRESHOLD : bit<32> = 1000;
+global SEND_PORT : bit<16> = 11111; 
+global RECEIVE_PORT : bit<16> = 22222;
+
+
+packet pac {
+    ipv4srcAddr : bit<32>;
+    ipv4dstAddr : bit<32>;
+    ipv4protocol : bit<8>;
+    ipv4diffserv : bit<8>;
+    tcpSrcPort : bit<16>;
+    tcpDstPort : bit<16>;
+    tcpEce     : bit<1>;
+    tcpCwr     : bit<1>;
+    tcpWindow  : bit<16>;
+}
+
+// Run on sender. Set diffserv to 1 to indicate ecn capability
+// First checks if some input packet has cwr set. If cwr is set, reduce window size
+snippet send() {
+    input w  : pac;
+    output a : pac;
+    if (w.tcpCwr == 1) {
+        a.tcpWindow = a.tcpWindow / 2;;
+    } 
+    a.ipv4diffserv = 1;
+    a.tcpSrcPort = SEND_PORT;
+    a.tcpDstPort = RECEIVE_PORT;
+}
+
+// Run on switch. Treat diffserv as if first 6 bits are 0, only last 2 count for ecn. 
+// Later, can change to shift to extract last 2 bits from diffserv
+snippet switch() {
+    input x : pac;
+    output y : pac;
+    transient e : bit<1>;
+    if (x.diffserv == 1) {
+        e = queue_size > THRESHOLD;
+        y.diffserv = e ? 3 : 1;
+    }
+}
+
+// Run on receiver. Diffserv 3 indicates CE = 0b11
+snippet receive() {
+    input p : pac;
+    output q: pac;
+    if (p.diffserv == 3) {
+        q.tcpSrcPort = RECEIVE_PORT;
+        q.tcpDstPort = SEND_PORT;
+        q.tcpEce = 1;
+    }
+}
+
+// Run on sender. Halve the congestion window if ece bit is set
+snippet echo() {
+    input b : pac;
+    output c : pac;
+    if (b.tcpEce == 1) {
+        c.tcpCwr = 1;
+        c.tcpWindow = c.tcpWindow / 2;
+    }
+}
+
+// Run on receiver
+snippet cwr() {
+    input p : pac;
+    output r : pac;
+    if (p.tcpCwr == 0) {
+        r.tcpEce = 1
+    }
+}
+
+(send, switch):a->x,
+(switch, receive):y->p,
+(receive, echo):q->b,
+(echo, send):c->w,
+(echo, cwr):c->p,
+(cwr,echo):r->b,
