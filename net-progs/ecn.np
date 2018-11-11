@@ -20,12 +20,12 @@ packet pac {
 }
 
 // Run on sender. Set diffserv to 1 to indicate ecn capability
-// First checks if some input packet has cwr set. If cwr is set, reduce window size
+// First checks if some input packet has cwr set. If cwr is set, reduce window size by half
 snippet send() {
-    input w  : pac;
+    input check_cwr2 : bit<1>;
     output a : pac;
-    if (w.tcpCwr == 1) {
-        a.tcpWindow = a.tcpWindow / 2;;
+    if (check_cwr2 == 1) {
+        a.tcpWindow = a.tcpWindow / 2;
     } 
     a.ipv4diffserv = 1;
     a.tcpSrcPort = SEND_PORT;
@@ -38,9 +38,9 @@ snippet switch() {
     input x : pac;
     output y : pac;
     transient e : bit<1>;
-    if (x.diffserv == 1) {
+    if (x.ipv4diffserv == 1) {
         e = queue_size > THRESHOLD;
-        y.diffserv = e ? 3 : 1;
+        y.ipv4diffserv = e ? 3 : 1;
     }
 }
 
@@ -48,35 +48,40 @@ snippet switch() {
 snippet receive() {
     input p : pac;
     output q: pac;
-    if (p.diffserv == 3) {
+    if (p.ipv4diffserv == 3) {
         q.tcpSrcPort = RECEIVE_PORT;
         q.tcpDstPort = SEND_PORT;
         q.tcpEce = 1;
     }
 }
 
-// Run on sender. Halve the congestion window if ece bit is set
+// Run on sender. Acknowledges congestion indication by sending a segment with the CWR bit set to receiver 
 snippet echo() {
     input b : pac;
     output c : pac;
+    output check_cwr1 : bit<1>;
     if (b.tcpEce == 1) {
+        check_cwr1 = 1;
         c.tcpCwr = 1;
-        c.tcpWindow = c.tcpWindow / 2;
+        c.tcpSrcPort = SEND_PORT;
+        c.tcpDstPort = RECEIVE_PORT;
     }
 }
 
-// Run on receiver
+// Run on receiver, Keep transmitting echo to sender if cwr is not set
 snippet cwr() {
     input p : pac;
     output r : pac;
     if (p.tcpCwr == 0) {
-        r.tcpEce = 1
+        r.tcpEce = 1;
+        r.tcpSrcPort = RECEIVE_PORT;
+        r.tcpDstPort = SEND_PORT;
     }
 }
 
 (send, switch):a->x,
 (switch, receive):y->p,
 (receive, echo):q->b,
-(echo, send):c->w,
+(echo, send):check_cwr1->check_cwr2,
 (echo, cwr):c->p,
 (cwr,echo):r->b,
