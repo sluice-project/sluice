@@ -103,23 +103,35 @@ fn parse_packet_field<'a>(token_iter : &mut TokenIterator<'a>) -> PacketField<'a
 fn parse_snippets<'a>(token_iter : &mut TokenIterator<'a> ) -> Snippets<'a> {
   // Internal helper function to check if it's a snippet or not
   let is_snippet = |token| { match token { &Token::Snippet => true, _ => false, } };
+  let is_annotation = |token| { match token { &Token::Annotation => true, _ => false, } };
 
   // println!("{:p}", &packets);
   let mut snippet_vector = Vec::<Snippet>::new();
   loop {
-    if !token_iter.peek().is_some() || !is_snippet(*token_iter.peek().unwrap()) {
+    if !token_iter.peek().is_some() || (!is_snippet(*token_iter.peek().unwrap()) && !is_annotation(*token_iter.peek().unwrap())) {
       return Snippets{snippet_vector};
     } else {
       let snippet = parse_snippet(token_iter);
       snippet_vector.push(snippet);
     }
   }
-
 }
 
 fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   let mut ifid: u64 = 0;
-  match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
+  let is_snippet = |token| { match token { &Token::Snippet => true, _ => false, } };
+  let is_annotation = |token| { match token { &Token::Annotation => true, _ => false, } };
+
+  // let device = match {}
+  let mut device = Identifier{id_name : ""};
+  if is_snippet(*token_iter.peek().unwrap()) {
+    match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
+  } else if is_annotation(*token_iter.peek().unwrap()) {
+    match_token(token_iter, Token::Annotation, "Annotation must start with definition must start with the keyword snippet."); 
+    device  = parse_identifier(token_iter);
+    match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
+  }
+
   let snippet_id  = parse_identifier(token_iter);
   match_token(token_iter, Token::ParenLeft, "Snippet argument list must start with a left parenthesis.");
   match_token(token_iter, Token::ParenRight, "Snippet argument list must end with a right parenthesis.");
@@ -127,7 +139,7 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   let variable_decls    = parse_variable_decls(token_iter);
   let ifblocks          = parse_ifblocks(token_iter, &mut ifid);
   match_token(token_iter, Token::BraceRight, "Snippet body must end with a right brace.");
-  return Snippet{snippet_id, variable_decls, ifblocks};
+  return Snippet{snippet_id, device_id : device, variable_decls, ifblocks};
 }
 
 fn parse_connections<'a>(token_iter : &mut TokenIterator<'a>) -> Connections<'a> {

@@ -19,8 +19,11 @@ packet pac {
     tcpWindow  : bit<16>;
 }
 
+
 // Run on sender. Set diffserv to 1 to indicate ecn capability
 // First checks if some input packet has cwr set. If cwr is set, reduce window size by half
+
+@ sending_host
 snippet send() {
     input check_cwr2 : bit<1>;
     output a : pac;
@@ -32,8 +35,11 @@ snippet send() {
     a.tcpDstPort = RECEIVE_PORT;
 }
 
+
 // Run on switch. Treat diffserv as if first 6 bits are 0, only last 2 count for ecn. 
 // Later, can change to shift to extract last 2 bits from diffserv
+
+@ programmable_switch
 snippet switch() {
     input x : pac;
     output y : pac;
@@ -44,7 +50,10 @@ snippet switch() {
     }
 }
 
+
 // Run on receiver. Diffserv 3 indicates CE = 0b11
+
+@ receiving_host
 snippet receive() {
     input p : pac;
     output q: pac;
@@ -55,7 +64,10 @@ snippet receive() {
     }
 }
 
+
 // Run on sender. Acknowledges congestion indication by sending a segment with the CWR bit set to receiver 
+
+@ sending_host
 snippet echo() {
     input b : pac;
     output c : pac;
@@ -68,7 +80,10 @@ snippet echo() {
     }
 }
 
+
 // Run on receiver, Keep transmitting echo to sender if cwr is not set
+
+@ receiving_host
 snippet cwr() {
     input p : pac;
     output r : pac;

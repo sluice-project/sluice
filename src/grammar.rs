@@ -50,6 +50,7 @@ pub struct Snippets<'a> {
 #[derive(PartialEq)]
 pub struct Snippet<'a> {
   pub snippet_id       : Identifier<'a>,
+  pub device_id        : Identifier<'a>,
   pub variable_decls   : VariableDecls<'a>,
   pub ifblocks         : IfBlocks<'a>,
 }

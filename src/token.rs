@@ -55,6 +55,7 @@ pub enum Token<'a> {
   Global,
   If,
   Else,
+  Annotation,
 
   // Dot operator
   Dot,

@@ -33,7 +33,6 @@ packet result {
     click_time : bit<32>;    
 }
 
-
 snippet send_impr() {
     output a : impr;
     a.tcpSrcPort = IMPR_PORT;
