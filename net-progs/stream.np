@@ -33,18 +33,21 @@ packet result {
     click_time : bit<32>;    
 }
 
+@ impr_host
 snippet send_impr() {
     output a : impr;
     a.tcpSrcPort = IMPR_PORT;
     a.tcpDstPort = DPORT;
 }
 
+@ click_host
 snippet send_click() {
     output b : click;
     b.tcpSrcPort = CLICK_PORT;
     b.tcpDstPort = DPORT;
 }
 
+@ programmable_switch
 snippet join () {
     input p : impr;
     input q : click;
@@ -56,7 +59,7 @@ snippet join () {
     }
 }
 
-
+@ receive_host
 snippet receive() {
     input x : result;
 }
