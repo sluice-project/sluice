@@ -1,4 +1,4 @@
-// simple sculpt program for explicit congestion notification protocol
+// simple sluice program for explicit congestion notification protocol
 // remove comments before compiling
 
 global queue_size : bit<32>;

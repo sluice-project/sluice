@@ -1,13 +1,13 @@
 #![feature(test)]
 
 extern crate test;
-extern crate sculpt;
+extern crate sluice;
 
-use sculpt::lexer;
-use sculpt::parser;
-use sculpt::def_use::DefUse;
-use sculpt::pretty_printer::PrettyPrinter;
-use sculpt::tree_fold::TreeFold;
+use sluice::lexer;
+use sluice::parser;
+use sluice::def_use::DefUse;
+use sluice::pretty_printer::PrettyPrinter;
+use sluice::tree_fold::TreeFold;
 use test::Bencher;
 
 fn create_test_input(size : u32) -> String {

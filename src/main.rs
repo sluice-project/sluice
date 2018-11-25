@@ -1,14 +1,14 @@
-extern crate sculpt;
+extern crate sluice;
 
-use sculpt::lexer;
-use sculpt::parser;
-use sculpt::def_use::DefUse;
-use sculpt::tree_fold::TreeFold;
+use sluice::lexer;
+use sluice::parser;
+use sluice::def_use::DefUse;
+use sluice::tree_fold::TreeFold;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 // Main compiler binary
-// Takes an input sculpt program and produces a refined program
+// Takes an input sluice program and produces a P4 program for each network device
 fn main() {
   let args: Vec<String> = env::args().collect();
   let filename = &args[1];
