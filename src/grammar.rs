@@ -194,7 +194,7 @@ pub enum ExprRight<'a> {
 }
 
 #[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq, Hash)]
 pub struct Identifier<'a> {
   pub id_name : &'a str,
 }
@@ -272,5 +272,32 @@ impl<'a> LValue<'a> {
         id.get_str().to_owned() + " . " + &field_name.get_str()
       }
     }
+  }
+
+  pub fn get_string_vec(&self) -> Vec<&str> {
+      match self {
+        &LValue::Scalar(ref id) => {
+            let mut my_vec = Vec::new();
+            my_vec.push(id.get_str());
+            return my_vec;
+        },
+        &LValue::Array(ref id, ref address) => {
+            let mut my_vec = Vec::new();
+            my_vec.push(id.get_str());
+            match **address {
+                Operand::LValue(ref lval) => {
+                    let mut nex_vec = lval.get_string_vec();
+                },
+                _ =>  { }
+            }
+            return my_vec;
+        },
+        &LValue::Field(ref id, ref field_name) => {
+            let mut my_vec = Vec::new();
+            my_vec.push(id.get_str());
+            my_vec.push(&field_name.get_str());
+            return my_vec;
+        }
+      }
   }
 }

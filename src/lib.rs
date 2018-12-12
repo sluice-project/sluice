@@ -9,3 +9,4 @@ pub mod tree_fold;
 pub mod def_use;
 pub mod code_gen;
 pub mod pretty_printer;
+pub mod trans_snippet;

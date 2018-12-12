@@ -1,6 +1,6 @@
-global threshold = 111;
+global threshold : bit<32> = 111;
 
-packet n;
+packet n {}
 
 snippet foo() {
   input a : bit<2>;
@@ -33,7 +33,6 @@ snippet fun(){
   q = x;
   r = y;
   m = 5;
-  call foo();
 }
 
 

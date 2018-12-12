@@ -4,9 +4,13 @@ use sluice::lexer;
 use sluice::parser;
 use sluice::def_use::DefUse;
 use sluice::tree_fold::TreeFold;
+use sluice::trans_snippet::trans_snippets;
+
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
+
+
 // Main compiler binary
 // Takes an input sluice program and produces a P4 program for each network device
 fn main() {
@@ -23,7 +27,7 @@ fn main() {
   let parse_tree = parser::parse_prog(token_iter);
   assert!(token_iter.peek().is_none(), "Token iterator is not empty.");
   println!("Parse tree: {:?}\n", parse_tree);
-
+  trans_snippets(&parse_tree.snippets);
   // Check that identifiers are defined before use
   let mut def_use = DefUse::new();
   def_use.visit_prog(&parse_tree);
