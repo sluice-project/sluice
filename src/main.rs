@@ -4,7 +4,7 @@ use sluice::lexer;
 use sluice::parser;
 use sluice::def_use::DefUse;
 use sluice::tree_fold::TreeFold;
-use sluice::trans_snippet::trans_snippets;
+use sluice::trans_snippet::*;
 
 use std::env;
 use std::fs::File;
@@ -24,10 +24,11 @@ fn main() {
   let tokens = & mut lexer::get_tokens(&contents);
   // parsing
   let token_iter = & mut tokens.iter().peekable();
+  let mut my_dag =  Dag { dag_vector : Vec::new()};
   let parse_tree = parser::parse_prog(token_iter);
   assert!(token_iter.peek().is_none(), "Token iterator is not empty.");
   println!("Parse tree: {:?}\n", parse_tree);
-  trans_snippets(&parse_tree.snippets);
+  trans_snippets(&parse_tree.snippets);//, &mut my_dag);
   // Check that identifiers are defined before use
   let mut def_use = DefUse::new();
   def_use.visit_prog(&parse_tree);
