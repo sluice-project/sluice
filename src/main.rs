@@ -27,7 +27,7 @@ fn main() {
   let mut my_dag =  Dag { dag_vector : Vec::new()};
   let parse_tree = parser::parse_prog(token_iter);
   assert!(token_iter.peek().is_none(), "Token iterator is not empty.");
-  println!("Parse tree: {:?}\n", parse_tree);
+  //println!("Parse tree: {:?}\n", parse_tree);
   trans_snippets(&parse_tree.snippets);//, &mut my_dag);
   // Check that identifiers are defined before use
   let mut def_use = DefUse::new();

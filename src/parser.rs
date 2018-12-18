@@ -127,7 +127,7 @@ fn parse_snippet<'a>(token_iter : &mut TokenIterator<'a>) -> Snippet<'a> {
   if is_snippet(*token_iter.peek().unwrap()) {
     match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
   } else if is_annotation(*token_iter.peek().unwrap()) {
-    match_token(token_iter, Token::Annotation, "Annotation must start with definition must start with the keyword snippet."); 
+    match_token(token_iter, Token::Annotation, "Annotation must start with definition must start with the keyword snippet.");
     device  = parse_identifier(token_iter);
     match_token(token_iter, Token::Snippet, "Snippet definition must start with the keyword snippet.");
   }
@@ -260,7 +260,7 @@ fn parse_type_qualifier<'a>(token_iter : &mut TokenIterator<'a>) -> TypeQualifie
 
 fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier : TypeQualifier) -> VarType<'a> {
   match_token(token_iter, Token::Colon, "Type annotation must start with a colon.");
-  
+
   let is_bit = |token| { match token { &Token::Bit => true, _ => false, } };
 
 
@@ -274,7 +274,7 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
 
   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
   let bit_width = parse_value(token_iter).value;
-  if bit_width > 32 { 
+  if bit_width > 32 {
     panic!("Bit width can be at most 32.");
   } else if bit_width < 1 {
     panic!("Bit width must be at least 1.");
@@ -290,7 +290,7 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
 
     return VarType { var_info, type_qualifier };
   } else {
-    let var_info = VarInfo::BitArray(bit_width, 1);    
+    let var_info = VarInfo::BitArray(bit_width, 1);
     return VarType { var_info, type_qualifier};
   }
 }
