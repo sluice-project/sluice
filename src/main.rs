@@ -24,7 +24,6 @@ fn main() {
   let tokens = & mut lexer::get_tokens(&contents);
   // parsing
   let token_iter = & mut tokens.iter().peekable();
-  let mut my_dag =  Dag { dag_vector : Vec::new()};
   let parse_tree = parser::parse_prog(token_iter);
   assert!(token_iter.peek().is_none(), "Token iterator is not empty.");
   //println!("Parse tree: {:?}\n", parse_tree);

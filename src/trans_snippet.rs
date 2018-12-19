@@ -15,6 +15,7 @@ pub enum DagNodeType<'a> {
 #[derive(PartialEq)]
 pub struct DagNode<'a> {
     pub node_type : DagNodeType<'a>,
+    pub p4_code : &'a str,
     pub next_nodes : Vec<usize>,
     pub prev_nodes : Vec<usize>
 }
@@ -23,6 +24,8 @@ pub struct DagNode<'a> {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct Dag<'a> {
+    pub snippet_id       : &'a str,
+    pub device_id        : &'a str,
     pub dag_vector : Vec<DagNode<'a>>
 }
 
@@ -43,7 +46,7 @@ pub fn get_indices_lval<'a> (decl_map : &HashMap<&str, usize>,
 
     let my_vec_ids = &lval.get_string_vec();
     for my_id in my_vec_ids {
-        println!("{:?} ", my_id);
+        //println!("{:?} ", my_id);
         let my_option = decl_map.get(my_id);
         match my_option {
             Some(index) => {
@@ -83,13 +86,14 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
         decl_map.insert(&my_variable_decl.identifier.id_name, i);
         i = i + 1;
     }
-    println!("decl map: {:?}\n ", decl_map);
+    //println!("decl map : {:?}\n ", decl_map);
     // Next, process statements, for now ignoring if block.
     for my_if_block in &my_snippet.ifblocks.ifblock_vector {
         for my_statement in &my_if_block.statements.stmt_vector {
-            println!("Statement : {:?}: ",  my_statement );
-            let mut my_indices_1 : HashMap<&str, usize> = HashMap::new();
-            let mut my_indices_2 : HashMap<&str, usize> = HashMap::new();
+            //println!("decl map : {:?}\n ", decl_map);
+            //println!("Processing Statement : {:?}: ",  my_statement );
+            let mut my_indices_1 : HashMap<&str, usize>;
+            let mut my_indices_2 : HashMap<&str, usize>;
             let mut my_indices_3 : HashMap<&str, usize> = HashMap::new();
             let mut my_indices_4 : HashMap<&str, usize> = HashMap::new();
             let mut my_indices_5 : HashMap<&str, usize> = HashMap::new();
@@ -107,7 +111,6 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     my_indices_5 = get_indices_op(&decl_map, &op_false);
                 }
                 ExprRight::Empty() => {
-
                 }
             }
             // Populate next_nodes
@@ -117,8 +120,7 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     Some(mut my_parent_dag_node) => {
                         if !&my_parent_dag_node.next_nodes.contains(&i) {
                             my_parent_dag_node.next_nodes.push(i);
-                            println!("parent_dag_node {:?}", my_parent_dag_node);
-
+                            //println!("Parent_dag_node: {:?}", my_parent_dag_node);
                         }
                     }
                     None => {}
@@ -131,7 +133,7 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     Some(mut my_parent_dag_node) => {
                         if !&my_parent_dag_node.next_nodes.contains(&i) {
                             my_parent_dag_node.next_nodes.push(i);
-                            println!("parent_dag_node {:?}", my_parent_dag_node);
+                            //println!("Parent_dag_node: {:?}", my_parent_dag_node);
                         }
                     }
                     None => {}
@@ -144,7 +146,7 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     Some(mut my_parent_dag_node) => {
                         if !&my_parent_dag_node.next_nodes.contains(&i) {
                             my_parent_dag_node.next_nodes.push(i);
-                            //println!("parent_dag_node {:?}", my_parent_dag_node);
+                            //println!("Parent_dag_node: {:?}", my_parent_dag_node);
                         }
                     }
                     None => {}
@@ -157,7 +159,7 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     Some(mut my_parent_dag_node) => {
                         if !&my_parent_dag_node.next_nodes.contains(&i) {
                             my_parent_dag_node.next_nodes.push(i);
-                            //println!("parent_dag_node {:?}", my_parent_dag_node);
+                            //println!("Parent_dag_node: {:?}", my_parent_dag_node);
                         }
                     }
                     None => {}
@@ -170,7 +172,7 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     Some(mut my_parent_dag_node) => {
                         if !&my_parent_dag_node.next_nodes.contains(&i) {
                             my_parent_dag_node.next_nodes.push(i);
-                            //println!("parent_dag_node {:?}", my_parent_dag_node);
+                            //println!("Parent_dag_node: {:?}", my_parent_dag_node);
                         }
                     }
                     None => {}
@@ -184,8 +186,7 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     Some(mut my_dag_node) => {
                         if !&my_dag_node.prev_nodes.contains(&p_index_1) {
                             my_dag_node.prev_nodes.push(p_index_1);
-                            println!("prev parent_dag_node {:?}", my_dag_node);
-
+                            //println!("My_dag_node: {:?}", my_dag_node);
                         }
                     }
                     None => {}
@@ -197,7 +198,7 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     Some(mut my_dag_node) => {
                         if !&my_dag_node.prev_nodes.contains(&p_index_2) {
                             my_dag_node.prev_nodes.push(p_index_2);
-                            println!("prev parent_dag_node {:?}", my_dag_node);
+                            //println!("My_dag_node: {:?}", my_dag_node);
                         }
                     }
                     None => {}
@@ -209,6 +210,7 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     Some(mut my_dag_node) => {
                         if !&my_dag_node.prev_nodes.contains(&p_index_3) {
                             my_dag_node.prev_nodes.push(p_index_3);
+                            //println!("My_dag_node: {:?}", my_dag_node);
                         }
                     }
                     None => {}
@@ -220,6 +222,7 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     Some(mut my_dag_node) => {
                         if !&my_dag_node.prev_nodes.contains(&p_index_4) {
                             my_dag_node.prev_nodes.push(p_index_4);
+                            //println!("My_dag_node: {:?}", my_dag_node);
                         }
                     }
                     None => {}
@@ -231,13 +234,14 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     Some(mut my_dag_node) => {
                         if !&my_dag_node.prev_nodes.contains(&p_index_5) {
                             my_dag_node.prev_nodes.push(p_index_5);
+                            //println!("My_dag_node: {:?}", my_dag_node);
                         }
                     }
                     None => {}
                 }
             }
-            println!("decl map: {:?}\n ", decl_map);
-            i = i+1;
+            //println!("decl map: {:?}\n ", decl_map);
+            i = i + 1;
         }
     }
 }
@@ -246,21 +250,22 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
     let mut dag_map : HashMap<&str, Dag>= HashMap::new();
 
     for my_snippet in &my_snippets.snippet_vector {
-        let mut my_dag : Dag = Dag { dag_vector : Vec::new()};
-        for my_snippet in &my_snippets.snippet_vector {
-            //let my_dag_start_node : DagNode;
+        //println!("Snippet : {:?}\n", my_snippet.snippet_id.id_name);
+        let mut my_dag : Dag = Dag { snippet_id : my_snippet.snippet_id.id_name, device_id : my_snippet.device_id.id_name,
+            dag_vector : Vec::new()};
+        //let my_dag_start_node : DagNode;
 
-            for my_variable_decl in &my_snippet.variable_decls.decl_vector {
-                let my_dag_start_node = DagNode {node_type : DagNodeType::Decl(my_variable_decl),
-                      next_nodes : Vec::new(), prev_nodes : Vec::new()};
-                my_dag.dag_vector.push(my_dag_start_node);
-            }
-            for my_if_block in &my_snippet.ifblocks.ifblock_vector {
-                for my_statement in &my_if_block.statements.stmt_vector {
-                    let mut my_dag_node = DagNode {node_type: DagNodeType::Stmt(&my_statement),
-                         next_nodes: Vec::new(), prev_nodes: Vec::new()};
-                    my_dag.dag_vector.push(my_dag_node);
-                }
+        for my_variable_decl in &my_snippet.variable_decls.decl_vector {
+            let my_dag_start_node = DagNode {node_type : DagNodeType::Decl(my_variable_decl), p4_code : "",
+                  next_nodes : Vec::new(), prev_nodes : Vec::new()};
+            //println!("{:?}\n", my_dag_start_node);
+            my_dag.dag_vector.push(my_dag_start_node);
+        }
+        for my_if_block in &my_snippet.ifblocks.ifblock_vector {
+            for my_statement in &my_if_block.statements.stmt_vector {
+                let mut my_dag_node = DagNode {node_type: DagNodeType::Stmt(&my_statement), p4_code : "",
+                     next_nodes: Vec::new(), prev_nodes: Vec::new()};
+                my_dag.dag_vector.push(my_dag_node);
             }
         }
         dag_map.insert(&my_snippet.snippet_id.id_name, my_dag);
@@ -281,7 +286,6 @@ pub fn trans_snippets<'a> (my_snippets : &Snippets<'a>) {
                 println!("Snippet DAG: {:?}\n", snippet_dag);
             }
             None => {}
-
         }
     }
 }

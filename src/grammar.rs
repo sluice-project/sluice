@@ -287,6 +287,9 @@ impl<'a> LValue<'a> {
             match **address {
                 Operand::LValue(ref lval) => {
                     let mut nex_vec = lval.get_string_vec();
+                    for nex_id in nex_vec {
+                        my_vec.push(nex_id);
+                    }
                 },
                 _ =>  { }
             }
