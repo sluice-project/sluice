@@ -15,9 +15,25 @@ pub enum DagNodeType<'a> {
 #[derive(PartialEq)]
 pub struct DagNode<'a> {
     pub node_type : DagNodeType<'a>,
-    pub p4_code : &'a str,
+    pub p4_code : P4Code<'a>,
     pub next_nodes : Vec<usize>,
     pub prev_nodes : Vec<usize>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct P4Code<'a> {
+    pub p4_header : P4Header<'a>,
+    pub p4_ingress : &'a str,
+    pub p4_egress : &'a str,
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct P4Header<'a> {
+    pub meta : String,
+    pub register : &'a str,
+    pub define : &'a str
 }
 
 // For now, using a simplistic DAG dc using vectors.
@@ -29,7 +45,7 @@ pub struct Dag<'a> {
     pub dag_vector : Vec<DagNode<'a>>
 }
 
-pub fn getIdentifiers<'a> (my_operand : &'a Operand<'a>) -> Vec<&'a str> {
+pub fn get_identifiers<'a> (my_operand : &'a Operand<'a>) -> Vec<&'a str> {
     match &my_operand {
         Operand::LValue(ref lval) => {
             let mut nex_vec = lval.get_string_vec();
@@ -40,8 +56,7 @@ pub fn getIdentifiers<'a> (my_operand : &'a Operand<'a>) -> Vec<&'a str> {
 
 }
 
-pub fn get_indices_lval<'a> (decl_map : &HashMap<&str, usize>,
-    lval : &'a LValue<'a>) -> HashMap<&'a str, usize> {
+pub fn get_indices_lval<'a> (decl_map : &HashMap<&str, usize>, lval : &'a LValue<'a>) -> HashMap<&'a str, usize> {
     let mut my_indices : HashMap<&'a str, usize> = HashMap::new();
 
     let my_vec_ids = &lval.get_string_vec();
@@ -60,7 +75,7 @@ pub fn get_indices_lval<'a> (decl_map : &HashMap<&str, usize>,
 }
 
 pub fn get_indices_op<'a> (decl_map : &HashMap<&str, usize>, op : &'a Operand<'a>) -> HashMap<&'a str, usize> {
-    let mut empty : HashMap<&str, usize> = HashMap::new();
+    let empty : HashMap<&str, usize> = HashMap::new();
     match &op {
         Operand::LValue(ref lval) => {
             return get_indices_lval(decl_map, lval);
@@ -74,7 +89,7 @@ pub fn get_dag_node<'a>(my_dag : &'a Dag<'a>,index : &usize) ->  Option<&'a DagN
     return *my_dag_option;
 
 }
-//pub fn build_map<'a> (my_snippet: &'a Snippet<'a>) ->
+
 // Construct the connections between the nodes to form the Dag
 // TODO : Make it modular. Curently baffled by how to pass mutable reference of Dag again
 pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a>) {
@@ -251,20 +266,24 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
 
     for my_snippet in &my_snippets.snippet_vector {
         //println!("Snippet : {:?}\n", my_snippet.snippet_id.id_name);
-        let mut my_dag : Dag = Dag { snippet_id : my_snippet.snippet_id.id_name, device_id : my_snippet.device_id.id_name,
-            dag_vector : Vec::new()};
+        let mut my_dag : Dag = Dag { snippet_id : my_snippet.snippet_id.id_name,
+            device_id : my_snippet.device_id.id_name, dag_vector : Vec::new()};
         //let my_dag_start_node : DagNode;
 
         for my_variable_decl in &my_snippet.variable_decls.decl_vector {
-            let my_dag_start_node = DagNode {node_type : DagNodeType::Decl(my_variable_decl), p4_code : "",
-                  next_nodes : Vec::new(), prev_nodes : Vec::new()};
+            let dummyheader = P4Header{meta:String::new(), register:"", define:""};
+            let dummpyp4 = P4Code{p4_header: dummyheader, p4_ingress:"", p4_egress:""};
+            let my_dag_start_node = DagNode {node_type : DagNodeType::Decl(my_variable_decl),
+                p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new()};
             //println!("{:?}\n", my_dag_start_node);
             my_dag.dag_vector.push(my_dag_start_node);
         }
         for my_if_block in &my_snippet.ifblocks.ifblock_vector {
             for my_statement in &my_if_block.statements.stmt_vector {
-                let mut my_dag_node = DagNode {node_type: DagNodeType::Stmt(&my_statement), p4_code : "",
-                     next_nodes: Vec::new(), prev_nodes: Vec::new()};
+                let dummyheader = P4Header{meta:String::new(), register:"", define:""};
+                let dummpyp4 = P4Code{p4_header:dummyheader, p4_ingress:"", p4_egress:""};
+                let mut my_dag_node = DagNode {node_type: DagNodeType::Stmt(&my_statement),
+                    p4_code : dummpyp4, next_nodes: Vec::new(), prev_nodes: Vec::new()};
                 my_dag.dag_vector.push(my_dag_node);
             }
         }
@@ -272,6 +291,62 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
     }
     dag_map
 }
+
+pub fn get_p4_header_trans<'a> (node_type : &DagNodeType<'a>) -> P4Header<'a> {
+    let mut my_p4_header : P4Header<'a> = P4Header {meta:String::new(), register:"", define:""};
+    match &node_type {
+        DagNodeType::Decl(my_decl) => {
+            // Based on the type, the variable decl should be either a register/meta.
+            match my_decl.var_type.type_qualifier {
+                TypeQualifier::Transient => {
+                    match my_decl.var_type.var_info {
+                        VarInfo::BitArray(bit_width, var_size) => {
+                            my_p4_header.meta = format!("{} : {}",my_decl.identifier.id_name, bit_width);
+                        }
+                        _ => { }
+                    }
+                }
+                TypeQualifier::Persistent => {
+
+                }
+                _ => {}
+            }
+            return my_p4_header;
+        }
+        _ => {
+            my_p4_header
+        }
+    }
+}
+
+
+pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>) -> Vec<&'a str> {
+    let my_p4_ingress : &str = "";
+    let my_p4_egress : &str = "";
+    let mut my_p4_body = Vec::new();
+
+    match &node_type {
+        DagNodeType::Cond(my_decl) => {
+            return my_p4_body;
+        }
+        DagNodeType::Stmt(my_decl) => {
+            return my_p4_body;
+        }
+        _ => {
+            return my_p4_body;
+        }
+    }
+}
+
+fn fill_p4code<'a> (my_dag : &mut Dag<'a>) {
+    for mut my_dag_node in &mut my_dag.dag_vector {
+        my_dag_node.p4_code.p4_header = get_p4_header_trans(&my_dag_node.node_type);
+        //my_dag_node.p4_code.p4_ingress, my_dag_node.p4_code.p4_egress
+        let pair = get_p4_body_trans(&my_dag_node.node_type);
+
+    }
+}
+
 
 
 pub fn trans_snippets<'a> (my_snippets : &Snippets<'a>) {
@@ -283,6 +358,7 @@ pub fn trans_snippets<'a> (my_snippets : &Snippets<'a>) {
         match my_option {
             Some(mut snippet_dag) => {
                 create_connections(&my_snippet, &mut snippet_dag);
+                fill_p4code(&mut snippet_dag);
                 println!("Snippet DAG: {:?}\n", snippet_dag);
             }
             None => {}
