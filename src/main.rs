@@ -1,5 +1,6 @@
 extern crate sluice;
-
+#[macro_use]
+extern crate serde_json;
 use sluice::lexer;
 use sluice::parser;
 use sluice::def_use::DefUse;
