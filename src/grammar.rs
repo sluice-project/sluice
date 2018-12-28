@@ -173,11 +173,17 @@ pub struct Expr<'a> {
   pub expr_right : ExprRight<'a>
 }
 
+// impl<'a> Clone for Expr<'a> {
+//     fn clone(&self) -> Expr<'a> {
+//         Expr{op1 : self.op1, expr_right : self.expr_right}
+//     }
+// }
 // Enum of binary operation types
 macro_rules! bin_op_type {
   ($($x:ident),*) => {
     #[derive(Debug)]
     #[derive(PartialEq)]
+    #[derive(Copy,Clone)]
     pub enum BinOpType {
       $($x,)*
     }
@@ -199,6 +205,14 @@ pub struct Identifier<'a> {
   pub id_name : &'a str,
 }
 
+impl<'a> Copy for Identifier<'a> {}
+
+impl<'a> Clone for Identifier<'a> {
+    fn clone(&self) -> Identifier<'a> {
+        Identifier {id_name : self.id_name.clone()}
+    }
+}
+
 impl<'a> Identifier<'a> {
   pub fn get_str(&self) -> &str{
     return self.id_name;
@@ -211,6 +225,14 @@ pub struct Value {
   pub value : u64
 }
 
+impl Copy for Value {}
+
+impl Clone for Value {
+    fn clone(&self) -> Value {
+        Value {value : self.value}
+    }
+}
+
 impl Value {
   pub fn get_string(&self) -> String {
     return self.value.to_string();
@@ -219,6 +241,7 @@ impl Value {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+//#[derive(Copy, Clone)]
 pub enum Operand<'a> {
   LValue(LValue<'a>),
   Value(Value),
@@ -255,6 +278,7 @@ impl<'a> Operand<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+//#[derive(Copy, Clone)]
 pub enum LValue<'a> {
   Scalar(Identifier<'a>),
   Array(Identifier<'a>, Box<Operand<'a>>),

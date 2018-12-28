@@ -192,5 +192,6 @@ pub fn gen_p4_code<'a> (snippet_name : &str, snippet_dag : &Dag<'a>){
     gen_p4_metadata(&snippet_dag, &mut p4_file);
     gen_p4_registers(&snippet_dag, &mut p4_file);
     gen_p4_parser(&snippet_dag, &mut p4_file);
+    //gen_p4_actions(&snippet_dag, &mut p4_file);
     gen_p4_body(&snippet_dag, &mut p4_file);
 }

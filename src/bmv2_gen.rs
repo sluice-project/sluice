@@ -78,16 +78,20 @@ pub fn get_p4_header_trans<'a> (node_type : &DagNodeType<'a>) -> P4Header {
 }
 
 
-pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>) -> Vec<&'a str> {
+// Ideally to get both ingress and egress parts of conversion [0] for ingress and [1] for egress and [2] for actions
+pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>) -> Vec<String> {
     let my_p4_ingress : String = String::new();
     let my_p4_egress : String = String::new();
+    let my_p4_commons : String = String::new();
     let mut my_p4_body = Vec::new();
 
     match &node_type {
         DagNodeType::Cond(my_decl) => {
+            // TODO : If Statements
             return my_p4_body;
         }
         DagNodeType::Stmt(my_decl) => {
+
             return my_p4_body;
         }
         _ => {
@@ -100,7 +104,7 @@ pub fn fill_p4code<'a> (my_dag : &mut Dag<'a>) {
     for mut my_dag_node in &mut my_dag.dag_vector {
         my_dag_node.p4_code.p4_header = get_p4_header_trans(&my_dag_node.node_type);
         //my_dag_node.p4_code.p4_ingress, my_dag_node.p4_code.p4_egress
-        let pair = get_p4_body_trans(&my_dag_node.node_type);
+        let my_code : Vec<String> = get_p4_body_trans(&my_dag_node.node_type);
 
     }
 }
@@ -191,5 +195,6 @@ pub fn gen_p4_code<'a> (snippet_name : &str, snippet_dag : &Dag<'a>){
     gen_p4_metadata(&snippet_dag, &mut p4_file);
     gen_p4_registers(&snippet_dag, &mut p4_file);
     gen_p4_parser(&snippet_dag, &mut p4_file);
+    //gen_p4_actions(&snippet_dag, &mut p4_file);
     gen_p4_body(&snippet_dag, &mut p4_file);
 }
