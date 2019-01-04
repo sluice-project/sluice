@@ -1,0 +1,18 @@
+global threshold : bit<32> = 111;
+
+packet n {}
+
+
+@ bmv2
+snippet fun(){
+  transient z : bit<1>;
+  transient r : bit<32>;
+  transient q : bit<32>;
+  transient m : bit<32>;
+  transient l : bit<32>;
+  q = 10;
+  r = 5;
+  l = r;
+  z = q > r;
+  m = z? 5 : 10;
+}

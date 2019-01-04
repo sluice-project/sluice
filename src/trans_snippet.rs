@@ -38,9 +38,10 @@ pub struct DagNode<'a> {
 #[derive(PartialEq)]
 pub struct P4Code {
     pub p4_header : P4Header,
-    pub p4_ingress : String,
-    pub p4_egress : String,
-    pub p4_commons : String
+    pub p4_control : String,
+    pub p4_actions : String,
+    pub p4_commons : String,
+
 }
 
 #[derive(Debug)]
@@ -59,6 +60,14 @@ pub struct Dag<'a> {
     pub snippet_id       : &'a str,
     pub device_id        : &'a str,
     pub dag_vector : Vec<DagNode<'a>>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct VarDecl<'a> {
+  pub id             : String,
+  pub var_info       : VarInfo<'a>,
+  pub type_qualifier : TypeQualifier,
 }
 
 pub fn get_identifiers<'a> (my_operand : &'a Operand<'a>) -> Vec<&'a str> {
@@ -518,7 +527,7 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
         for my_variable_decl in &my_snippet.variable_decls.decl_vector {
 
             let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-            let dummpyp4 = P4Code{p4_header: dummyheader, p4_ingress:String::new(), p4_egress:String::new(), p4_commons:String::new()};
+            let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
             let my_dag_start_node = DagNode {node_type : DagNodeType::Decl(my_variable_decl),
                 p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
             //println!("{:?}\n", my_dag_start_node);
@@ -527,7 +536,7 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
         for my_if_block in &my_snippet.ifblocks.ifblock_vector {
             for my_statement in &my_if_block.statements.stmt_vector {
                 let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                let dummpyp4 = P4Code{p4_header:dummyheader, p4_ingress:String::new(), p4_egress:String::new(), p4_commons:String::new()};
+                let dummpyp4 = P4Code{p4_header:dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
                 let mut my_dag_node = DagNode {node_type: DagNodeType::Stmt(&my_statement),
                     p4_code : dummpyp4, next_nodes: Vec::new(), prev_nodes: Vec::new(), pre_condition : None};
                 my_dag.dag_vector.push(my_dag_node);

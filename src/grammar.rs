@@ -126,6 +126,14 @@ pub enum TypeQualifier {
   Global,
 }
 
+impl Copy for TypeQualifier {}
+
+impl Clone for TypeQualifier {
+    fn clone(&self) -> TypeQualifier {
+        return *self;
+    }
+}
+
 
 #[derive(Debug)]
 #[derive(PartialEq)]

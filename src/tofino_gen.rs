@@ -160,16 +160,16 @@ fn gen_p4_body<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     let mut contents : String = String::new();
     contents = contents + &format!("control ingress {{\n");
     for my_dag_node in &my_dag.dag_vector {
-        if (my_dag_node.p4_code.p4_ingress.len() != 0) {
-            contents = contents + &my_dag_node.p4_code.p4_ingress;
+        if (my_dag_node.p4_code.p4_control.len() != 0) {
+            contents = contents + &my_dag_node.p4_code.p4_control;
         }
     }
     contents = contents + &format!("}}\n");
 
     contents = contents + &format!("control egress {{\n");
     for my_dag_node in &my_dag.dag_vector {
-        if (my_dag_node.p4_code.p4_ingress.len() != 0) {
-            contents = contents + &my_dag_node.p4_code.p4_egress;
+        if (my_dag_node.p4_code.p4_control.len() != 0) {
+            contents = contents + &my_dag_node.p4_code.p4_control;
         }
     }
     contents = contents + &format!("}}\n");
