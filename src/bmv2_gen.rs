@@ -234,17 +234,6 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl, my_rval1_decl 
         match my_lval_decl.type_qualifier {
             TypeQualifier::Transient => {
                 // Metadata
-                my_p4_control = my_p4_control + &format!("{}table{:?}();\n", TAB, table_count);
-                if new_action.load(Ordering::SeqCst) {
-                    my_p4_actions = my_p4_actions + &format!("action action{:?} () {{\n", action_count);
-                    my_p4_commons = my_p4_commons + &format!("table table{:?} () {{\n", table_count);
-                    my_p4_commons = my_p4_commons + &format!("{}actions {{\n", TAB);
-                    my_p4_commons = my_p4_commons + &format!("{}{}action{:?};\n", TAB, TAB, table_count);
-                    my_p4_commons = my_p4_commons + &format!("{}}}\n", TAB);
-                    my_p4_commons = my_p4_commons + &format!("}}\n");
-                    action_count.fetch_add(1, Ordering::SeqCst);
-                    table_count.fetch_add(1, Ordering::SeqCst);
-                }
                 let mut p4_func = "";
                 match bin_op_type {
                     BinOpType::BooleanAnd => {
@@ -273,15 +262,30 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl, my_rval1_decl 
                     }
                 }
                 if p4_func.len() != 0 {
+                    if new_action.load(Ordering::SeqCst) {
+                        my_p4_actions = my_p4_actions + &format!("action action{:?} () {{\n", action_count);
+                        my_p4_commons = my_p4_commons + &format!("table table{:?} () {{\n", table_count);
+                        my_p4_commons = my_p4_commons + &format!("{}actions {{\n", TAB);
+                        my_p4_commons = my_p4_commons + &format!("{}{}action{:?};\n", TAB, TAB, table_count);
+                        my_p4_commons = my_p4_commons + &format!("{}}}\n", TAB);
+                        my_p4_commons = my_p4_commons + &format!("}}\n");
+                        my_p4_control = my_p4_control + &format!("{}table{:?}();\n", TAB, table_count);
+                        action_count.fetch_add(1, Ordering::SeqCst);
+                        table_count.fetch_add(1, Ordering::SeqCst);
+                    }
                     my_p4_actions = my_p4_actions + &format!("{}{}({}.{},{}.{},{}.{});\n", TAB, p4_func,
                         META_HEADER, my_lval_decl.id, META_HEADER, my_rval1_decl.id, META_HEADER, my_rval1_decl.id);
+                    if new_action.load(Ordering::SeqCst) {
+                        my_p4_actions = my_p4_actions + &format!("}}\n");
+                    }
                 }
+
             }
             TypeQualifier::Persistent => {
 
             }
             _ => {
-
+                return my_p4_body;
             }
         }
         my_p4_body.push(my_p4_control);
@@ -293,13 +297,40 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl, my_rval1_decl 
         println!("{:?}\n", my_p4_body);
         return my_p4_body;
 }
+
+//Direction : true  for ref <op> val, false for val <op> ref
+pub fn handle_binop_refval_assignment<'a> (my_lval_decl : &VarDecl,
+    my_rval1_decl : &VarDecl,bin_op_type : BinOpType, val2 : u64, decl_map : &'a  HashMap<String, VarDecl>, ordering : bool) -> Vec<String> {
+    let mut my_p4_body = Vec::new();
+    let mut my_p4_control : String = String::new();
+    let mut my_p4_actions : String = String::new();
+    let mut my_p4_commons : String = String::new();
+
+
+    return my_p4_body;
+}
+
+
+pub fn handle_binop_vals_assignment<'a> (my_lval_decl : &VarDecl,
+    val1 : u64, bin_op_type : BinOpType, val2 : u64, decl_map : &'a  HashMap<String, VarDecl> ) -> Vec<String> {
+    let mut my_p4_body = Vec::new();
+    let mut my_p4_control : String = String::new();
+    let mut my_p4_actions : String = String::new();
+    let mut my_p4_commons : String = String::new();
+
+    return my_p4_body;
+}
+
 pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNodeType<'a>,
     decl_map : &'a  HashMap<String, VarDecl> ) -> Vec<String> {
         let mut my_p4_body = Vec::new();
         let mut my_lval_1 : String;
+        let empty_decl = VarDecl {id : String::new(), var_info : VarInfo::BitArray(0,0), type_qualifier: TypeQualifier::Input};
         let mut my_decl_1;
-        let mut my_decl_2;
+        let mut my_decl_2 = &empty_decl;
         let mut my_decl_3;
+        let mut is_val1 = false;
+        let mut val1 = 0;
 
         //println!("Handling Statement\n");
         //println!("{:?}\n", my_statement);
@@ -352,7 +383,10 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
             }
             Operand::Value(ref val) => {
                 // This is a value assignment . e.g a = 1 or
-                return handle_value_assignment(&my_decl_1, val.value);
+                is_val1 = true;
+                val1 = val.value;
+
+                //return handle_value_assignment(&my_decl_1, val.value);
             }
         }
 
@@ -381,19 +415,32 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                                 return my_p4_body;
                             }
                         }
-                        return handle_binop_refs_assignment(&my_decl_1, &my_decl_2, bin_op_type, &my_decl_3, decl_map);
+                        if is_val1 {
+                            return handle_binop_refval_assignment(&my_decl_1, &my_decl_2, bin_op_type, val1, decl_map, false);
+                        } else {
+                            return handle_binop_refs_assignment(&my_decl_1, &my_decl_2, bin_op_type, &my_decl_3, decl_map);
+                        }
                     }
-                    Operand::Value(ref val) => {
-
+                    Operand::Value(ref val2) => {
+                        if is_val1 {
+                            return handle_binop_vals_assignment(&my_decl_1, val1, bin_op_type, val2.value, decl_map);
+                        } else {
+                            return handle_binop_refval_assignment(&my_decl_1, &my_decl_2, bin_op_type, val2.value, decl_map, true);
+                        }
                     }
                 }
             }
             ExprRight::Cond(ref operand1, ref operand2) => {
                 // Operations like m = z?A:B;
+                // TODO
             }
             ExprRight::Empty() => {
-                // This is an assignment of meta/register/packet . e.g. a = b
-                return handle_ref_assignment(&my_decl_1, &my_decl_2);
+                // This is an assignment of meta/register/packet . e.g. a = b or a = 1
+                if is_val1 {
+                    return handle_value_assignment(&my_decl_1, val1);
+                } else {
+                    return handle_ref_assignment(&my_decl_1, &my_decl_2);
+                }
             }
         }
 
