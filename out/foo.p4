@@ -1,9 +1,5 @@
-#include <tofino/intrinsic_metadata.p4>
-#include <tofino/constants.p4>
-#include <tofino/primitives.p4>
-#include "tofino/stateful_alu_blackbox.p4"
-#include "tofino/lpf_blackbox.p4"
-#include "tofino/wred_blackbox.p4"
+#include <core.p4>
+#include <v1model.p4>
 header_type metadata_t { 
     fields {
         z : 2;
@@ -19,7 +15,16 @@ register m {
      width : 2; 
      instance_count : 3;
 }
+action action1 () {
+    modify_field(mdata.q, 5);
+}
+table table1 () {
+    actions {
+        action1;
+    }
+}
 control ingress {
+    table1();
 }
 control egress {
 }

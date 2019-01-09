@@ -10,9 +10,17 @@ snippet fun(){
   transient q : bit<32>;
   transient m : bit<32>;
   transient l : bit<32>;
+  transient i : bit<32>;
+  persistent reg1 : bit<32> = 0;
+  persistent reg2 : bit<32> = 0;
+  persistent reg3 : bit<32> = 0;
   q = 10;
   r = 5;
-  l = r;
+  l = reg3;
+  i = q + l;
+  reg1 = 11;
+
   z = q > r;
   m = z? 5 : 10;
+  reg2 = i + 5;
 }

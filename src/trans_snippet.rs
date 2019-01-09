@@ -624,38 +624,26 @@ mod tests {
 
   test_trans_success!(r"global threshold : bit<32> = 111;
                           packet n {}
-                          snippet foo() {
-                            input a : bit<2>;
-                            input b : bit<2>;
-                            input c : bit<2>;
-                            persistent p : bit<2> = 1;
-                            persistent m : bit<2>[3] = {1, 2, 3, };
-                            transient z : bit<2> = 3;
-                            transient h : bit<2>;
-                            transient q : bit<2>;
-                            q = 5;
-                            if (q > 5) {
-                              z[5] = 6;
-                              h = z[7];
-                              m = 5;
-                            }
-                          }
 
+                          @ bmv2
                           snippet fun(){
-                            input a : bit<1>;
-                            input b : bit<2>;
-                            input c : bit<2>;
-                            input x : bit<2>;
-                            input y : bit<2>;
-                            transient z : bit<2>;
-                            transient r : bit<2>;
-                            transient q : bit<2>;
-                            transient m : bit<2>;
-                            z = a + b;
-                            q = x;
-                            r = y;
-                            m = 5;
+                            transient z : bit<1>;
+                            transient r : bit<32>;
+                            transient q : bit<32>;
+                            transient m : bit<32>;
+                            transient l : bit<32>;
+                            transient i : bit<32>;
+                            persistent reg1 : bit<32> = 0;
+                            persistent reg2 : bit<32> = 0;
+
+                            q = 10;
+                            r = 5;
+                            l = r;
+                            i = q + l;
+                            reg1 = 11;
+                            reg2 = i;
+                            z = q > r;
+                            m = z? 5 : 10;
                           }
-                          (foo, fun)
                         ", trans_snippets, test_trans_snippets);
  }
