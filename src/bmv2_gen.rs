@@ -15,6 +15,10 @@ const TAB : &str = "    ";
 static action_count : AtomicUsize = AtomicUsize::new(1);
 static table_count : AtomicUsize = AtomicUsize::new(1);
 static operation_count : AtomicUsize = AtomicUsize::new(1);
+static temp_count : AtomicUsize = AtomicUsize::new(1);
+static eq_table_count : AtomicUsize = AtomicUsize::new(1);
+static neq_table_count : AtomicUsize = AtomicUsize::new(1);
+
 static new_action : AtomicBool = AtomicBool::new(true);
 
 pub fn handle_transient_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
@@ -230,6 +234,126 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64, 
     }
 }
 
+pub fn get_new_eq_table<'a> (my_temp_decl : &String, my_lval_decl : &VarDecl, eq : bool) -> (String, String, String) {
+    let mut my_p4_control : String = String::new();
+    let mut my_p4_actions : String = String::new();
+    let mut my_p4_commons : String = String::new();
+
+    let mut tablename : String;
+    let mut actionname : String;
+    match eq {
+        true => {
+            tablename = format!("eqtable{:?}", eq_table_count).to_string();
+            actionname = String::from("eqaction");
+            eq_table_count.fetch_add(1, Ordering::SeqCst);
+        }
+        false => {
+            tablename = format!("neqtable{:?}", neq_table_count).to_string();
+            actionname = String::from("neqaction");
+            neq_table_count.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+    my_p4_control = my_p4_control + &format!("{}apply({:?});\n", TAB, tablename);
+
+    my_p4_actions = my_p4_actions + &format!("action {:?}0 () {{\n", actionname);
+    my_p4_actions = my_p4_actions + &format!("{}modify_field({:?},0); \n}}\n", TAB, my_lval_decl.id);
+    my_p4_actions = my_p4_actions + &format!("action {:?}1 () {{\n", actionname);
+    my_p4_actions = my_p4_actions + &format!("{}modify_field({:?},1); \n}}\n", TAB, my_lval_decl.id);
+
+    my_p4_commons = my_p4_commons + &format!("table {:?} {{\n", tablename);
+    my_p4_commons = my_p4_commons + &format!("{}reads {{\n", TAB);
+    my_p4_commons = my_p4_commons + &format!("{}{}{:?}\n{} : exact;\n}}\n", TAB, TAB, my_temp_decl, TAB);
+
+    my_p4_commons = my_p4_commons + &format!("{}actions {{\n", TAB);
+    my_p4_commons = my_p4_commons + &format!("{}{}{:?}0;\n", TAB, TAB, actionname);
+    my_p4_commons = my_p4_commons + &format!("{}{}{:?}1;\n", TAB, TAB, actionname);
+    my_p4_commons = my_p4_commons + &format!("{}}}\n", TAB);
+    my_p4_commons = my_p4_commons + &format!("}}\n");
+    eq_table_count.fetch_add(1, Ordering::SeqCst);
+
+    return (my_p4_control, my_p4_actions, my_p4_commons);
+}
+
+pub fn handle_condition_refs<'a> (bin_op_type : BinOpType, my_lval_decl : &VarDecl, prefix1 : &str,
+ my_rval1_decl : &VarDecl, prefix2 : &str, my_rval2_decl : &VarDecl) -> (String, String, String) {
+     let mut my_p4_control : String = String::new();
+     let mut my_p4_actions : String = String::new();
+     let mut my_p4_commons : String = String::new();
+     let my_temp_decl_id = &format!("{}.temp{:?}", META_HEADER, temp_count);
+     action_count.fetch_add(1, Ordering::SeqCst);
+
+     let (a, b, c) = get_new_action();
+     my_p4_control = my_p4_control + &a;
+     my_p4_actions = my_p4_actions + &b;
+     my_p4_commons = my_p4_commons + &c;
+
+     my_p4_actions = my_p4_actions + &format!("{}subtract({}.{},", TAB, META_HEADER, my_temp_decl_id);
+     match prefix1.len() {
+         0 => {
+             my_p4_actions = my_p4_actions + &format!("{},", my_rval1_decl.id);
+         }
+         _ => {
+             my_p4_actions = my_p4_actions + &format!("{}.{},",prefix1, my_rval1_decl.id);
+         }
+     }
+     match prefix2.len() {
+         0 => {
+             my_p4_actions = my_p4_actions + &format!("{});\n", my_rval2_decl.id);
+         }
+         _ => {
+             my_p4_actions = my_p4_actions + &format!("{}.{});\n",prefix2, my_rval2_decl.id);
+         }
+     }
+     my_p4_actions = my_p4_actions + &format!("}}\n");
+     match bin_op_type {
+         BinOpType::Equal => {
+             let (a, b, c) = get_new_eq_table(my_temp_decl_id, my_lval_decl, true);
+         }
+         BinOpType::NotEqual => {
+             let (a, b, c) = get_new_eq_table(my_temp_decl_id, my_lval_decl, true);
+         }
+         _ => {}
+     }
+     return (my_p4_control, my_p4_actions, my_p4_commons);
+}
+
+pub fn handle_condition_refval<'a> (bin_op_type : BinOpType, my_lval_decl : &VarDecl, prefix1 : &str,
+ my_rval1_decl : &VarDecl, val : u64) -> (String, String, String) {
+     let mut my_p4_control : String = String::new();
+     let mut my_p4_actions : String = String::new();
+     let mut my_p4_commons : String = String::new();
+     let my_temp_decl_id = &format!("{}.temp{:?}", META_HEADER, temp_count);
+     action_count.fetch_add(1, Ordering::SeqCst);
+
+     let (a, b, c) = get_new_action();
+     my_p4_control = my_p4_control + &a;
+     my_p4_actions = my_p4_actions + &b;
+     my_p4_commons = my_p4_commons + &c;
+
+     my_p4_actions = my_p4_actions + &format!("{}subtract({}.{},", TAB, META_HEADER, my_temp_decl_id);
+     match prefix1.len() {
+         0 => {
+             my_p4_actions = my_p4_actions + &format!("{},", my_rval1_decl.id);
+         }
+         _ => {
+             my_p4_actions = my_p4_actions + &format!("{}.{},",prefix1, my_rval1_decl.id);
+         }
+     }
+     my_p4_actions = my_p4_actions + &format!("{});\n", val);
+
+     my_p4_actions = my_p4_actions + &format!("}}\n");
+     match bin_op_type {
+         BinOpType::Equal => {
+             let (a, b, c) = get_new_eq_table(my_temp_decl_id, my_lval_decl, true);
+         }
+         BinOpType::NotEqual => {
+             let (a, b, c) = get_new_eq_table(my_temp_decl_id, my_lval_decl, true);
+         }
+         _ => {}
+     }
+     return (my_p4_control, my_p4_actions, my_p4_commons);
+}
+
 pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index : u64, my_rval1_decl : &VarDecl, my_rval1_index : u64,
     bin_op_type : BinOpType, my_rval2_decl : &VarDecl, my_rval2_index : u64, decl_map : &'a  HashMap<String, VarDecl> ) -> (String, String, String) {
         let mut my_p4_control : String = String::new();
@@ -293,9 +417,27 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index
             }
             BinOpType::Modulo => {
                 p4_func = "";
+            } // Conditions from here
+            BinOpType::Equal => {
+                p4_func = "";
+                // Eg. a == b
+                let (a,b,c) = handle_condition_refs(bin_op_type, my_lval_decl, prefix1, my_rval1_decl, prefix2, my_rval2_decl);
+                my_p4_control = my_p4_control + &a;
+                my_p4_actions = my_p4_actions + &b;
+                my_p4_commons = my_p4_commons + &c;
+            }
+            BinOpType::NotEqual => {
+                p4_func = "";
+                // Eg. a != b
+                let (a,b,c) = handle_condition_refs(bin_op_type, my_lval_decl, prefix1, my_rval1_decl, prefix2, my_rval2_decl);
+                my_p4_control = my_p4_control + &a;
+                my_p4_actions = my_p4_actions + &b;
+                my_p4_commons = my_p4_commons + &c;
             }
             _ => {
-                //Something like z = a < b. This could be a pre-condition. will be handled separately.
+                p4_func = "";
+                // Eg. a >= b
+                panic!("Comparison on references not supported.\n");
             }
         }
         match my_lval_decl.type_qualifier {
@@ -422,8 +564,26 @@ pub fn handle_binop_refval_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_ind
         BinOpType::Modulo => {
             p4_func = "";
         }
+        BinOpType::Equal => {
+            p4_func = "";
+            // Eg. a == b
+            let (a,b,c) = handle_condition_refval(bin_op_type, my_lval_decl, prefix1, my_rval_decl, val2);
+            my_p4_control = my_p4_control + &a;
+            my_p4_actions = my_p4_actions + &b;
+            my_p4_commons = my_p4_commons + &c;
+        }
+        BinOpType::NotEqual => {
+            p4_func = "";
+            // Eg. a != b
+            let (a,b,c) = handle_condition_refval(bin_op_type, my_lval_decl, prefix1, my_rval_decl, val2);
+            my_p4_control = my_p4_control + &a;
+            my_p4_actions = my_p4_actions + &b;
+            my_p4_commons = my_p4_commons + &c;
+        }
         _ => {
-            //Something like z = a < b. This could be a pre-condition. will be handled separately.
+            p4_func = "";
+            // Eg. a >= b
+            panic!("Comparison on references not supported.\n");
         }
     }
     match my_lval_decl.type_qualifier {
@@ -587,13 +747,81 @@ pub fn handle_binop_vals_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index 
     return (my_p4_control, my_p4_actions, my_p4_commons);
 }
 
+pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : u64, operand : &Operand<'a>, decl_map : &'a  HashMap<String, VarDecl>) -> (String, String, String) {
+    let mut my_rval_decl;
+    let mut my_rval_index = 0;
+    match operand {
+        Operand::LValue(ref lval) => {
+            match lval {
+                LValue::Scalar(ref my_id) => {
+                    my_rval_decl = get_decl(my_id.id_name, decl_map);
+                }
+                LValue::Array(ref my_id, ref box_index_op) => {
+                    my_rval_decl = get_decl(my_id.id_name, decl_map);
+                }
+                _ => {
+                    panic!("Unsuppoted operation!");
+                }
+            }
+            return handle_ref_assignment(&my_lval_decl, my_lval_index, &my_rval_decl, my_rval_index);
+        }
+        Operand::Value(ref rval_val) => {
+            return handle_value_assignment(&my_lval_decl, my_lval_index, rval_val.value);
+        }
+    }
+}
+
 pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64,
- pre_condition : &Option<Statement<'a>>, operand1 : &Operand<'a>, operand2 : &Operand<'a>) -> (String, String, String) {
+ my_rval_decl : &VarDecl<'a>, operand1 : &Operand<'a>, operand2 : &Operand<'a>, decl_map : &'a  HashMap<String, VarDecl>  ) -> (String, String, String) {
     let mut my_p4_control : String = String::new();
     let mut my_p4_actions : String = String::new();
     let mut my_p4_commons : String = String::new();
 
+
+    my_p4_control = my_p4_control + &format!("{}apply(table{:?});\n", TAB, table_count);
+    let action1 = &format!("action{:?}", action_count);
+    action_count.fetch_add(1, Ordering::SeqCst);
+    let action2 = &format!("action{:?}", action_count);
+    action_count.fetch_add(1, Ordering::SeqCst);
+    new_action.store(false, Ordering::SeqCst);
+    my_p4_actions = my_p4_actions + &format!("action {} () {{\n", action1.to_string());
+    let (a,b,c) = handle_action_operand(my_lval_decl, my_lval_index, operand1, decl_map);
+    my_p4_control = my_p4_control + &a;
+    my_p4_actions = my_p4_actions + &b;
+    my_p4_commons = my_p4_commons + &c;
+    my_p4_actions = my_p4_actions + &format!("}}\n");
+    my_p4_actions = my_p4_actions + &format!("action {} () {{\n", action2.to_string());
+    let (a,b,c) = handle_action_operand(my_lval_decl, my_lval_index, operand2, decl_map);
+    my_p4_control = my_p4_control + &a;
+    my_p4_actions = my_p4_actions + &b;
+    my_p4_commons = my_p4_commons + &c;
+    my_p4_actions = my_p4_actions + &format!("}}\n");
+    my_p4_commons = my_p4_commons + &format!("table table{:?} {{\n", table_count);
+    my_p4_commons = my_p4_commons + &format!("{}reads {{\n", TAB);
+    my_p4_commons = my_p4_commons + &format!("{}{}{}.{} : exact;\n{}}}\n", TAB, TAB, META_HEADER, my_rval_decl.id, TAB);
+
+    my_p4_commons = my_p4_commons + &format!("{}actions {{\n", TAB);
+    my_p4_commons = my_p4_commons + &format!("{}{}{:?};\n", TAB, TAB, action1);
+    my_p4_commons = my_p4_commons + &format!("{}{}{:?};\n", TAB, TAB, action2);
+    my_p4_commons = my_p4_commons + &format!("{}}}\n", TAB);
+    my_p4_commons = my_p4_commons + &format!("}}\n");
+    table_count.fetch_add(1, Ordering::SeqCst);
+    new_action.store(true, Ordering::SeqCst);
+
     return (my_p4_control, my_p4_actions, my_p4_commons);
+}
+
+pub fn get_decl<'a> (my_id : &str,  decl_map : &'a  HashMap<String, VarDecl>) -> &'a VarDecl<'a> {
+    let my_lval : String = String::from(my_id);
+    let my_decl_option = decl_map.get(&my_lval);
+    match my_decl_option {
+        Some(my_decl) => {
+            return my_decl;
+        }
+        None => {
+            panic!("Error: {} not declared?\n",my_lval);
+        }
+    }
 }
 
 pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNodeType<'a>,
@@ -724,7 +952,11 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
             ExprRight::Cond(ref operand1, ref operand2) => {
                 // Operations like m = z?A:B;
                 // TODO
-                return handle_ternary_assignment(&my_lval_decl, my_lval_index, pre_condition, operand1, operand2);
+                if !is_rval1_val {
+                    return handle_ternary_assignment(&my_lval_decl, my_lval_index, my_rval_decl1, operand1, operand2, decl_map);
+                } else {
+                    panic!("Static ternary not supported for now.\n");
+                }
             }
             ExprRight::Empty() => {
                 // This is an assignment of meta/register/packet . e.g. a = b or a = 1
