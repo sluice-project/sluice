@@ -449,68 +449,6 @@ pub fn create_connections<'a> (my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a
                     None => {}
                 }
             }
-
-            // for (_my_id_1,p_index_1) in my_indices_1 {
-            //     let my_dag_option = my_dag.dag_vector.get_mut(i);
-            //     match my_dag_option {
-            //         Some(mut my_dag_node) => {
-            //             if !&my_dag_node.prev_nodes.contains(&p_index_1) {
-            //                 my_dag_node.prev_nodes.push(p_index_1);
-            //                 //println!("My_dag_node: {:?}", my_dag_node);
-            //             }
-            //         }
-            //         None => {}
-            //     }
-            // }
-            // for (_my_id_2,p_index_2) in my_indices_2 {
-            //     let my_dag_option = my_dag.dag_vector.get_mut(i);
-            //     match my_dag_option {
-            //         Some(mut my_dag_node) => {
-            //             if !&my_dag_node.prev_nodes.contains(&p_index_2) {
-            //                 my_dag_node.prev_nodes.push(p_index_2);
-            //                 //println!("My_dag_node: {:?}", my_dag_node);
-            //             }
-            //         }
-            //         None => {}
-            //     }
-            // }
-            // for (_my_id_3,p_index_3) in my_indices_3 {
-            //     let my_dag_option = my_dag.dag_vector.get_mut(i);
-            //     match my_dag_option {
-            //         Some(mut my_dag_node) => {
-            //             if !&my_dag_node.prev_nodes.contains(&p_index_3) {
-            //                 my_dag_node.prev_nodes.push(p_index_3);
-            //                 //println!("My_dag_node: {:?}", my_dag_node);
-            //             }
-            //         }
-            //         None => {}
-            //     }
-            // }
-            // for (_my_id_4,p_index_4) in my_indices_4 {
-            //     let my_dag_option = my_dag.dag_vector.get_mut(i);
-            //     match my_dag_option {
-            //         Some(mut my_dag_node) => {
-            //             if !&my_dag_node.prev_nodes.contains(&p_index_4) {
-            //                 my_dag_node.prev_nodes.push(p_index_4);
-            //                 //println!("My_dag_node: {:?}", my_dag_node);
-            //             }
-            //         }
-            //         None => {}
-            //     }
-            // }
-            // for (_my_id_5,p_index_5) in my_indices_5 {
-            //     let my_dag_option = my_dag.dag_vector.get_mut(i);
-            //     match my_dag_option {
-            //         Some(mut my_dag_node) => {
-            //             if !&my_dag_node.prev_nodes.contains(&p_index_5) {
-            //                 my_dag_node.prev_nodes.push(p_index_5);
-            //                 //println!("My_dag_node: {:?}", my_dag_node);
-            //             }
-            //         }
-            //         None => {}
-            //     }
-            // }
-            //println!("decl map: {:?}\n ", decl_map);
             i = i + 1;
         }
     }
@@ -616,7 +554,6 @@ mod tests {
         let token_iter = &mut tokens.iter().peekable();
         let parse_tree = parse_prog(token_iter);
         $trans_snippet_routine(&parse_tree.snippets);
-
         assert!(token_iter.peek().is_none(), "token iterator is not empty");
       }
     )
