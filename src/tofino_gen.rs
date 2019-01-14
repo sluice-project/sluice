@@ -10,6 +10,9 @@ use trans_snippet::*;
 const META_HEADER : &str = "mdata";
 const TAB : &str = "    ";
 
+#[allow(unused_must_use)]
+#[allow(dead_code)]
+#[allow(unused_imports)]
 pub fn handle_transient_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
     let mut my_p4_header : P4Header = P4Header {meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
     match my_decl.var_type.var_info {

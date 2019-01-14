@@ -559,9 +559,17 @@ mod tests {
     )
   }
 
+  test_trans_success!(r"  @ bmv2
+                          snippet fun(){
+                            transient z : bit<1>;
+                            transient y : bit<1>;
+                            z = q > 10;
+                            y = p < 20;
+                            m = z? 5 : 10;
+                          }
+                        ", trans_snippets, test_trans_snippets);
   test_trans_success!(r"global threshold : bit<32> = 111;
                           packet n {}
-
                           @ bmv2
                           snippet fun(){
                             transient z : bit<1>;
@@ -583,4 +591,6 @@ mod tests {
                             m = z? 5 : 10;
                           }
                         ", trans_snippets, test_trans_snippets);
+
+
  }
