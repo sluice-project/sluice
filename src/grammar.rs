@@ -24,6 +24,7 @@ pub struct Packets<'a> {
 #[derive(PartialEq)]
 pub struct Packet<'a> {
   pub packet_id       : Identifier<'a>,
+  pub packet_base     : Identifier<'a>,
   pub packet_fields   : PacketFields<'a>,
 }
 

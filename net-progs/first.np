@@ -1,6 +1,8 @@
 global threshold : bit<32> = 111;
 
-packet n {}
+packet n: eth {
+  new_one : bit<32>;
+}
 
 
 @ bmv2
@@ -19,7 +21,8 @@ snippet fun(){
   l = reg3;
   i = q + l;
   reg1 = 11;
-  z = q == 10;
+  z = q >= 10;
+
   m = z? 5 : 10;
   reg2 = i + 5;
 }

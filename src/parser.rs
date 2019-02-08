@@ -69,10 +69,13 @@ fn parse_packets<'a>(token_iter : &mut TokenIterator<'a>) -> Packets<'a> {
 fn parse_packet<'a>(token_iter : &mut TokenIterator<'a>) -> Packet<'a> {
   match_token(token_iter, Token::Packet, "Packet definition must start with the keyword packet");
   let packet_id = parse_identifier(token_iter);
+  match_token(token_iter, Token::Colon, "Packet must contain a derivation from eth/ipv4/tcp/udp");
+  let packet_base = parse_identifier(token_iter);
+
   match_token(token_iter, Token::BraceLeft, "Packet body must begin with a left brace.");
   let packet_fields    = parse_packet_fields(token_iter);
   match_token(token_iter, Token::BraceRight, "Packet body must end with a right brace.");
-  return Packet {packet_id, packet_fields};
+  return Packet {packet_id, packet_base, packet_fields};
 }
 
 

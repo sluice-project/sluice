@@ -1,4 +1,3 @@
-
 use grammar::*;
 use std::collections::HashMap;
 use std::fs::File;
@@ -1170,7 +1169,7 @@ pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Opt
     }
 }
 
-pub fn fill_p4code<'a> (my_dag :  &mut Dag<'a>) {
+pub fn fill_p4code<'a> (my_packets : &Packets<'a>, my_dag :  &mut Dag<'a>) {
     let mut decl_map : HashMap<String, VarDecl>= HashMap::new();
     for mut my_dag_node in &mut my_dag.dag_vector {
         my_dag_node.p4_code.p4_header = get_p4_header_trans(&my_dag_node.node_type);
@@ -1220,12 +1219,101 @@ fn gen_p4_globals<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     p4_file.write(contents.as_bytes());
 }
 
-fn gen_p4_headers<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
+fn gen_p4_headers<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &mut File) {
     // TODO
     let mut contents : String = String::new();
-    contents = contents + &format!("header_type ethernet_t {{\n{}fields {{\n{}{}dstAddr : 48;\n{}{}srcAddr : 48;\n{}{}etherType : 16;\n{}}}\n}}\n",
-    TAB,TAB,TAB,TAB,TAB,TAB,TAB,TAB);
+    contents = contents + "#define ETHERTYPE_IPV4 0x0800\n";
+    contents = contents + "#define IP_PROTOCOLS_TCP 6\n";
+    contents = contents + "#define IP_PROTOCOLS_UDP 17\n";
+    contents = contents + "#define IP_PROTOCOLS_TCP 6\n";
+
+
+    contents = contents + &format!("header_type ethernet_t {{
+    fields {{
+        dstAddr : 48;
+        srcAddr : 48;
+        etherType : 16;
+    }}\n}}\n");
+    contents = contents + &format!("header_type ipv4_t {{
+    fields {{
+        version : 4;
+        ihl : 4;
+        diffserv : 8;
+        totalLen : 16;
+        identification : 16;
+        flags : 3;
+        fragOffset : 13;
+        ttl : 8;
+        protocol : 8;
+        hdrChecksum : 16;
+        srcAddr : 32;
+        dstAddr: 32;
+    }}\n}}\n");
+
+    contents = contents + &format!("header_type tcp_t {{
+    fields {{
+        srcPort : 16;
+        dstPort : 16;
+        seqNo : 32;
+        ackNo : 32;
+        dataOffset : 4;
+        res : 4;
+        flags : 8;
+        window : 16;
+        checksum : 16;
+        urgentPtr : 16;
+    }}\n}}\n");
+    contents = contents + &format!("header_type udp_t {{
+    fields {{
+        srcPort : 16;
+        dstPort : 16;
+        len : 16;
+        checksum : 16;
+    }}\n}}\n");
+    //
+    for my_packet in &my_packets.packet_vector {
+        if my_packet.packet_fields.field_vector.len() != 0 {
+            contents = contents + &format!("header_type {}_t {{\n", my_packet.packet_id.id_name);
+            contents = contents + &format!("{}fields {{\n", TAB);
+        }
+        for my_field in &my_packet.packet_fields.field_vector {
+            match my_field.var_type.var_info {
+                VarInfo::BitArray(size, no) => {
+                    contents = contents + &format!("{}{}{} : {};\n", TAB, TAB, my_field.identifier.id_name, size)
+                }
+                _ => {
+                    println!("Un-supported entry in packet field!");
+                }
+            }
+        }
+        if my_packet.packet_fields.field_vector.len() != 0 {
+            contents = contents + &format!("{}}}\n}}\n", TAB);
+            contents = contents + &format!("header {}_t {};\n", my_field.identifier.id_name);
+        }
+    }
+
+    // let my_option  = my_packets.packet_vector.get(0);
+    // match my_option {
+    //     Some(my_packet) => {
+    //         for my_field in &my_packet.packet_fields.field_vector {
+    //
+    //         }
+            // match my_field.var_type.var_info {
+            //     VarInfo::BitArray(size, no) => {
+            //          contents = contents + &format!("{} : {};\n", my_field.identifier.id_name, size)
+            //     }
+            //     _ => {
+            //         println!("Un-supported entry in packet field!");
+            //     }
+            // }
+    //     }
+    //     _ => {}
+    // }
     contents = contents + &format!("header ethernet_t ethernet;\n");
+    contents = contents + &format!("header ipv4_t ipv4;\n");
+    contents = contents + &format!("header tcp_t tcp;\n");
+    contents = contents + &format!("header udp_t udp;\n");
+
     p4_file.write(contents.as_bytes());
 }
 
@@ -1258,11 +1346,44 @@ fn gen_p4_registers<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     p4_file.write(contents.as_bytes());
 }
 
-fn gen_p4_parser<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
+fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &mut File) {
     // TODO
     let mut contents : String = String::new();
-    contents = contents + &format!("parser start {{\n{}return parse_ethernet;\n }}\nparser parse_ethernet {{\n{}extract(ethernet);\n{}return ingress;\n}}\n",
-     TAB, TAB, TAB);
+    let my_option  = my_packets.packet_vector.get(0);
+    let mut parse_my_packet : String = String::new();
+    match my_option {
+        Some(my_packet) => {
+            println!("Header base : {}\n", my_packet.packet_base.id_name);
+            match my_packet.packet_base.id_name {
+                "eth" => {
+                    parse_my_packet = parse_my_packet + &format!("default : parse_{};", my_packet.packet_id.id_name);
+                }
+                _ => {}
+            }
+        }
+        _ => {}
+    }
+    contents = contents + &format!("parser start {{
+    return parse_ethernet;\n}}\nparser parse_ethernet {{
+        return select(latest.etherType) {{
+            ETHERTYPE_IPV4 : parse_ipv4;\n");
+    if parse_my_packet.len() == 0 {
+        contents = contents + &format!("        default: ingress;\n");
+    } else {
+        contents = contents + &format!("        {}\n", parse_my_packet);
+    }
+
+    contents = contents + &format!("}}\n}}\nparser parse_ipv4 {{
+    extract(ipv4);
+    return select(latest.protocol) {{
+        IP_PROTOCOLS_TCP : parse_tcp;
+        IP_PROTOCOLS_UDP : parse_udp;
+        default: ingress;
+    }}\n}}\nparser parse_tcp {{
+    extract(tcp);
+    return ingress;\n}}\nparser parse_udp {{
+    extract(udp);
+    return ingress;\n}}\n");
     p4_file.write(contents.as_bytes());
 }
 
@@ -1300,7 +1421,7 @@ fn gen_p4_body<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     p4_file.write(contents.as_bytes());
 }
 
-pub fn gen_p4_code<'a> (snippet_name : &str, snippet_dag : &Dag<'a>){
+pub fn gen_p4_code<'a> (snippet_name : &str , my_packets : &Packets<'a>, snippet_dag : &Dag<'a>){
     let p4_filename : String = format!("out/{}.p4", snippet_name);
     let path = Path::new(p4_filename.as_str());
     let display  = path.display();
@@ -1312,10 +1433,10 @@ pub fn gen_p4_code<'a> (snippet_name : &str, snippet_dag : &Dag<'a>){
     };
     gen_p4_includes(&mut p4_file);
     gen_p4_globals(&snippet_dag, &mut p4_file);
-    gen_p4_headers(&snippet_dag, &mut p4_file);
+    gen_p4_headers(&snippet_dag, my_packets, &mut p4_file);
+    gen_p4_parser(&snippet_dag, my_packets, &mut p4_file);
     gen_p4_metadata(&snippet_dag, &mut p4_file);
     gen_p4_registers(&snippet_dag, &mut p4_file);
-    gen_p4_parser(&snippet_dag, &mut p4_file);
     //gen_p4_actions(&snippet_dag, &mut p4_file);
     gen_p4_body(&snippet_dag, &mut p4_file);
 }

@@ -500,18 +500,18 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
 //     println!("{}", reg.render("tpl_1", &json!({"name": "foo"})).unwrap());
 // }
 
-pub fn gen_p4_code<'a> (dag_map : HashMap<&'a str, Dag<'a>>){
+pub fn gen_p4_code<'a> (my_packets : &Packets<'a>, dag_map : HashMap<&'a str, Dag<'a>>){
     for (snippet_name, snippet_dag) in dag_map {
         let device_type : String = String::from(snippet_dag.device_id);
         if snippet_dag.device_id.contains("bmv2") {
-            bmv2_gen::gen_p4_code(&snippet_name, &snippet_dag);
+            bmv2_gen::gen_p4_code(&snippet_name, my_packets, &snippet_dag);
         } else if snippet_dag.device_id.contains("tofino"){
-            tofino_gen::gen_p4_code(&snippet_name, &snippet_dag);
+            tofino_gen::gen_p4_code(&snippet_name, my_packets,  &snippet_dag);
         }
     }
 }
 
-pub fn trans_snippets<'a> (my_snippets : &Snippets<'a>) {
+pub fn trans_snippets<'a> (my_packets : &Packets<'a>, my_snippets : &Snippets<'a>) {
     // TODO : Deal with mutability of my_dag
     let mut dag_map = create_dag_nodes(&my_snippets);
     //println!("Dag Map: {:?}\n", dag_map);
@@ -523,9 +523,9 @@ pub fn trans_snippets<'a> (my_snippets : &Snippets<'a>) {
            Some(mut snippet_dag) => {
                 create_connections(&my_snippet, &mut snippet_dag);
                 if device_type.contains("bmv2") {
-                    bmv2_gen::fill_p4code(&mut snippet_dag);
+                    bmv2_gen::fill_p4code(&my_packets, &mut snippet_dag);
                 } else if device_type.contains("tofino") {
-                    tofino_gen::fill_p4code(&mut snippet_dag);
+                    tofino_gen::fill_p4code(&my_packets, &mut snippet_dag);
                 }
                 println!("Snippet DAG: {:?}\n", snippet_dag);
 
@@ -533,7 +533,7 @@ pub fn trans_snippets<'a> (my_snippets : &Snippets<'a>) {
            None => {}
         }
     }
-    gen_p4_code(dag_map);
+    gen_p4_code(&my_packets, dag_map);
     //tofino_gen::gen_p4_code(dag_map);
 
     //init_handlebars(dag_map);
