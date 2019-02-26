@@ -71,14 +71,25 @@ fn parse_packet<'a>(token_iter : &mut TokenIterator<'a>) -> Packet<'a> {
   let packet_id = parse_identifier(token_iter);
   match_token(token_iter, Token::Colon, "Packet must contain a derivation from eth/ipv4/tcp/udp");
   let packet_base = parse_identifier(token_iter);
+  match_token(token_iter, Token::ParenLeft, "Packet decl must begin with left parathesis");
+  let packet_parser_condition = parse_packet_parser_condition(token_iter);
+  match_token(token_iter, Token::ParenRight, "Packet decl must end with left parathesis");
 
   match_token(token_iter, Token::BraceLeft, "Packet body must begin with a left brace.");
   let packet_fields    = parse_packet_fields(token_iter);
   match_token(token_iter, Token::BraceRight, "Packet body must end with a right brace.");
-  return Packet {packet_id, packet_base, packet_fields};
+  return Packet {packet_id, packet_base, packet_fields, packet_parser_condition};
 }
 
-
+fn parse_packet_parser_condition<'a>(token_iter : &mut TokenIterator<'a>) -> PacketParserCondition<'a> {
+    if !token_iter.peek().is_some() {
+      return PacketParserCondition::Empty();
+    }
+    let field_id = parse_identifier(token_iter);
+    match_token(token_iter, Token::Colon, "Parse condition must contain colon");
+    let field_value = parse_value(token_iter);
+    return PacketParserCondition::ParserCondition(field_id, field_value);
+}
 fn parse_packet_fields<'a>(token_iter : &mut TokenIterator<'a>) -> PacketFields<'a> {
   // Helper function to determine if the keyword starts a declaration
   let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false, } };
@@ -277,9 +288,11 @@ fn parse_type_annotation<'a>(token_iter : &mut TokenIterator<'a>, type_qualifier
 
   match_token(token_iter, Token::LessThan, "Need angular brackets to specify width of bit vector.");
   let bit_width = parse_value(token_iter).value;
-  if bit_width > 32 {
-    panic!("Bit width can be at most 32.");
-  } else if bit_width < 1 {
+  // Commented by Pravein, Header bit could be more than 32-bit
+  // if bit_width > 32 {
+  //   panic!("Bit width can be at most 32.");
+  // } else if
+  if bit_width < 1 {
     panic!("Bit width must be at least 1.");
   }
   match_token(token_iter, Token::GreaterThan, "Need angular brackets to specify width of bit vector.");

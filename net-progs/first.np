@@ -1,6 +1,6 @@
 global threshold : bit<32> = 111;
 
-packet n: eth {
+packet n: ethernet(etherType:1234) {
   new_one : bit<32>;
 }
 

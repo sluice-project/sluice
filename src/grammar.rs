@@ -26,6 +26,7 @@ pub struct Packet<'a> {
   pub packet_id       : Identifier<'a>,
   pub packet_base     : Identifier<'a>,
   pub packet_fields   : PacketFields<'a>,
+  pub packet_parser_condition : PacketParserCondition<'a>,
 }
 
 #[derive(Debug)]
@@ -39,6 +40,13 @@ pub struct PacketFields<'a> {
 pub struct PacketField<'a> {
   pub identifier     : Identifier<'a>,
   pub var_type       : VarType<'a>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub enum PacketParserCondition<'a> {
+  ParserCondition(Identifier<'a>, Value),
+  Empty()
 }
 
 #[derive(Debug)]

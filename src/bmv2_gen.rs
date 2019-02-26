@@ -1288,7 +1288,7 @@ fn gen_p4_headers<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &
         }
         if my_packet.packet_fields.field_vector.len() != 0 {
             contents = contents + &format!("{}}}\n}}\n", TAB);
-            contents = contents + &format!("header {}_t {};\n", my_field.identifier.id_name);
+            contents = contents + &format!("header {}_t {};\n", my_packet.packet_id.id_name, my_packet.packet_id.id_name);
         }
     }
 
@@ -1347,18 +1347,59 @@ fn gen_p4_registers<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
 }
 
 fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &mut File) {
-    // TODO
     let mut contents : String = String::new();
     let my_option  = my_packets.packet_vector.get(0);
-    let mut parse_my_packet : String = String::new();
+    let mut parse_my_ethpacket : String = String::new();
+    let mut parse_my_ipv4packet : String = String::new();
+    let mut parse_my_udppacket : String = String::new();
+    let mut parse_my_tcppacket : String = String::new();
+
     match my_option {
         Some(my_packet) => {
             println!("Header base : {}\n", my_packet.packet_base.id_name);
-            match my_packet.packet_base.id_name {
-                "eth" => {
-                    parse_my_packet = parse_my_packet + &format!("default : parse_{};", my_packet.packet_id.id_name);
+            let my_base = my_packet.packet_base.id_name;
+            let my_condition = &my_packet.packet_parser_condition;
+            match my_base {
+                "ethernet" => {
+                    match my_condition {
+                        PacketParserCondition::ParserCondition(id, value) => {
+                            match id.id_name {
+                                "etherType" => {
+                                    parse_my_ethpacket = parse_my_ethpacket + &format!("{:?} : parse_{};", value, my_packet.packet_id.id_name);
+                                }
+                                _ => {
+                                    panic!("Conditional Parsing over Ethernet supported for only etherType\n");
+                                }
+                            }
+                        }
+                        Empty => {
+                            panic!("Conditional Parsing necessary on Ethernet Header\n");
+                        }
+                    }
                 }
-                _ => {}
+                "ipv4" => {
+                    match my_condition {
+                        PacketParserCondition::ParserCondition(id, value) => {
+                            match id.id_name {
+                                "protocol" => {
+                                    parse_my_ipv4packet = parse_my_ipv4packet + &format!("{:?} : parse_{};", value, my_packet.packet_id.id_name);
+                                }
+                                _ => {
+                                    panic!("Conditional Parsing over IPV4 supported for only protocol type\n");
+                                }
+                            }
+                        }
+                        Empty => {
+                            panic!("Conditional Parsing necessary on IPV4 Header\n");
+                        }
+                    }
+                }
+                "udp" => {
+                    parse_my_udppacket = parse_my_udppacket + &format!("parse_{};", my_packet.packet_id.id_name);
+                }
+                _ => {
+                    panic!("Need to have a derivative!\n");
+                }
             }
         }
         _ => {}
@@ -1367,10 +1408,10 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
     return parse_ethernet;\n}}\nparser parse_ethernet {{
         return select(latest.etherType) {{
             ETHERTYPE_IPV4 : parse_ipv4;\n");
-    if parse_my_packet.len() == 0 {
+    if parse_my_ethpacket.len() == 0 {
         contents = contents + &format!("        default: ingress;\n");
     } else {
-        contents = contents + &format!("        {}\n", parse_my_packet);
+        contents = contents + &format!("        {}\n", parse_my_ethpacket);
     }
 
     contents = contents + &format!("}}\n}}\nparser parse_ipv4 {{

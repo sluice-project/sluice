@@ -1,0 +1,12 @@
+packet dptp_pkt:ethernet(etherType:1234){
+  magic : bit<16>;
+  command : bit<8>;
+  reference_ts_hi : bit<32>;
+  reference_ts_lo : bit<32>;
+  era_ts_hi : bit<32>;
+  current_rate : bit<32>;
+  igmacts : bit<48>;
+  igts : bit<48>;
+  egts : bit<48>;
+  capturets : bit<48>;
+}
