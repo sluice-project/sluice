@@ -27,9 +27,12 @@ fn main() {
   let token_iter = & mut tokens.iter().peekable();
   let parse_tree = parser::parse_prog(token_iter);
   assert!(token_iter.peek().is_none(), "Token iterator is not empty.");
+  let mut def_use = DefUse::new();
+  // need to fix def_use. Conditional statements in if/else that modify the same lvalue cause error
+  // example error from first.np:  'Redefining variable l that is already defined in fun.'
+  
+  // def_use.visit_prog(&parse_tree);
   println!("Parse tree: {:?}\n", parse_tree);
   trans_snippets(&parse_tree.packets,&parse_tree.snippets);//, &mut my_dag);
   // Check that identifiers are defined before use
-  let mut def_use = DefUse::new();
-  def_use.visit_prog(&parse_tree);
 }
