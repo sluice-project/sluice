@@ -1175,7 +1175,7 @@ pub fn fill_p4code<'a> (my_packets : &Packets<'a>, my_dag :  &mut Dag<'a>) {
         my_dag_node.p4_code.p4_header = get_p4_header_trans(&my_dag_node.node_type);
         // Insert nodes to decl_map
         match my_dag_node.node_type {
-            DagNodeType::Decl(my_decl) => {
+            DagNodeType::Decl(ref my_decl) => {
                 let mut my_vardecl : VarDecl;
                 let my_id : String = String::from(my_decl.identifier.id_name);
                 let mut my_varinfo : VarInfo<'a>;
