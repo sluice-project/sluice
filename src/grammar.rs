@@ -1,5 +1,6 @@
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Prog<'a> {
   pub globals : Globals<'a>,
   pub packets : Packets<'a>,
@@ -10,33 +11,37 @@ pub struct Prog<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Globals<'a> {
   pub global_vector : Vec<VariableDecl<'a>>,
 }
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Packets<'a> {
   pub packet_vector : Vec<Packet<'a>>,
 }
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Packet<'a> {
   pub packet_id       : Identifier<'a>,
   pub packet_base     : Identifier<'a>,
   pub packet_fields   : PacketFields<'a>,
-  pub packet_parser_condition : PacketParserCondition<'a>,
 }
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct PacketFields<'a> {
   pub field_vector : Vec<PacketField<'a>>
 }
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct PacketField<'a> {
   pub identifier     : Identifier<'a>,
   pub var_type       : VarType<'a>
@@ -44,19 +49,14 @@ pub struct PacketField<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
-pub enum PacketParserCondition<'a> {
-  ParserCondition(Identifier<'a>, Value),
-  Empty()
-}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Snippets<'a> {
   pub snippet_vector : Vec<Snippet<'a>>
 }
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Snippet<'a> {
   pub snippet_id       : Identifier<'a>,
   pub device_id        : Identifier<'a>,
@@ -66,12 +66,14 @@ pub struct Snippet<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct IfBlocks<'a> {
   pub ifblock_vector : Vec<IfBlock<'a>>
 }
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct IfBlock<'a> {
   pub id         : u64,
   pub condtype   : u64,
@@ -81,6 +83,7 @@ pub struct IfBlock<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Condition<'a> {
 //    pub lvalue : LValue<'a>,
     pub expr   : Expr<'a>,
@@ -89,12 +92,14 @@ pub struct Condition<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Connections<'a> {
   pub connection_vector : Vec<Connection<'a>>
 }
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Connection<'a> {
   pub from_snippet   : Identifier<'a>,
   pub to_snippet     : Identifier<'a>,
@@ -103,6 +108,7 @@ pub struct Connection<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct VariablePair<'a> {
   pub from_var : Identifier<'a>,
   pub to_var   : Identifier<'a>
@@ -110,12 +116,14 @@ pub struct VariablePair<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct VariableDecls<'a> {
   pub decl_vector : Vec<VariableDecl<'a>>
 }
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct VariableDecl<'a> {
   pub identifier     : Identifier<'a>,
   pub initial_values : Vec<Value>,
@@ -146,6 +154,7 @@ impl Clone for TypeQualifier {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct VarType<'a> {
   pub var_info : VarInfo<'a>,
   pub type_qualifier : TypeQualifier,
@@ -154,6 +163,7 @@ pub struct VarType<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct BitArray {
   pub bit_width : u64,
   pub var_size  : u64,
@@ -162,6 +172,7 @@ pub struct BitArray {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub enum VarInfo<'a> {
   BitArray(u64, u64),
   Packet(Identifier<'a>),
@@ -171,12 +182,14 @@ pub enum VarInfo<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Statements<'a> {
   pub stmt_vector : Vec<Statement<'a>>
 }
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Statement<'a> {
   pub lvalue : LValue<'a>,
   pub expr   : Expr<'a>
@@ -185,6 +198,7 @@ pub struct Statement<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Expr<'a> {
   pub op1         : Operand<'a>,
   pub expr_right : ExprRight<'a>
@@ -210,6 +224,7 @@ bin_op_type!(BooleanAnd, BooleanOr, Plus, Minus, Mul, Div, Modulo, Equal, NotEqu
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub enum ExprRight<'a> {
   BinOp(BinOpType, Operand<'a>),
   Cond(Operand<'a>, Operand<'a>),
@@ -258,6 +273,7 @@ impl Value {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 //#[derive(Copy, Clone)]
 pub enum Operand<'a> {
   LValue(LValue<'a>),
@@ -295,6 +311,7 @@ impl<'a> Operand<'a> {
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 //#[derive(Copy, Clone)]
 pub enum LValue<'a> {
   Scalar(Identifier<'a>),
@@ -315,15 +332,18 @@ impl<'a> LValue<'a> {
     }
   }
 
+
+  // convert lvalues to string vec (eg. a to [a] and b[3] to [b,3])
   pub fn get_string_vec(&self) -> Vec<&str> {
+      
+      let mut my_vec = Vec::new();
+
       match self {
         &LValue::Scalar(ref id) => {
-            let mut my_vec = Vec::new();
             my_vec.push(id.get_str());
             return my_vec;
         },
         &LValue::Array(ref id, ref address) => {
-            let mut my_vec = Vec::new();
             my_vec.push(id.get_str());
             match **address {
                 Operand::LValue(ref lval) => {
@@ -337,7 +357,6 @@ impl<'a> LValue<'a> {
             return my_vec;
         },
         &LValue::Field(ref id, ref field_name) => {
-            let mut my_vec = Vec::new();
             my_vec.push(id.get_str());
             my_vec.push(&field_name.get_str());
             return my_vec;
