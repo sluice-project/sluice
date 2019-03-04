@@ -1,0 +1,35 @@
+global threshold : bit<32> = 111;
+
+packet n: eth {
+  new_one : bit<32>;
+}
+
+
+@ bmv2
+snippet first1() {
+  transient z : bit<1>;
+  transient r : bit<32>;
+  transient q : bit<32>;
+  transient m : bit<32>;
+  transient l : bit<32>;
+  transient i : bit<32>;
+  persistent reg1 : bit<32> = 0;
+  persistent reg2 : bit<32> = 0;
+  persistent reg3 : bit<32> = 0;
+  transient if_block_tmp_2 : bit<1>; 
+  transient tmp_0_if_2 : bit<32>;
+  transient tmp_1_if_3 : bit<32>;
+  q = 10;
+  r = 5;
+  if_block__tmp_2 = q > r;  
+  l = if_block_tmp_2 ? reg3 : l;
+  tmp_0_if_2 = q + l;
+  i = if_block_tmp_2 ? tmp_0_if_2 : i;
+  l = if_block_tmp_2 ? l : reg1;
+  tmp_1_if_3 = q - l;
+  i = if_block_tmp_2 ? i : tmp_1_if_3;
+  reg1 = 11;
+  z = q >= 10;
+  m = z ? q : r;
+  reg2 = i + 5;
+}
