@@ -21,7 +21,7 @@ snippet first1() {
   transient tmp_1_if_3 : bit<32>;
   q = 10;
   r = 5;
-  if_block__tmp_2 = q > r;  
+  if_block_tmp_2 = q > r;  
   l = if_block_tmp_2 ? reg3 : l;
   tmp_0_if_2 = q + l;
   i = if_block_tmp_2 ? tmp_0_if_2 : i;

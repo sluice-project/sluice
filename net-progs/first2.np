@@ -5,6 +5,7 @@ packet n: ethernet(etherType:1234) {
 }
 
 
+
 @ bmv2
 snippet first2(){
   transient z : bit<1>;

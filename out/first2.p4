@@ -93,9 +93,9 @@ header_type metadata_t {
         reg1 : 32;
         reg2 : 32;
         reg3 : 32;
-        if_block_tmp2 : 1;
+        if_block_tmp_2 : 1;
         tmp_0_if_2 : 32;
-        tmp_1_if_2 : 32;
+        tmp_1_if_3 : 32;
     }
 }
 metadata metadata_t mdata;
@@ -118,10 +118,10 @@ action action2 () {
     modify_field(mdata.r, 5);
 }
 action action3 () {
-    modify_field(mdata.if_block_tmp2, 1); 
+    modify_field(mdata.if_block_tmp_2, 1); 
 }
 action action4 () {
-    modify_field(mdata.if_block_tmp2, 0); 
+    modify_field(mdata.if_block_tmp_2, 0); 
 }
 action action5 () {
 action action7 () {
@@ -142,24 +142,39 @@ action action10 () {
     modify_field(mdata.i, mdata.i);
 }
 action action11 () {
-    subtract(mdata.tmp_1_if_2,mdata.q,mdata.l);
+    modify_field(mdata.l, mdata.l);
 }
 action action12 () {
-    register_write(reg1, 11, 0);
-}
 action action13 () {
-    modify_field(mdata.z, 1); 
+    register_read(mdata.reg1, reg1, 0);
+}
+    modify_field(mdata.l, mdata.reg1);
 }
 action action14 () {
-    modify_field(mdata.z, 0); 
+    subtract(mdata.tmp_1_if_3,mdata.q,mdata.l);
 }
 action action15 () {
-    modify_field(mdata.m, mdata.q);
+    modify_field(mdata.i, mdata.i);
 }
 action action16 () {
-    modify_field(mdata.m, mdata.r);
+    modify_field(mdata.i, mdata.tmp_1_if_3);
 }
 action action17 () {
+    register_write(reg1, 11, 0);
+}
+action action18 () {
+    modify_field(mdata.z, 1); 
+}
+action action19 () {
+    modify_field(mdata.z, 0); 
+}
+action action20 () {
+    modify_field(mdata.m, mdata.q);
+}
+action action21 () {
+    modify_field(mdata.m, mdata.r);
+}
+action action22 () {
     add(mdata.reg2,mdata.i,5);
     register_write(reg2, 0, mdata.reg2);
 }
@@ -190,7 +205,7 @@ table table5 {
 }
 table table6 {
     reads {
-        mdata.if_block_tmp2 : exact;
+        mdata.if_block_tmp_2 : exact;
     }
     actions {
         action5;
@@ -204,7 +219,7 @@ table table7 {
 }
 table table8 {
     reads {
-        mdata.if_block_tmp2 : exact;
+        mdata.if_block_tmp_2 : exact;
     }
     actions {
         action9;
@@ -213,36 +228,59 @@ table table8 {
 }
 table table9 {
     actions {
-        action11;
+        action13;
     }
 }
 table table10 {
+    reads {
+        mdata.if_block_tmp_2 : exact;
+    }
     actions {
+        action11;
         action12;
     }
 }
 table table11 {
     actions {
-        action13;
-    }
-}
-table table12 {
-    actions {
         action14;
     }
 }
-table table13 {
+table table12 {
     reads {
-        mdata.z : exact;
+        mdata.if_block_tmp_2 : exact;
     }
     actions {
         action15;
         action16;
     }
 }
-table table14 {
+table table13 {
     actions {
         action17;
+    }
+}
+table table14 {
+    actions {
+        action18;
+    }
+}
+table table15 {
+    actions {
+        action19;
+    }
+}
+table table16 {
+    reads {
+        mdata.z : exact;
+    }
+    actions {
+        action20;
+        action21;
+    }
+}
+table table17 {
+    actions {
+        action22;
     }
 }
 control ingress {
@@ -258,14 +296,17 @@ control ingress {
     apply(table7);
     apply(table8);
     apply(table9);
-    apply(table10);
-    if (mdata.q >= 10) {
-        apply(table11);
-    } else {
-        apply(table12);
-    }
+    apply(table9);
+    apply(table11);
+    apply(table12);
     apply(table13);
-    apply(table14);
+    if (mdata.q >= 10) {
+        apply(table14);
+    } else {
+        apply(table15);
+    }
+    apply(table16);
+    apply(table17);
 }
 control egress {
 }
