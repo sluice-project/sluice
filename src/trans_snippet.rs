@@ -111,6 +111,16 @@ pub fn get_indices_lval<'a> (decl_map : &HashMap<String, usize>, lval : LValue<'
     return my_indices;
 }
 
+// Getting pre-cond var from decl map leads to wrong condition statement since only the latest dag-vector index
+// of the pre-cond variable will be returned i.e. if the pre-cond var has been used after its initial
+// assignment, then the wrong pre-condition is populated in the current node being processed...
+// May have to store a separate map solely for pre-cond var assignments like "if_block_tmp_2 = q > r"
+// for example:                             if_block_tmp_2 is used in the 2nd line so the pre-cond index        
+//   if_block_tmp_2 = q > r;                for the current node (i = if_block_tmp_2 ? ...) will be this 2nd
+//   l = if_block_tmp_2 ? reg3 : l;         line index instead of the 1st line index (1st line indicates the
+//   tmp_0_if_2 = q + l;                    actual assignment of the pre-cond variable)
+//   i = if_block_tmp_2 ? tmp_0_if_2 : i;
+
 pub fn get_pre_condition<'a> (decl_map : &'a HashMap<String, usize>, lval : LValue<'a>) -> Option<&'a usize> {
     let _my_indices : HashMap<&'a str, usize> = HashMap::new();
 
@@ -230,8 +240,6 @@ pub fn check_clone_condition<'a> (my_pre_condition_dag_option : Option<&'a DagNo
 // TODO : Make it modular. Curently baffled by how to pass mutable reference of Dag again
 // TODO : add support for packet fields here and in code gen file
 pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a>) {
-    
-    println!("dag vector : {:?}\n\n", my_dag.dag_vector.get(14));
     // A HashMap to keep track of declarations.
     let mut decl_map : HashMap<String, usize>= HashMap::new();
     
@@ -276,6 +284,10 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'
                         my_indices_5 = get_indices_op(&decl_map, op_false.clone());
                         // Fill in the pre-condition statement
                         let my_option = get_pre_condition_op(&decl_map, my_statement.expr.op1.clone());
+                        // println!("node : {:?}\n\n", dagnode);
+                        // println!("pre-cond : {:?}\n\n", my_option);
+                        // println!("decl_map : {:?}\n\n", decl_map);
+
                         match my_option {
                             Some(vector) => {
                                 pre_condition_vector = *vector;
@@ -354,34 +366,37 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'
                     }
                     decl_map.insert(my_id_5, i);
                 }
+
                 // let condition_statement_lvalue : LValue;
                 // let condition_statement_op1 : Operand;
                 // let condition_statement_exprright : ExprRight;
                 // let condition_statement_expr : Expr;
 
+                // // TODO :  Currently unable to handle use of same pre-condition var
+                // // in multiple statements...see example above
                 // {
                 //     // Populate pre-condition if any,
                 //     if pre_condition_found == true {
+                //         println!("current node {:?}\n\n\n", dagnode);
                 //         let my_pre_condition_dag_option = my_dag.dag_vector.get(pre_condition_vector);
-                //         println!("HEEYYYY {:?}\n", my_pre_condition_dag_option);
+                //         println!("Condition {:?}\n\n\n", my_pre_condition_dag_option);
                 //         //pre_condition = check_clone_condition(my_pre_condition_dag_option);
                 //         match my_pre_condition_dag_option {
                 //             Some (my_pre_condition_dag) => {
-                //                 println!("Condition : {:?}\n",my_pre_condition_dag);
                 //                 //let condition_statement_op :
                 //                 match &my_pre_condition_dag.node_type {
                 //                     DagNodeType::Stmt(my_statement) => {
                 //                         match my_statement.lvalue {
                 //                             LValue::Scalar(ref my_identifier) => {
                 //                                 condition_statement_lvalue = LValue::Scalar(Identifier{id_name : my_identifier.id_name});
-                //                                 println!("{:?}\n", condition_statement_lvalue);
+                //                                 // println!("{:?}\n", condition_statement_lvalue);
                 //                                 match my_statement.expr.op1 {
                 //                                     Operand::LValue(ref lval) => {
                 //                                         match lval {
                 //                                             LValue::Scalar(ref my_identifier2) => {
                 //                                                 let my_lval = LValue::Scalar(Identifier{id_name : my_identifier2.id_name});
                 //                                                 println!("{:?}\n", my_lval);
-                //                                                 println!("HELLO {:?}",my_statement.expr.expr_right );
+                //                                                 // println!("HELLO {:?}",my_statement.expr.expr_right );
                 //                                                 match my_statement.expr.expr_right {
                 //                                                     ExprRight::BinOp(bin_op_type, ref operand) => {
                 //                                                         match operand {
@@ -531,7 +546,7 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
                     {
                         // need to change variable names so they are more unique and do not conflict with
                         // variable names in other snippets i.e. include snippet_id, device_id in if_var string
-                        let if_var =  format!("if_block_tmp{}", my_if_block.id);
+                        let if_var =  format!("if_block_tmp_{}", my_if_block.id);
                         let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
                         let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
                         let if_bit_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(if_var.into_boxed_str()) }, 
@@ -547,7 +562,7 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
 
                     // adds node for statement of setting if_bit to condition expression
                     {
-                        let if_var =  format!("if_block_tmp{}", my_if_block.id);
+                        let if_var =  format!("if_block_tmp_{}", my_if_block.id);
                         let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
                         let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};                            
                         let if_bit_stmt = Statement { 
@@ -627,13 +642,13 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
                                                 Operand::LValue(LValue::Scalar(Identifier{id_name: ""})))}; 
 
                             if my_if_block.condtype == 1 {
-                                let if_var =  format!("if_block_tmp{}", my_if_block.id);
+                                let if_var =  format!("if_block_tmp_{}", my_if_block.id);
                                 tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
                                                 expr_right: ExprRight::Cond(Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(tmp_var.into_boxed_str()),})), 
                                                 Operand::LValue(my_statement.lvalue.clone())) }; 
 
                             } else if my_if_block.condtype == 2 {
-                                let if_var =  format!("if_block_tmp{}", my_if_block.id - 1); // for else condition, use the previous
+                                let if_var =  format!("if_block_tmp_{}", my_if_block.id - 1); // for else condition, use the previous
                                                                                              // if block's condition bit var to set
                                                                                              // else statements
                                 // For else statement, switch op1 and op2 in cond 
@@ -665,13 +680,13 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
                                             Operand::LValue(LValue::Scalar(Identifier{id_name: ""})))}; 
 
                         if my_if_block.condtype == 1 {
-                            let if_var =  format!("if_block_tmp{}", my_if_block.id);
+                            let if_var =  format!("if_block_tmp_{}", my_if_block.id);
                             tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
                                             expr_right: ExprRight::Cond(my_statement.expr.op1.clone(), 
                                             Operand::LValue(my_statement.lvalue.clone())) }; 
 
                         } else if my_if_block.condtype == 2 {
-                            let if_var =  format!("if_block_tmp{}", my_if_block.id - 1); 
+                            let if_var =  format!("if_block_tmp_{}", my_if_block.id - 1); 
                             tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
                                             expr_right: ExprRight::Cond(Operand::LValue(my_statement.lvalue.clone()), 
                                              my_statement.expr.op1.clone()) }; 
