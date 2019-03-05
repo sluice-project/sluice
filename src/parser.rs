@@ -327,10 +327,10 @@ fn parse_ifblocks<'a>(token_iter : &mut TokenIterator<'a>, ifid :&mut u64) -> If
       let ifblock = parse_ifblock(token_iter, *ifid, blocktype);
       ifblock_vector.push(ifblock);
     } else if is_elseblock(*token_iter.peek().unwrap()) {
+      *ifid += 1;
       blocktype = 2;
       let ifblock = parse_ifblock(token_iter, *ifid, blocktype);
       ifblock_vector.push(ifblock);
-      *ifid += 1;
     } else if is_ident(*token_iter.peek().unwrap()) {
       *ifid += 1;
       blocktype = 3; // this 'if block' type serves as generic statements like q = 5
