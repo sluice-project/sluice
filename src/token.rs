@@ -51,6 +51,8 @@ pub enum Token<'a> {
   Assign,
 
   // Additions for Network Model
+  Import,
+  Device,
   Packet,
   Global,
   If,

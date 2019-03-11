@@ -1,0 +1,20 @@
+packet ethernet {
+  ethDstAddr : bit<48>;
+  ethSrcAddr : bit<48>;
+  ethType : bit<16>;
+}
+
+packet ipv4 {
+  ipv4Version : bit<4>;
+  ipv4Ihl : bit<4>;
+  ipv4Diffserv : bit<8>;
+  ipv4TotalLen : bit<16>;
+  ipv4Identification : bit<16>;
+  ipv4Flags : bit<3>;
+  ipv4FragOffset : bit<13>;
+  ipv4Ttl : bit<8>;
+  ipv4Protocol : bit<8>;
+  ipv4HdrChecksum : bit<16>;
+  ipv4SrcAddr : bit<32>;
+  ipv4DstAddr: bit<32>;
+}

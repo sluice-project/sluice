@@ -1,0 +1,7 @@
+device psa {
+  timestamp_mac : bit<48>;
+  timestamp_ingress : bit<48>;
+  timestamp_egress : bit<48>;
+  enqueue_bits : bit<32>;
+  dequeue_bits : bit<32>;
+}

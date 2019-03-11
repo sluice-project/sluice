@@ -1,3 +1,5 @@
+import device psa;
+
 packet dptp_pkt:ethernet(etherType:1234){
   magic : bit<16>;
   command : bit<8>;
@@ -9,4 +11,12 @@ packet dptp_pkt:ethernet(etherType:1234){
   igts : bit<48>;
   egts : bit<48>;
   capturets : bit<48>;
+}
+
+
+@ bmv2
+snippet dptp_switch(){
+  transient z : bit<1>;
+  z =1;
+  psa.a = 1;
 }

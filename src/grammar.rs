@@ -2,12 +2,42 @@
 #[derive(PartialEq)]
 #[derive(Clone)]
 pub struct Prog<'a> {
+  pub imports : Imports<'a>,
   pub globals : Globals<'a>,
   pub packets : Packets<'a>,
   pub snippets : Snippets<'a>,
   pub connections : Connections<'a>
 }
 
+#[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
+pub struct Device<'a> {
+  pub device_id : Identifier<'a>,
+  pub device_fields : DeviceFields<'a>,
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
+pub struct DeviceFields<'a> {
+  pub field_vector : Vec<DeviceField<'a>>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
+pub struct DeviceField<'a> {
+  pub identifier     : Identifier<'a>,
+  pub var_type       : VarType<'a>
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
+pub struct Imports<'a> {
+  pub import_vector : Vec<Import<'a>>,
+}
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -31,6 +61,14 @@ pub struct Packet<'a> {
   pub packet_base     : Identifier<'a>,
   pub packet_fields   : PacketFields<'a>,
   pub packet_parser_condition : PacketParserCondition<'a>,
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
+pub struct Import<'a> {
+  pub import_type     : Identifier<'a>,
+  pub import_id       : Identifier<'a>,
 }
 
 #[derive(Debug)]
@@ -346,7 +384,7 @@ impl<'a> LValue<'a> {
 
   // convert lvalues to string vec (eg. a to [a] and b[3] to [b,3])
   pub fn get_string_vec(&self) -> Vec<&str> {
-      
+
       let mut my_vec = Vec::new();
 
       match self {

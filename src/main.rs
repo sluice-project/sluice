@@ -30,9 +30,9 @@ fn main() {
   let mut def_use = DefUse::new();
   // need to fix def_use. Conditional statements in if/else that modify the same lvalue cause error
   // example error from first.np:  'Redefining variable l that is already defined in fun.'
-  
+
   // def_use.visit_prog(&parse_tree);
   println!("Parse tree: {:?}\n", parse_tree);
-  trans_snippets(&parse_tree.packets,&parse_tree.snippets);//, &mut my_dag);
+  trans_snippets(&parse_tree.imports, &parse_tree.packets, &parse_tree.snippets);//, &mut my_dag);
   // Check that identifiers are defined before use
 }
