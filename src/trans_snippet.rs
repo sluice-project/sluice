@@ -499,7 +499,8 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'
     }
 }
 
-// This func creates the snippet dag and uses Domino's branch removal step to convert if/else statements to single line condtypes
+// This func creates the snippet dag and uses Domino's branch removal step to convert if/else 
+// statements to single line ternary conditionals
 // TODO need to handle packet field nodes
 pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag<'a>>  {
 
@@ -543,6 +544,7 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
 
                 if my_if_block.condtype == 1 {
 
+                    // adds node for if_bit declaration
                     {
                         // need to change variable names so they are more unique and do not conflict with
                         // variable names in other snippets i.e. include snippet_id, device_id in if_var string
@@ -753,7 +755,7 @@ pub fn trans_snippets<'a> (my_packets : &Packets<'a>, my_snippets : &Snippets<'a
         match my_option {
            Some(mut snippet_dag) => {
                 create_connections(&my_snippet, &mut snippet_dag);
-                // println!("Snippet DAG: {:?}\n", snippet_dag);
+                println!("Snippet DAG with connections: {:?}\n", snippet_dag);
                 if device_type.contains("bmv2") {
                     bmv2_gen::fill_p4code(&my_packets, &mut snippet_dag);
                 } else if device_type.contains("tofino") {
@@ -823,6 +825,60 @@ mod tests {
                             m = z? 5 : 10;
                           }
                         ", trans_snippets, test_trans_snippets2);
-
+  test_trans_success!(r"  @ bmv2
+                          snippet fun(){
+                              transient z : bit<1>;
+                              transient r : bit<32>;
+                              transient q : bit<32>;
+                              transient m : bit<32>;
+                              transient l : bit<32>;
+                              transient i : bit<32>;
+                              persistent reg1 : bit<32> = 0;
+                              persistent reg2 : bit<32> = 0;
+                              persistent reg3 : bit<32> = 0;
+                              q = 10;
+                              r = 5;
+                              if(q > r) {
+                                l = reg3;
+                                i = q + l;
+                              } else {
+                                l = reg1;
+                                i = q - l;
+                              }
+                              reg1 = 11;
+                              z = q >= 10;
+                              m = z ? q : r;
+                              reg2 = i + 5;
+                            }
+                        ", trans_snippets, test_trans_snippets_if_else);
+    test_trans_success!(r"  @ bmv2
+                            snippet first1() {
+                              transient z : bit<1>;
+                              transient r : bit<32>;
+                              transient q : bit<32>;
+                              transient m : bit<32>;
+                              transient l : bit<32>;
+                              transient i : bit<32>;
+                              persistent reg1 : bit<32> = 0;
+                              persistent reg2 : bit<32> = 0;
+                              persistent reg3 : bit<32> = 0;
+                              transient if_block_tmp_2 : bit<1>; 
+                              transient tmp_0_if_2 : bit<32>;
+                              transient tmp_1_if_3 : bit<32>;
+                              q = 10;
+                              r = 5;
+                              if_block_tmp_2 = q > r;  
+                              l = if_block_tmp_2 ? reg3 : l;
+                              tmp_0_if_2 = q + l;
+                              i = if_block_tmp_2 ? tmp_0_if_2 : i;
+                              l = if_block_tmp_2 ? l : reg1;
+                              tmp_1_if_3 = q - l;
+                              i = if_block_tmp_2 ? i : tmp_1_if_3;
+                              reg1 = 11;
+                              z = q >= 10;
+                              m = z ? q : r;
+                              reg2 = i + 5;
+                            }
+                        ", trans_snippets, test_trans_snippets_ternary_cond);
 
  }
