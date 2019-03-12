@@ -998,7 +998,8 @@ pub fn get_decl<'a> (my_id : &str,  decl_map : &'a  HashMap<String, VarDecl>) ->
 }
 
 pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNodeType<'a>,
-    pre_condition : &Option<Statement<'a>>, decl_map : &'a  HashMap<String, VarDecl> ) -> (String, String, String, String) {
+    pre_condition : &Option<Statement<'a>>, decl_map : &'a  HashMap<String, VarDecl>,
+      import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>) -> (String, String, String, String) {
         let mut my_p4_control : String = String::new();
         let mut my_p4_actions : String = String::new();
         let mut my_p4_commons : String = String::new();
@@ -1045,6 +1046,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                 }
                 my_lval_index = 0;
             }
+
             _ => {
                 return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
             }
@@ -1148,7 +1150,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
 
 // Ideally to get both ingress and egress parts of conversion [0] for ingress and [1] for egress and [2] for actions
 pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Option<Statement<'a>>,
- decl_map : &'a HashMap<String, VarDecl>) -> (String, String, String, String) {
+ decl_map : &'a HashMap<String, VarDecl>, import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>) -> (String, String, String, String) {
     let mut my_p4_control : String = String::new();
     let mut my_p4_actions : String = String::new();
     let mut my_p4_commons : String = String::new();
@@ -1161,7 +1163,7 @@ pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Opt
             //return (my_p4_control, my_p4_actions, my_p4_commons);
         }
         DagNodeType::Stmt(my_statement) => {
-            return handle_statement(&my_statement, node_type, pre_condition, decl_map);
+            return handle_statement(&my_statement, node_type, pre_condition, decl_map, import_map, packet_map);
         }
         _ => {
             return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
@@ -1169,7 +1171,7 @@ pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Opt
     }
 }
 
-pub fn fill_p4code<'a> (my_packets : &Packets<'a>, my_dag :  &mut Dag<'a>) {
+pub fn fill_p4code<'a> (import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>, my_dag :  &mut Dag<'a>) {
     let mut decl_map : HashMap<String, VarDecl>= HashMap::new();
     for mut my_dag_node in &mut my_dag.dag_vector {
         my_dag_node.p4_code.p4_header = get_p4_header_trans(&my_dag_node.node_type);
@@ -1196,7 +1198,7 @@ pub fn fill_p4code<'a> (my_packets : &Packets<'a>, my_dag :  &mut Dag<'a>) {
         println!("declMap : {:?}\n", decl_map);
     }
     for mut my_dag_node in &mut my_dag.dag_vector {
-        let (a, b, c, d) = get_p4_body_trans(&my_dag_node.node_type, &my_dag_node.pre_condition, &decl_map);
+        let (a, b, c, d) = get_p4_body_trans(&my_dag_node.node_type, &my_dag_node.pre_condition, &decl_map, import_map, packet_map);
         println!("meta header : {}\n", d);
         my_dag_node.p4_code.p4_control = a;
         my_dag_node.p4_code.p4_actions = b;
@@ -1362,10 +1364,10 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
             match my_base {
                 "ethernet" => {
                     match my_condition {
-                        PacketParserCondition::ParserCondition(id, value) => {
+                        PacketParserCondition::ParserCondition(id, val) => {
                             match id.id_name {
                                 "etherType" => {
-                                    parse_my_ethpacket = parse_my_ethpacket + &format!("{:?} : parse_{};", value, my_packet.packet_id.id_name);
+                                    parse_my_ethpacket = parse_my_ethpacket + &format!("{}{} : parse_{};", TAB, val.value, my_packet.packet_id.id_name);
                                 }
                                 _ => {
                                     panic!("Conditional Parsing over Ethernet supported for only etherType\n");
@@ -1414,17 +1416,22 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
         contents = contents + &format!("        {}\n", parse_my_ethpacket);
     }
 
-    contents = contents + &format!("}}\n}}\nparser parse_ipv4 {{
+    contents = contents + &format!("{}}}\n}}\nparser parse_ipv4 {{
     extract(ipv4);
     return select(latest.protocol) {{
         IP_PROTOCOLS_TCP : parse_tcp;
-        IP_PROTOCOLS_UDP : parse_udp;
-        default: ingress;
-    }}\n}}\nparser parse_tcp {{
+        IP_PROTOCOLS_UDP : parse_udp;", TAB);
+
+    if parse_my_ipv4packet.len() == 0 {
+        contents = contents + &format!("        default: ingress;\n");
+    } else {
+        contents = contents + &format!("        {}\n", parse_my_ipv4packet);
+    }
+    contents = contents + &format!("{}}}\n}}\nparser parse_tcp {{
     extract(tcp);
     return ingress;\n}}\nparser parse_udp {{
     extract(udp);
-    return ingress;\n}}\n");
+    return ingress;\n}}\n", TAB);
     p4_file.write(contents.as_bytes());
 }
 

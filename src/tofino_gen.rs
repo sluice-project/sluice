@@ -99,7 +99,7 @@ pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>) -> Vec<&'a str> {
     }
 }
 
-pub fn fill_p4code<'a> (my_packets : &Packets<'a>, my_dag : &mut Dag<'a>) {
+pub fn fill_p4code<'a> (import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>, my_dag : &mut Dag<'a>) {
     for mut my_dag_node in &mut my_dag.dag_vector {
         my_dag_node.p4_code.p4_header = get_p4_header_trans(&my_dag_node.node_type);
         //my_dag_node.p4_code.p4_ingress, my_dag_node.p4_code.p4_egress

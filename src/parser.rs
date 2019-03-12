@@ -28,13 +28,70 @@ fn match_token<'a>(token_iter : & mut TokenIterator<'a>, expected : Token<'a>, e
 }
 
 pub fn parse_prog<'a>(token_iter : &mut TokenIterator<'a>) -> Prog<'a> {
+  let imports     = parse_imports(token_iter);
   let globals     = parse_globals(token_iter);
-  let packets      = parse_packets(token_iter);
+  let packets     = parse_packets(token_iter);
   let snippets    = parse_snippets(token_iter);
   let connections = parse_connections(token_iter);
-  return Prog { globals, packets, snippets, connections };
+  return Prog { imports, globals, packets, snippets, connections };
 }
 
+pub fn parse_device<'a>(token_iter : &mut TokenIterator<'a>) -> Device<'a> {
+    match_token(token_iter, Token::Device, "Device definition must start with the keyword device");
+    let device_id = parse_identifier(token_iter);
+    match_token(token_iter, Token::BraceLeft, "Device body must begin with a left brace.");
+    let device_fields = parse_device_fields(token_iter);
+    match_token(token_iter, Token::BraceRight, "Device body must end with a right brace.");
+    return Device {device_id, device_fields};
+}
+
+fn parse_device_fields<'a>(token_iter : &mut TokenIterator<'a>) -> DeviceFields<'a> {
+  // Helper function to determine if the keyword starts a declaration
+  let is_ident = |token| { match token { &Token::Identifier(_) => true, _ => false, } };
+
+  let mut field_vector = Vec::<DeviceField>::new();
+  loop {
+    if !token_iter.peek().is_some() || (!is_ident(*token_iter.peek().unwrap())) {
+      return DeviceFields{field_vector}; // return empty decl vector if no vars declared
+    } else {
+      let device_field = parse_device_field(token_iter);
+      field_vector.push(device_field);
+    }
+  }
+}
+
+fn parse_device_field<'a>(token_iter : &mut TokenIterator<'a>) -> DeviceField<'a> {
+  let identifier = parse_identifier(token_iter);
+  let var_type   = parse_type_annotation(token_iter, TypeQualifier::Field);
+  match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
+  return DeviceField {identifier, var_type};
+}
+
+
+fn parse_import<'a>(token_iter : &mut TokenIterator<'a>) -> Import<'a> {
+    match_token(token_iter, Token::Import, "Import definition must start with keyword import");
+    match_token(token_iter, Token::Device, "Device definition must start with the keyword device");
+    let dtype = "device";
+    let my_type = Identifier{id_name :dtype};
+    let my_import_id = parse_identifier(token_iter);
+    match_token(token_iter, Token::SemiColon, "Last token in a declaration must be a semicolon.");
+    return Import{import_type: my_type, import_id : my_import_id};
+}
+
+fn parse_imports<'a>(token_iter : &mut TokenIterator<'a>) -> Imports<'a> {
+    let is_import = |token| { match token { &Token::Import => true, _ => false, } };
+    let mut import_vector = Vec::<Import>::new();
+    //println!("token_iter.peek ={:?}\n", token_iter.peek());
+    loop {
+      if !token_iter.peek().is_some() || !is_import(*token_iter.peek().unwrap()) {
+        return Imports{import_vector};
+      } else {
+        //println!("Here with token {:?}\n", token_iter);
+        let my_import = parse_import(token_iter);
+        import_vector.push(my_import);
+      }
+    }
+}
 
 fn parse_globals<'a>(token_iter : &mut TokenIterator<'a>) -> Globals<'a> {
   let is_global = |token| { match token { &Token::Global => true, _ => false, } };
@@ -49,6 +106,32 @@ fn parse_globals<'a>(token_iter : &mut TokenIterator<'a>) -> Globals<'a> {
   }
 }
 
+pub fn parse_import_packets<'a>(token_iter : &mut TokenIterator<'a>) -> Packets<'a> {
+  // Internal helper function to check if it's a snippet or not
+  let is_packet = |token| { match token { &Token::Packet => true, _ => false, } };
+
+  let mut packet_vector = Vec::<Packet>::new();
+  loop {
+    if !token_iter.peek().is_some() || !is_packet(*token_iter.peek().unwrap()) {
+      return Packets{packet_vector};
+    } else {
+      let packet = parse_import_packet(token_iter);
+      packet_vector.push(packet);
+    }
+  }
+}
+
+
+fn parse_import_packet<'a>(token_iter : &mut TokenIterator<'a>) -> Packet<'a> {
+  match_token(token_iter, Token::Packet, "Packet definition must start with the keyword packet");
+  let packet_id = parse_identifier(token_iter);
+  let packet_base = Identifier{id_name:"none"};
+  let packet_parser_condition = PacketParserCondition::Empty();
+  match_token(token_iter, Token::BraceLeft, "Packet body must begin with a left brace.");
+  let packet_fields    = parse_packet_fields(token_iter);
+  match_token(token_iter, Token::BraceRight, "Packet body must end with a right brace.");
+  return Packet {packet_id, packet_base, packet_fields, packet_parser_condition};
+}
 
 fn parse_packets<'a>(token_iter : &mut TokenIterator<'a>) -> Packets<'a> {
   // Internal helper function to check if it's a snippet or not
