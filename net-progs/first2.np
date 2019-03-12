@@ -22,12 +22,10 @@ snippet first2(){
   if(q > r) {
     l = reg3;
     i = q + l;
-  }
-  else {
+  } else {
     l = reg1;
     i = q - l;
   }
-
   reg1 = 11;
   z = q >= 10;
   m = z ? q : r;
