@@ -69,6 +69,8 @@ pub fn handle_persistent_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
     }
     return my_p4_header;
 }
+
+// how to handle input/output packet decls?? (see ecn.np)
 pub fn get_p4_header_trans<'a> (node_type : &'a DagNodeType<'a>) -> P4Header {
     let mut my_p4_header : P4Header = P4Header {meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
     let mut my_vardecl : VarDecl;
@@ -168,7 +170,20 @@ pub fn handle_value_assignment<'a> ( my_lval_decl : &VarDecl, my_lval_index : u6
     }
 }
 
-pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64, my_rval_decl : &VarDecl, my_rval_index : u64) -> (String, String, String, String) {
+
+
+
+pub fn handle_read_register_v2 (my_decl : &VarDecl, my_index : u64) -> (String, String, String) {
+    let mut my_p4_control : String = String::new();
+    let mut my_p4_actions : String = String::new();
+    let mut my_p4_commons : String = String::new();
+    my_p4_actions = my_p4_actions + &format!("{}register_read({}.{}, {}, {});\n", TAB,
+        META_HEADER, my_decl.id, my_decl.id, my_index);
+    return (my_p4_control, my_p4_actions, my_p4_commons);
+}
+
+pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64, my_rval_decl : &VarDecl, my_rval_index : u64,
+                            read_reg_func : &Fn(&VarDecl, u64) -> (String, String, String) ) -> (String, String, String, String) {
     let mut my_p4_control : String = String::new();
     let mut my_p4_actions : String = String::new();
     let mut my_p4_commons : String = String::new();
@@ -178,7 +193,7 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64, 
     match my_rval_decl.type_qualifier {
         TypeQualifier::Persistent => {
             // If register, then first need to read the register val to meta.
-            let (a,b,c) = handle_read_register(my_rval_decl, my_rval_index);
+            let (a,b,c) = read_reg_func(my_rval_decl, my_rval_index);
             my_p4_control = my_p4_control + &a;
             my_p4_actions = my_p4_actions + &b;
             my_p4_commons = my_p4_commons + &c;
@@ -442,6 +457,8 @@ pub fn handle_condition_refval_v2<'a> (bin_op_type : &str, my_lval_decl : &VarDe
      my_p4_control = my_p4_control + &format!("{}}}\n", TAB);
      return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
 }
+
+
 pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index : u64, my_rval1_decl : &VarDecl, my_rval1_index : u64,
     bin_op_type : BinOpType, my_rval2_decl : &VarDecl, my_rval2_index : u64, decl_map : &'a  HashMap<String, VarDecl> ) -> (String, String, String, String) {
         let mut my_p4_control : String = String::new();
@@ -917,6 +934,7 @@ pub fn handle_binop_vals_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index 
     return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
 }
 
+// handle_action_operand(l, index, reg3, decl_map)
 pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : u64, operand : &Operand<'a>, decl_map : &'a  HashMap<String, VarDecl>) -> (String, String, String, String) {
     let mut my_rval_decl;
     let mut my_rval_index = 0;
@@ -933,7 +951,7 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : u64,
                     panic!("Unsuppoted operation!");
                 }
             }
-            return handle_ref_assignment(&my_lval_decl, my_lval_index, &my_rval_decl, my_rval_index);
+            return handle_ref_assignment(&my_lval_decl, my_lval_index, &my_rval_decl, my_rval_index, &handle_read_register_v2);
         }
         Operand::Value(ref rval_val) => {
             return handle_value_assignment(&my_lval_decl, my_lval_index, rval_val.value);
@@ -956,6 +974,8 @@ pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u
     ACTION_COUNT.fetch_add(1, Ordering::SeqCst);
     NEW_ACTION.store(false, Ordering::SeqCst);
     my_p4_actions = my_p4_actions + &format!("action {} () {{\n", action1.to_string());
+
+    // handle_action_operand(l, index, reg3, decl_map) (see first1.np)
     let (a,b,c,d) = handle_action_operand(my_lval_decl, my_lval_index, operand1, decl_map);
     my_p4_control = my_p4_control + &a;
     my_p4_actions = my_p4_actions + &b;
@@ -1017,6 +1037,8 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
         //println!("Handling Statement\n");
         //println!("{:?}\n", my_statement);
         //println!("decl_map: {:?}\n", decl_map);
+        
+        // checking that lvalue of statement is declared
         match my_statement.lvalue {
             LValue::Scalar(ref my_id) => {
                 let my_lval : String = String::from(my_id.id_name);
@@ -1053,6 +1075,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
         }
 
         match my_statement.expr.op1 {
+        // checking that op1 of statement is declared if it is an lvalue
             Operand::LValue(ref lval) => {
                 // Could be an assignment or operation. e.g a = b or  a = b + c
                 match lval {
@@ -1139,7 +1162,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                 if is_rval1_val {
                     return handle_value_assignment(&my_lval_decl, my_lval_index, rval1_val);
                 } else {
-                    return handle_ref_assignment(&my_lval_decl, my_lval_index, &my_rval_decl1, my_rval1_index);
+                    return handle_ref_assignment(&my_lval_decl, my_lval_index, &my_rval_decl1, my_rval1_index, &handle_read_register);
                 }
             }
         }
@@ -1157,11 +1180,11 @@ pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Opt
     let mut my_p4_metadecl : String = String::new();
 
     match &node_type {
-        DagNodeType::Cond(my_cond) => {
-            // TODO : If Statements
-            panic!("If Conditional not supported yet!");
-            //return (my_p4_control, my_p4_actions, my_p4_commons);
-        }
+        // DagNodeType::Cond(my_cond) => {
+        //     // TODO : If Statements
+        //     panic!("If Conditional not supported yet!");
+        //     //return (my_p4_control, my_p4_actions, my_p4_commons);
+        // }
         DagNodeType::Stmt(my_statement) => {
             return handle_statement(&my_statement, node_type, pre_condition, decl_map, import_map, packet_map);
         }
