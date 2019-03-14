@@ -643,8 +643,8 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index
                             my_p4_actions = my_p4_actions + &format!("{}.{});\n",prefix2, my_rval2_decl.id);
                         }
                     }
-                    my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}.{}, {});\n", TAB,
-                            my_lval_decl.id, META_HEADER, my_lval_decl.id, my_lval_index);
+                    my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}, {}.{});\n", TAB,
+                            my_lval_decl.id, my_lval_index, META_HEADER, my_lval_decl.id);
                     if NEW_ACTION.load(Ordering::SeqCst) {
                         my_p4_actions = my_p4_actions + &format!("}}\n");
                     }
