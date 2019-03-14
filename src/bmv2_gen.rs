@@ -158,7 +158,7 @@ pub fn handle_value_assignment<'a> ( my_lval_decl : &VarDecl, my_lval_index : u6
                 my_p4_actions = my_p4_actions + &b;
                 my_p4_commons = my_p4_commons + &c;
             }
-            my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}, {});\n", TAB, my_lval_decl.id, val, my_lval_index);
+            my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}, {});\n", TAB, my_lval_decl.id, my_lval_index, val);
             if NEW_ACTION.load(Ordering::SeqCst) {
                 my_p4_actions = my_p4_actions + &format!("}}\n");
             }
@@ -237,11 +237,11 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64, 
                 my_p4_commons = my_p4_commons + &c;
             }
             if prefix.len()!= 0 {
-                my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}.{}, {});\n", TAB,
-                    my_lval_decl.id, prefix, my_rval_decl.id, my_rval_index);
+                my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}, {}.{});\n", TAB,
+                        my_lval_decl.id, my_lval_index, prefix, my_lval_decl.id);
             } else {
                 my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}, {});\n", TAB,
-                    my_lval_decl.id, my_rval_decl.id, my_rval_index);
+                    my_lval_decl.id, my_rval_index, my_rval_decl.id);
             }
             if NEW_ACTION.load(Ordering::SeqCst) {
                 my_p4_actions = my_p4_actions + &format!("}}\n");

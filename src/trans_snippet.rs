@@ -742,6 +742,8 @@ pub fn gen_p4_code<'a> (my_packets : &Packets<'a>, dag_map : HashMap<&'a str, Da
         }
     }
 }
+
+
 pub fn create_import_map<'a> (my_imports : &Imports<'a>) ->HashMap<String, String>  {
     let mut import_map : HashMap<String, String>= HashMap::new();
     for my_import in &my_imports.import_vector {
@@ -763,6 +765,7 @@ pub fn create_import_map<'a> (my_imports : &Imports<'a>) ->HashMap<String, Strin
     println!("Import Map:{:?}\n", import_map);
     return import_map;
 }
+
 
 pub fn create_packet_map<'a> (my_packets : &Packets<'a>) ->HashMap<String, String>  {
     let mut packet_map : HashMap<String, String>= HashMap::new();
@@ -842,7 +845,7 @@ mod tests {
         let tokens = &mut get_tokens(input);
         let token_iter = &mut tokens.iter().peekable();
         let parse_tree = parse_prog(token_iter);
-        $trans_snippet_routine(&parse_tree.packets, &parse_tree.snippets);
+        $trans_snippet_routine(&parse_tree.imports, &parse_tree.packets, &parse_tree.snippets);
         assert!(token_iter.peek().is_none(), "token iterator is not empty");
       }
     )

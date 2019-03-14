@@ -63,15 +63,14 @@ parser start {
 parser parse_ethernet {
         return select(latest.etherType) {
             ETHERTYPE_IPV4 : parse_ipv4;
-        Value { value: 1234 } : parse_n;
-}
+            1234 : parse_n;
+    }
 }
 parser parse_ipv4 {
     extract(ipv4);
     return select(latest.protocol) {
         IP_PROTOCOLS_TCP : parse_tcp;
-        IP_PROTOCOLS_UDP : parse_udp;
-        default: ingress;
+        IP_PROTOCOLS_UDP : parse_udp;        default: ingress;
     }
 }
 parser parse_tcp {
@@ -124,57 +123,53 @@ action action4 () {
     modify_field(mdata.if_block_tmp_2, 0); 
 }
 action action5 () {
-action action7 () {
     register_read(mdata.reg3, reg3, 0);
-}
     modify_field(mdata.l, mdata.reg3);
 }
 action action6 () {
     modify_field(mdata.l, mdata.l);
 }
-action action8 () {
+action action7 () {
     add(mdata.tmp_0_if_2,mdata.q,mdata.l);
 }
-action action9 () {
+action action8 () {
     modify_field(mdata.i, mdata.tmp_0_if_2);
 }
-action action10 () {
+action action9 () {
     modify_field(mdata.i, mdata.i);
 }
-action action11 () {
+action action10 () {
     modify_field(mdata.l, mdata.l);
 }
-action action12 () {
-action action13 () {
+action action11 () {
     register_read(mdata.reg1, reg1, 0);
-}
     modify_field(mdata.l, mdata.reg1);
 }
-action action14 () {
+action action12 () {
     subtract(mdata.tmp_1_if_3,mdata.q,mdata.l);
 }
-action action15 () {
+action action13 () {
     modify_field(mdata.i, mdata.i);
 }
-action action16 () {
+action action14 () {
     modify_field(mdata.i, mdata.tmp_1_if_3);
 }
-action action17 () {
-    register_write(reg1, 11, 0);
+action action15 () {
+    register_write(reg1, 0, 11);
 }
-action action18 () {
+action action16 () {
     modify_field(mdata.z, 1); 
 }
-action action19 () {
+action action17 () {
     modify_field(mdata.z, 0); 
 }
-action action20 () {
+action action18 () {
     modify_field(mdata.m, mdata.q);
 }
-action action21 () {
+action action19 () {
     modify_field(mdata.m, mdata.r);
 }
-action action22 () {
+action action20 () {
     add(mdata.reg2,mdata.i,5);
     register_write(reg2, 0, mdata.reg2);
 }
@@ -199,11 +194,6 @@ table table4 {
     }
 }
 table table5 {
-    actions {
-        action7;
-    }
-}
-table table6 {
     reads {
         mdata.if_block_tmp_2 : exact;
     }
@@ -212,9 +202,18 @@ table table6 {
         action6;
     }
 }
+table table6 {
+    actions {
+        action7;
+    }
+}
 table table7 {
+    reads {
+        mdata.if_block_tmp_2 : exact;
+    }
     actions {
         action8;
+        action9;
     }
 }
 table table8 {
@@ -222,13 +221,13 @@ table table8 {
         mdata.if_block_tmp_2 : exact;
     }
     actions {
-        action9;
         action10;
+        action11;
     }
 }
 table table9 {
     actions {
-        action13;
+        action12;
     }
 }
 table table10 {
@@ -236,21 +235,17 @@ table table10 {
         mdata.if_block_tmp_2 : exact;
     }
     actions {
-        action11;
-        action12;
+        action13;
+        action14;
     }
 }
 table table11 {
     actions {
-        action14;
+        action15;
     }
 }
 table table12 {
-    reads {
-        mdata.if_block_tmp_2 : exact;
-    }
     actions {
-        action15;
         action16;
     }
 }
@@ -260,27 +255,17 @@ table table13 {
     }
 }
 table table14 {
-    actions {
-        action18;
-    }
-}
-table table15 {
-    actions {
-        action19;
-    }
-}
-table table16 {
     reads {
         mdata.z : exact;
     }
     actions {
-        action20;
-        action21;
+        action18;
+        action19;
     }
 }
-table table17 {
+table table15 {
     actions {
-        action22;
+        action20;
     }
 }
 control ingress {
@@ -292,21 +277,19 @@ control ingress {
         apply(table4);
     }
     apply(table5);
-    apply(table5);
+    apply(table6);
     apply(table7);
     apply(table8);
     apply(table9);
-    apply(table9);
+    apply(table10);
     apply(table11);
-    apply(table12);
-    apply(table13);
     if (mdata.q >= 10) {
-        apply(table14);
+        apply(table12);
     } else {
-        apply(table15);
+        apply(table13);
     }
-    apply(table16);
-    apply(table17);
+    apply(table14);
+    apply(table15);
 }
 control egress {
 }
