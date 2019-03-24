@@ -1,3 +1,5 @@
+extern crate regex;
+use self::regex::Regex;
 use grammar::*;
 use std::collections::HashMap;
 use std::fs::File;
@@ -1520,7 +1522,7 @@ pub fn gen_p4_code<'a> (snippet_name : &str , my_packets : &Packets<'a>, snippet
 // TODO : handle packet fields
 pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packets<'a>, snippet_dag : &Dag<'a>){
 
-    let command_filename : String = format!("commands/{}.p4", snippet_name);
+    let command_filename : String = format!("commands/{}.txt", snippet_name);
     let path = Path::new(command_filename.as_str());
     let display  = path.display();
     let mut command_file = match File::create(path) {
@@ -1531,13 +1533,13 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
     };
 
     let mut decl_map : HashMap<String, VariableDecl>= HashMap::new();
+    let mut contents : String = String::new();
 
     for dagnode in &snippet_dag.dag_vector {
 
         match &dagnode.node_type {
             DagNodeType::Decl(var_decl) => {
                 decl_map.insert(var_decl.identifier.id_name.to_string(), var_decl.clone());
-                // add command for like "table_set_default table6 action6"
             }
 
             DagNodeType::Stmt(my_statement) => {
@@ -1548,13 +1550,38 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                                 match lval {
                                     LValue::Scalar(ref my_id) => {
                                         let table_index = decl_map.get(my_id.id_name.clone());
-                                        let index_type = table_index.var_type.var_info;
-                                        match index_type {
-                                            VarInfo::BitArray(1, 1) => {
+                                        match table_index {
+                                            Some(my_decl) => {
+                                                match my_decl.var_type.var_info {
+                                                    VarInfo::BitArray(1, 1) => {
+                                                        // parse out action and table names from p4_commons
+                                                        let re1 = Regex::new(r"table\d+").unwrap();
+                                                        let re2 = Regex::new(r"action\d+").unwrap();
+                                                        
+                                                        let mut table_array = Vec::new();
+                                                        for cap in re1.captures_iter(&dagnode.p4_code.p4_commons) {
+                                                            let ref table_str = cap.get(0).unwrap().as_str();
+                                                            table_array.push(table_str.clone());
+                                                        }
 
+                                                        let mut action_array = Vec::new();
+                                                        for cap in re2.captures_iter(&dagnode.p4_code.p4_commons) {
+                                                            let ref action_str = cap.get(0).unwrap().as_str();
+                                                            action_array.push(action_str.clone());
+                                                        }
+                        
+                                                        contents = contents + &format!("table_add {} {} 1 => \n", table_array[0], action_array[0]);
+                                                        contents = contents + &format!("table_add {} {} 0 => \n", table_array[0], action_array[1]);
+                                                    }
+                                                    //TODO : add support for 32 bit table indices and tables with multiple read vars
+                                                    _ => {panic!("Unsupported table index type!");}
+
+                                                }
                                             }
-
-                                            _ => {panic!("Unsupported table index type!");}
+                                            None => { 
+                                                println!("Error: {} not declared?\n",my_id.id_name);
+                                            }
+              
                                         }
                                     }
                                     
@@ -1566,11 +1593,35 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                                     }
                                 }
                             }
+
                             Operand::Value(ref rval_val) => {}
                         }
                     }
 
-                    _ => {}  
+                    _ => {
+                        // parse out action and table names from p4_commons
+                        let re1 = Regex::new(r"table\d+").unwrap();
+                        let re2 = Regex::new(r"action\d+").unwrap();
+                        
+                        let mut table_array = Vec::new();
+                        for cap in re1.captures_iter(&dagnode.p4_code.p4_commons) {
+                            let ref table_str = cap.get(0).unwrap().as_str();
+                            table_array.push(table_str.clone());
+                        }
+
+                        let mut action_array = Vec::new();
+                        for cap in re2.captures_iter(&dagnode.p4_code.p4_commons) {
+                            let ref action_str = cap.get(0).unwrap().as_str();
+                            action_array.push(action_str.clone());
+                        }
+
+                        // check that exactly 1 action is run per table
+                        if table_array.len() == action_array.len() {
+                            for (x, action) in action_array.iter().enumerate() {
+                                contents = contents + &format!("table_set_default {} {}\n", table_array[x], action);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1578,7 +1629,5 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
         }
     }
 
-    println!("HERE   {:?} \n\n", decl_map);
-
-
+    command_file.write(contents.as_bytes());
 }
