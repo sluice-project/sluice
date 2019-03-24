@@ -1434,6 +1434,7 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
     }
     contents = contents + &format!("parser start {{
     return parse_ethernet;\n}}\nparser parse_ethernet {{
+        extract(ethernet);
         return select(latest.etherType) {{
             ETHERTYPE_IPV4 : parse_ipv4;\n");
     if parse_my_ethpacket.len() == 0 {
