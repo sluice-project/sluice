@@ -182,6 +182,8 @@ pub fn handle_read_register_v2 (my_decl : &VarDecl, my_index : u64) -> (String, 
     return (my_p4_control, my_p4_actions, my_p4_commons);
 }
 
+// reg1 = if_block_tmp_2 ? tmp_0_if_2 : reg1; (see test1.np)
+// handle_ref_assignment(reg1, index, tmp_0_if_2, index, v2)
 pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64, my_rval_decl : &VarDecl, my_rval_index : u64,
                             read_reg_func : &Fn(&VarDecl, u64) -> (String, String, String) ) -> (String, String, String, String) {
     let mut my_p4_control : String = String::new();
@@ -238,7 +240,7 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64, 
             }
             if prefix.len()!= 0 {
                 my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}, {}.{});\n", TAB,
-                        my_lval_decl.id, my_lval_index, prefix, my_lval_decl.id);
+                        my_lval_decl.id, my_lval_index, prefix, my_rval_decl.id);
             } else {
                 my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}, {});\n", TAB,
                     my_lval_decl.id, my_rval_index, my_rval_decl.id);
@@ -959,6 +961,7 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : u64,
     }
 }
 
+// reg1 = if_block_tmp_2 ? tmp_0_if_2 : reg1; (test1.np)
 pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64,
  my_rval_decl : &VarDecl<'a>, operand1 : &Operand<'a>, operand2 : &Operand<'a>, decl_map : &'a  HashMap<String, VarDecl>  ) -> (String, String, String, String) {
     let mut my_p4_control : String = String::new();
