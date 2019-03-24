@@ -1515,3 +1515,70 @@ pub fn gen_p4_code<'a> (snippet_name : &str , my_packets : &Packets<'a>, snippet
     //gen_p4_actions(&snippet_dag, &mut p4_file);
     gen_p4_body(&snippet_dag, &mut p4_file);
 }
+
+
+// TODO : handle packet fields
+pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packets<'a>, snippet_dag : &Dag<'a>){
+
+    let command_filename : String = format!("commands/{}.p4", snippet_name);
+    let path = Path::new(command_filename.as_str());
+    let display  = path.display();
+    let mut command_file = match File::create(path) {
+        Err(why) => panic!("couldn't create {}: {}",
+                           display,
+                           why.description()),
+        Ok(command_file) => command_file,
+    };
+
+    let mut decl_map : HashMap<String, VariableDecl>= HashMap::new();
+
+    for dagnode in &snippet_dag.dag_vector {
+
+        match &dagnode.node_type {
+            DagNodeType::Decl(var_decl) => {
+                decl_map.insert(var_decl.identifier.id_name.to_string(), var_decl.clone());
+                // add command for like "table_set_default table6 action6"
+            }
+
+            DagNodeType::Stmt(my_statement) => {
+                match &my_statement.expr.expr_right {
+                    ExprRight::Cond(_,_) => {
+                        match my_statement.expr.op1 {
+                            Operand::LValue(ref lval) => {
+                                match lval {
+                                    LValue::Scalar(ref my_id) => {
+                                        let table_index = decl_map.get(my_id.id_name.clone());
+                                        let index_type = table_index.var_type.var_info;
+                                        match index_type {
+                                            VarInfo::BitArray(1, 1) => {
+
+                                            }
+
+                                            _ => {panic!("Unsupported table index type!");}
+                                        }
+                                    }
+                                    
+                                    // TODO : handle tables for array, value and packet field operands
+                                    LValue::Array(ref my_id, ref box_index_op) => {}
+                                    
+                                    _ => {
+                                        panic!("Unsuppoted operation!");
+                                    }
+                                }
+                            }
+                            Operand::Value(ref rval_val) => {}
+                        }
+                    }
+
+                    _ => {}  
+                }
+            }
+
+            _ => {}
+        }
+    }
+
+    println!("HERE   {:?} \n\n", decl_map);
+
+
+}
