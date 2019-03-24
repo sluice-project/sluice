@@ -732,11 +732,12 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets) -> HashMap<&'a str, Dag
 //     println!("{}", reg.render("tpl_1", &json!({"name": "foo"})).unwrap());
 // }
 
-pub fn gen_p4_code<'a> (my_packets : &Packets<'a>, dag_map : HashMap<&'a str, Dag<'a>>){
+pub fn gen_code<'a> (my_packets : &Packets<'a>, dag_map : HashMap<&'a str, Dag<'a>>){
     for (snippet_name, snippet_dag) in dag_map {
 
         if snippet_dag.device_id.contains("bmv2") {
             bmv2_gen::gen_p4_code(&snippet_name, my_packets, &snippet_dag);
+            bmv2_gen::gen_control_plane_commands(&snippet_name, my_packets, &snippet_dag);
         } else if snippet_dag.device_id.contains("tofino"){
             tofino_gen::gen_p4_code(&snippet_name, my_packets,  &snippet_dag);
         }
@@ -827,7 +828,7 @@ pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_packets : &Packets<'a>,
     // dag_map now contains p4 code and connection information (next/prev node)
     println!("\n\n\n Filled Dag Map: {:?}\n\n\n\n", dag_map);
     // process::exit(1);
-    gen_p4_code(&my_packets, dag_map);
+    gen_code(&my_packets, dag_map);
     //init_handlebars(dag_map);
 }
 
