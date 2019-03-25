@@ -1522,7 +1522,7 @@ pub fn gen_p4_code<'a> (snippet_name : &str , my_packets : &Packets<'a>, snippet
 // TODO : handle packet fields
 pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packets<'a>, snippet_dag : &Dag<'a>){
 
-    let command_filename : String = format!("commands/{}.txt", snippet_name);
+    let command_filename : String = format!("bmv2_sim/commands/{}.txt", snippet_name);
     let path = Path::new(command_filename.as_str());
     let display  = path.display();
     let mut command_file = match File::create(path) {
