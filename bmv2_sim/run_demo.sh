@@ -1,9 +1,9 @@
-sluce_file=$1
-sluice_file_path=net_progs/$1.np
+sluice_file=$1
+sluice_file_path=net-progs/$1.np
 
 cd ..
 cargo run --bin sluice $sluice_file_path
-cp out/${sluce_file}.p4 bmv2_sim/
+cp out/${sluice_file}.p4 bmv2_sim/
 cd bmv2_sim
 source env.sh
 
@@ -14,7 +14,7 @@ SWITCH_PATH=$BMV2_PATH/targets/simple_switch/simple_switch
 CLI_PATH=$BMV2_PATH/targets/simple_switch/sswitch_CLI
 
 set -m
-$P4C_BM_SCRIPT ${sluce_file}.p4 --json ${sluce_file}.json
+$P4C_BM_SCRIPT ${sluice_file}.p4 --json ${sluice_file}.json
 
 # sudo $SWITCH_PATH >/dev/null 2>&1
 # sudo $SWITCH_PATH test1.json \
@@ -24,7 +24,7 @@ $P4C_BM_SCRIPT ${sluce_file}.p4 --json ${sluce_file}.json
 
 sudo python $BMV2_PATH/mininet/1sw_demo.py \
     --behavioral-exe $BMV2_PATH/targets/simple_switch/simple_switch \
-    --json ${sluce_file}.json
+    --json ${sluice_file}.json
 
 # sleep 2
 # $CLI_PATH test1.json < commands1.txt
