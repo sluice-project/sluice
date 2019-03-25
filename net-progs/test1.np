@@ -1,0 +1,18 @@
+@ bmv2
+snippet test1(){
+  transient a : bit<32>;
+  transient b : bit<32>;
+  transient z : bit<1>;
+  persistent reg1 : bit<32> = 0;
+  a = 10;
+  b = 5;
+  reg1 = a + b;
+  if(a > b) {
+    reg1 = reg1 + 2;
+    a = 1;
+  } else {
+    reg1 = reg1 + 100;
+  }
+  z = a > b;
+  reg1 = z ? 1234 : 346;
+}
