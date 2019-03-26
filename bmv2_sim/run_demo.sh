@@ -1,3 +1,5 @@
+sudo mn -c
+
 sluice_file=$1
 sluice_file_path=net-progs/$1.np
 

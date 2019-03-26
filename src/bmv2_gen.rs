@@ -1425,7 +1425,22 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
                     }
                 }
                 "udp" => {
-                    parse_my_udppacket = parse_my_udppacket + &format!("parse_{};", my_packet.packet_id.id_name);
+
+                    match my_condition {
+                        PacketParserCondition::ParserCondition(id, value) => {
+                            match id.id_name {
+                                "srcPort" => {
+                                    parse_my_ipv4packet = parse_my_ipv4packet + &format!("{:?} : parse_{};", value, my_packet.packet_id.id_name);
+                                }
+                                _ => {
+                                    panic!("Conditional Parsing over UDP supported for only srcPort type\n");
+                                }
+                            }
+                        }
+                        Empty => {
+                            panic!("Conditional Parsing necessary on UDP Header\n");
+                        }
+                    }
                 }
                 _ => {
                     panic!("Need to have a derivative!\n");
@@ -1452,17 +1467,30 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
         IP_PROTOCOLS_UDP : parse_udp;", TAB);
 
     if parse_my_ipv4packet.len() == 0 {
-        contents = contents + &format!("        default: ingress;\n");
+        contents = contents + &format!("        \ndefault: ingress;\n");
     } else {
         contents = contents + &format!("        {}\n", parse_my_ipv4packet);
     }
+
     contents = contents + &format!("{}}}\n}}\nparser parse_tcp {{
     extract(tcp);
-    return ingress;\n}}\nparser parse_udp {{
-    extract(udp);
     return ingress;\n}}\n", TAB);
+
+    if parse_my_udppacket.len() == 0 {
+        contents = contents + &format!("\nparser parse_udp {{
+                                        extract(udp);
+                                        return ingress;\n}}\n")
+    } else {
+        contents = contents + &format!("{}}}\n}}\nparser parse_udp {{
+                                                extract(udp);
+                                                return select(latest.srcPort) {{", TAB);
+        contents = contents + &format!("        {}\n", parse_my_udppacket);
+        contents = contents + &format!("        \ndefault: ingress;}}\n}}\n");
+    }
+
     p4_file.write(contents.as_bytes());
 }
+
 
 fn gen_p4_body<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     let mut contents : String = String::new();
