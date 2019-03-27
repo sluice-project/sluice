@@ -1489,6 +1489,15 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
         contents = contents + &format!("{}{}default: ingress;\n{}}}\n}}\n\n", TAB, TAB, TAB);
     }
 
+    match my_option {
+        Some(my_packet) => {
+            contents = contents + &format!("parser parse_{} {{
+    extract({});
+    return ingress;\n}}\n\n", my_packet.packet_id.id_name, my_packet.packet_id.id_name);
+        }
+        _ => {}
+    }
+
     p4_file.write(contents.as_bytes());
 }
 
