@@ -1347,6 +1347,62 @@ fn gen_p4_headers<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &
     p4_file.write(contents.as_bytes());
 }
 
+fn gen_p4_routing_tables<'a> (p4_file : &mut File) {
+    let mut contents : String = String::new();
+    contents = contents + &format!("
+field_list ipv4_checksum_list {{
+        ipv4.version;
+        ipv4.ihl;
+        ipv4.diffserv;
+        ipv4.totalLen;
+        ipv4.identification;
+        ipv4.flags;
+        ipv4.fragOffset;
+        ipv4.ttl;
+        ipv4.protocol;
+        ipv4.srcAddr;
+        ipv4.dstAddr;
+}}
+
+field_list_calculation ipv4_checksum {{
+    input {{
+        ipv4_checksum_list;
+    }}
+    algorithm : csum16;
+    output_width : 16;
+}}
+calculated_field ipv4.hdrChecksum  {{
+    verify ipv4_checksum;
+    update ipv4_checksum;
+}}
+
+
+action _drop() {{
+    drop();
+}}
+
+action ipv4_forward(dstAddr, port) {{
+    modify_field(standard_metadata.egress_spec, port);
+    modify_field(ethernet.srcAddr, ethernet.dstAddr);
+    modify_field(ethernet.dstAddr, dstAddr);
+    subtract_from_field(ipv4.ttl, 1);
+}}
+
+table ipv4_lpm {{
+    reads {{
+        ipv4.dstAddr : lpm;
+    }}
+    actions {{
+        ipv4_forward;
+        _drop;
+    }}
+    size: 1024;
+}}\n\n", );
+
+    p4_file.write(contents.as_bytes());
+}
+
+
 fn gen_p4_metadata<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     let mut contents : String = String::new();
     let mut meta_found = 0;
@@ -1478,9 +1534,9 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
     return ingress;\n}}\n", TAB);
 
     if parse_my_udppacket.len() == 0 {
-        contents = contents + &format!("{}}}\n}}\nparser parse_udp {{
-        extract(udp);
-        return ingress;\n}}\n", TAB);
+        contents = contents + &format!("\nparser parse_udp {{
+    extract(udp);
+    return ingress;\n}}\n");
     } else {
         contents = contents + &format!("\nparser parse_udp {{
     extract(udp);
@@ -1524,8 +1580,12 @@ fn gen_p4_body<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
             contents = contents + &my_dag_node.p4_code.p4_control;
         }
     }
+    // calling ipv4_lpm for routing
+    contents = contents + "
+    if(valid(ipv4) and ipv4.ttl > 0) {
+        apply(ipv4_lpm);
+    }\n" ;
     contents = contents + &format!("}}\n");
-
     contents = contents + &format!("control egress {{\n");
     // for my_dag_node in &my_dag.dag_vector {
     //     if (my_dag_node.p4_code.p4_control.len() != 0) {
@@ -1550,6 +1610,7 @@ pub fn gen_p4_code<'a> (snippet_name : &str , my_packets : &Packets<'a>, snippet
     gen_p4_globals(&snippet_dag, &mut p4_file);
     gen_p4_headers(&snippet_dag, my_packets, &mut p4_file);
     gen_p4_parser(&snippet_dag, my_packets, &mut p4_file);
+    gen_p4_routing_tables(&mut p4_file);
     gen_p4_metadata(&snippet_dag, &mut p4_file);
     gen_p4_registers(&snippet_dag, &mut p4_file);
     //gen_p4_actions(&snippet_dag, &mut p4_file);
