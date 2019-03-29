@@ -609,7 +609,6 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
                                 }
 
                                 LValue::Field(ref p, ref f) => {
-                                    // git commit src -m 'handle packets within statements of if-else blocks'
                                     let ind = format!("{}.{}", p.id_name, f.id_name);
                                     let width = packet_map.get(&ind).unwrap().1;
                                     vinfo = VarInfo::BitArray(width, 1);
@@ -820,68 +819,10 @@ pub fn create_packet_map<'a> (my_packets : &Packets<'a>) -> HashMap<String, (Str
             } 
             packet_map.insert(field_name, (identifier, size));
         }
-
-//  Packet { packet_id: Identifier { id_name: "n" }, packet_base: Identifier { id_name: "udp" }, 
-
-// packet_fields: PacketFields { field_vector: [
-//         PacketField { identifier: Identifier { id_name: "new_one" }, 
-//                     var_type: VarType { var_info: BitArray(32, 1), type_qualifier: Field } }] 
-// }, 
-
-// packet_parser_condition: ParserCondition(Identifier { id_name: "srcPort" }, Value { value: 1234 }) }
-
-
     }
     println!("Packet Map:{:?}\n", packet_map);
     return packet_map;
 }
-
-// pub fn create_packet_map<'a> (my_packets : &Packets<'a>) ->HashMap<String, String>  {
-//     let mut packet_map : HashMap<String, String>= HashMap::new();
-//     for my_packet in &my_packets.packet_vector {
-//         println!("my Packet : {:?}\n", my_packet);
-//         let packet_file = format!("{}packet.np", INCLUDE_DIR);
-//         println!("Importing {}\n", packet_file);
-//         let mut f = File::open(packet_file).expect("File not found");
-//         let mut contents = String::new();
-//         f.read_to_string(&mut contents).expect("Something went wrong reading the file");
-//         let tokens = & mut lexer::get_tokens(&contents);
-//         let token_iter = & mut tokens.iter().peekable();
-//         let pkt_tree = parser::parse_import_packets(token_iter);
-//         for my_pkt in  pkt_tree.packet_vector {
-//             for my_pkt_field in &my_pkt.packet_fields.field_vector {
-//                 let my_id = my_pkt_field.identifier.id_name.clone();
-//                 let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), my_id);
-//                 let identifier = format!("{}.{}", my_pkt.packet_id.id_name.clone(),my_id);
-//                 packet_map.insert(field_name, identifier);
-//             }
-//             println!("Packet : {:?}\n", my_pkt);
-//             // let field_name  = format!("{}.{}", dev_tree.device_id.id_name.clone(), my_dev_field.identifier.id_name.clone());
-//             // let identifier = format!("{}", my_dev_field.identifier.id_name.clone());
-//             // import_map.insert(field_name, identifier);
-//             //import_map.push()
-//         }
-
-//         for field in &my_packet.packet_fields.field_vector {
-//             let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), field.identifier.id_name.clone());
-//             let identifier = field_name.clone();
-//             packet_map.insert(field_name, identifier);
-//         }
-
-// //  Packet { packet_id: Identifier { id_name: "n" }, packet_base: Identifier { id_name: "udp" }, 
-
-// // packet_fields: PacketFields { field_vector: [
-// //         PacketField { identifier: Identifier { id_name: "new_one" }, 
-// //                     var_type: VarType { var_info: BitArray(32, 1), type_qualifier: Field } }] 
-// // }, 
-
-// // packet_parser_condition: ParserCondition(Identifier { id_name: "srcPort" }, Value { value: 1234 }) }
-
-
-//     }
-//     println!("Packet Map:{:?}\n", packet_map);
-//     return packet_map;
-// }
 
 // need to use either 'bmv2' or 'tofino' for device annotation
 pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_packets : &Packets<'a>, my_snippets : &Snippets<'a>) {
