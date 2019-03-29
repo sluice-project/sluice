@@ -1024,7 +1024,7 @@ pub fn get_decl<'a> (my_id : &str,  decl_map : &'a  HashMap<String, VarDecl>) ->
 
 pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNodeType<'a>,
     pre_condition : &Option<Statement<'a>>, decl_map : &'a  HashMap<String, VarDecl>,
-      import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>) -> (String, String, String, String) {
+      import_map : &HashMap<String, String>, packet_map : &HashMap<String, (String, u64)>) -> (String, String, String, String) {
         let mut my_p4_control : String = String::new();
         let mut my_p4_actions : String = String::new();
         let mut my_p4_commons : String = String::new();
@@ -1178,7 +1178,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
 
 // Ideally to get both ingress and egress parts of conversion [0] for ingress and [1] for egress and [2] for actions
 pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Option<Statement<'a>>,
- decl_map : &'a HashMap<String, VarDecl>, import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>) -> (String, String, String, String) {
+ decl_map : &'a HashMap<String, VarDecl>, import_map : &HashMap<String, String>, packet_map : &HashMap<String, (String, u64)>) -> (String, String, String, String) {
     let mut my_p4_control : String = String::new();
     let mut my_p4_actions : String = String::new();
     let mut my_p4_commons : String = String::new();
@@ -1199,7 +1199,7 @@ pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Opt
     }
 }
 
-pub fn fill_p4code<'a> (import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>, my_dag :  &mut Dag<'a>) {
+pub fn fill_p4code<'a> (import_map : &HashMap<String, String>, packet_map : &HashMap<String, (String, u64)>, my_dag :  &mut Dag<'a>) {
     let mut decl_map : HashMap<String, VarDecl>= HashMap::new();
     for mut my_dag_node in &mut my_dag.dag_vector {
         my_dag_node.p4_code.p4_header = get_p4_header_trans(&my_dag_node.node_type);
@@ -1226,7 +1226,7 @@ pub fn fill_p4code<'a> (import_map : &HashMap<String, String>, packet_map : &Has
         println!("declMap : {:?}\n", decl_map);
     }
     for mut my_dag_node in &mut my_dag.dag_vector {
-        let (a, b, c, d) = get_p4_body_trans(&my_dag_node.node_type, &my_dag_node.pre_condition, &decl_map, import_map, packet_map);
+        let (a, b, c, d) = get_p4_body_trans(&my_dag_node.node_type, &my_dag_node.pre_condition, &decl_map, import_map, &packet_map);
         println!("meta header : {}\n", d);
         my_dag_node.p4_code.p4_control = a;
         my_dag_node.p4_code.p4_actions = b;
@@ -1346,6 +1346,7 @@ fn gen_p4_headers<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &
 
     p4_file.write(contents.as_bytes());
 }
+
 
 fn gen_p4_routing_tables<'a> (p4_file : &mut File) {
     let mut contents : String = String::new();

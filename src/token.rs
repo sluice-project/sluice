@@ -1,5 +1,7 @@
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
+
 pub enum Token<'a> {
   // Variants that take an argument
   Identifier(&'a str),
