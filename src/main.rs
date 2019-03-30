@@ -11,6 +11,8 @@ use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 
+use std::process;
+const INCLUDE_DIR : &str = "net-progs/include/";
 
 // Main compiler binary
 // Takes an input sluice program and produces a P4 program for each network device
@@ -33,6 +35,21 @@ fn main() {
 
   // def_use.visit_prog(&parse_tree);
   println!("Parse tree: {:?}\n", parse_tree);
-  trans_snippets(&parse_tree.imports, &parse_tree.packets, &parse_tree.snippets);//, &mut my_dag);
+
+  let packet_file = format!("{}packet.np", INCLUDE_DIR);
+  let mut f = File::open(packet_file).expect("File not found");
+  let mut contents = String::new();
+  f.read_to_string( &mut contents).expect("Something went wrong reading the file");
+  let tokens = & mut lexer::get_tokens(&contents);
+  let token_iter = & mut tokens.iter().peekable();
+  let pkt_tree = parser::parse_import_packets(token_iter);
+  println!("Packet tree: {:?}\n", pkt_tree);
+  // process::exit(1);
+
+  trans_snippets(&parse_tree.imports, &parse_tree.packets, &parse_tree.snippets, &pkt_tree);//, &mut my_dag);
   // Check that identifiers are defined before use
 }
+
+    // let mut field_decls : HashMap<String, VarType> = HashMap::new();
+
+

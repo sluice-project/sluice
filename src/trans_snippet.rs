@@ -239,7 +239,8 @@ pub fn check_clone_condition<'a> (my_pre_condition_dag_option : Option<&'a DagNo
 
 // Construct the connections between each line of code within a snippet to create dag-vector for that snippet
 // TODO : Make it modular. Curently baffled by how to pass mutable reference of Dag again
-// TODO : add support for packet fields here and in code gen file
+// TODO : add support for packet fields here and in code gen file. Connections currently not being made for statements
+// containing only packet fields and/or values
 pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a>) {
     // A HashMap to keep track of declarations.
     let mut decl_map : HashMap<String, usize>= HashMap::new();
@@ -503,9 +504,27 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'
 // This func creates the snippet dag and uses Domino's branch removal step to convert if/else 
 // statements to single line ternary conditionals
 // TODO need to handle packet field nodes
-pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<String, (String, u64)>) -> HashMap<&'a str, Dag<'a>>  {
+pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<String, String>, 
+    my_packets : &Packets<'a>, pkt_tree : &Packets<'a>,) -> HashMap<&'a str, Dag<'a>>  {
 
     let mut dag_map : HashMap<&str, Dag>= HashMap::new();
+    let mut field_decls : HashMap<String, VarType> = HashMap::new();
+
+    // put all packet fields in hashmap
+    for my_pkt in  &pkt_tree.packet_vector {
+        for my_pkt_field in &my_pkt.packet_fields.field_vector {
+            let f = my_pkt_field.identifier.id_name.clone();
+            let field_name = format!("{}.{}", my_pkt.packet_id.id_name.clone(),f);
+            field_decls.insert(field_name, my_pkt_field.var_type.clone());
+        }
+    }
+
+    for my_packet in &my_packets.packet_vector {
+        for field in &my_packet.packet_fields.field_vector {
+            let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), field.identifier.id_name.clone());
+            field_decls.insert(field_name, field.var_type.clone());
+        }
+    }
 
     for my_snippet in &my_snippets.snippet_vector {
 
@@ -524,7 +543,6 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
             // populate symbol table here
             symbol_table.insert(my_variable_decl.identifier.id_name, my_variable_decl.var_type.clone());
         }
-        // println!("CHECK  {:?} \n\n\n\n",symbol_table );
         // process::exit(1);
         let mut last_decl_ind : usize = my_dag.dag_vector.len();
         let mut tmp_var_count : usize = 0;
@@ -607,10 +625,15 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
                                                 };
                                     vinfo = VarInfo::BitArray(width, 1);
                                 }
-
+                                // _ => {}
                                 LValue::Field(ref p, ref f) => {
-                                    let ind = format!("{}.{}", p.id_name, f.id_name);
-                                    let width = packet_map.get(&ind).unwrap().1;
+                                    let field = format!("{}.{}", p.id_name, f.id_name);
+                                    let field_name_map = packet_map.get(&field).unwrap();
+                                    let vtype = field_decls.get(field_name_map).unwrap();
+                                    let width =  match vtype.var_info {
+                                                  VarInfo::BitArray(bit_width, _var_size) => bit_width,
+                                                  _ => {0}
+                                                };
                                     vinfo = VarInfo::BitArray(width, 1);
                                 }
                             }
@@ -716,7 +739,6 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
         }
         dag_map.insert(&my_snippet.snippet_id.id_name, my_dag);
     }
-
     dag_map
 }
 
@@ -771,11 +793,8 @@ pub fn create_import_map<'a> (my_imports : &Imports<'a>) ->HashMap<String, Strin
 }
 
 
-  // packet_map    : HashMap<String, (String, u64)>,
-        // let mut action_array = Vec::new();
-
-pub fn create_packet_map<'a> (my_packets : &Packets<'a>) -> HashMap<String, (String, u64)>  {
-    let mut packet_map : HashMap<String, (String, u64)> = HashMap::new();
+pub fn create_packet_map<'a> (my_packets : &Packets<'a>) ->HashMap<String, String>  {
+    let mut packet_map : HashMap<String, String>= HashMap::new();
     for my_packet in &my_packets.packet_vector {
         println!("my Packet : {:?}\n", my_packet);
         let packet_file = format!("{}packet.np", INCLUDE_DIR);
@@ -791,14 +810,7 @@ pub fn create_packet_map<'a> (my_packets : &Packets<'a>) -> HashMap<String, (Str
                 let my_id = my_pkt_field.identifier.id_name.clone();
                 let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), my_id);
                 let identifier = format!("{}.{}", my_pkt.packet_id.id_name.clone(),my_id);
-                let mut size = 0;
-                match &my_pkt_field.var_type.var_info {
-                    VarInfo::BitArray(width, _) => {
-                        size = *width;
-                    }
-                    _ => {}
-                } 
-                packet_map.insert(field_name, (identifier, size));
+                packet_map.insert(field_name, identifier);
             }
             println!("Packet : {:?}\n", my_pkt);
             // let field_name  = format!("{}.{}", dev_tree.device_id.id_name.clone(), my_dev_field.identifier.id_name.clone());
@@ -810,27 +822,21 @@ pub fn create_packet_map<'a> (my_packets : &Packets<'a>) -> HashMap<String, (Str
         for field in &my_packet.packet_fields.field_vector {
             let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), field.identifier.id_name.clone());
             let identifier = field_name.clone();
-            let mut size = 0;
-            match &field.var_type.var_info {
-                VarInfo::BitArray(width, _) => {
-                    size = *width;
-                }
-                _ => {}
-            } 
-            packet_map.insert(field_name, (identifier, size));
+            packet_map.insert(field_name, identifier);
         }
     }
     println!("Packet Map:{:?}\n", packet_map);
     return packet_map;
 }
 
+
 // need to use either 'bmv2' or 'tofino' for device annotation
-pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_packets : &Packets<'a>, my_snippets : &Snippets<'a>) {
+pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_packets : &Packets<'a>, my_snippets : &Snippets<'a>, pkt_tree : &Packets<'a>) {
     // TODO : Deal with mutability of my_dag
     let import_map = create_import_map(my_imports);
     let packet_map = create_packet_map(my_packets);
-    let mut dag_map = create_dag_nodes(&my_snippets, &packet_map);
-    println!("\n\n\n Empty Dag Map: {:?}\n\n\n\n", dag_map);
+    let mut dag_map = create_dag_nodes(&my_snippets, &packet_map, my_packets, pkt_tree);
+    // println!("\n\n\n Empty Dag Map: {:?}\n\n\n\n", dag_map);
 
     for my_snippet in &my_snippets.snippet_vector {
 
@@ -839,14 +845,13 @@ pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_packets : &Packets<'a>,
         match my_option {
            Some(mut snippet_dag) => {
                 create_connections(&my_snippet, &mut snippet_dag);
-                println!("Snippet DAG with connections: {:?}\n", snippet_dag);
+                // println!("Snippet DAG with connections: {:?}\n", snippet_dag);
                 if device_type.contains("bmv2") {
-                    bmv2_gen::fill_p4code(&import_map, &packet_map, &mut snippet_dag);
+                    bmv2_gen::fill_p4code(&import_map, &packet_map, &mut snippet_dag, &pkt_tree, &my_packets);
                 } else if device_type.contains("tofino") {
-                    tofino_gen::fill_p4code(&import_map, &packet_map, &mut snippet_dag);
+                    tofino_gen::fill_p4code(&import_map, &packet_map, &mut snippet_dag, &pkt_tree, &my_packets );
                 }
                 // println!("Snippet DAG: {:?}\n", snippet_dag);
-
            }
            None => {}
         }
@@ -872,7 +877,8 @@ mod tests {
         let tokens = &mut get_tokens(input);
         let token_iter = &mut tokens.iter().peekable();
         let parse_tree = parse_prog(token_iter);
-        $trans_snippet_routine(&parse_tree.imports, &parse_tree.packets, &parse_tree.snippets);
+        // TODO : need to replace &parse_tree.packets (the 4th func input) with the actual pkt_tree
+        $trans_snippet_routine(&parse_tree.imports, &parse_tree.packets, &parse_tree.snippets, &parse_tree.packets);
         assert!(token_iter.peek().is_none(), "token iterator is not empty");
       }
     )

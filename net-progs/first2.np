@@ -30,4 +30,5 @@ snippet first2(){
   z = q >= 10;
   m = z ? q : r;
   reg2 = i + 5;
+  n.new_one = 65;
 }
