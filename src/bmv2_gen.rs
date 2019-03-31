@@ -280,9 +280,13 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64, 
                 my_p4_commons = my_p4_commons + &c;            
             }
 
-            my_p4_actions = my_p4_actions + &format!("{}modify_field({}, {}.{});\n", TAB,
-                my_lval_decl.id, prefix, my_rval_decl.id);
-
+            if prefix.len()!= 0 {
+                my_p4_actions = my_p4_actions + &format!("{}modify_field({}, {}.{});\n", TAB,
+                    my_lval_decl.id, prefix, my_rval_decl.id);
+            } else {
+                my_p4_actions = my_p4_actions + &format!("{}modify_field({}, {});\n", TAB,
+                    my_lval_decl.id, my_rval_decl.id);
+            }
             if NEW_ACTION.load(Ordering::SeqCst) {
                 my_p4_actions = my_p4_actions + &format!("}}\n");
             }
@@ -1146,15 +1150,16 @@ pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u
     my_p4_commons = my_p4_commons + &format!("{}reads {{\n", TAB);
 
 
-    match my_lval_decl.type_qualifier {
-        TypeQualifier::Field => {
-            my_p4_commons = my_p4_commons + &format!("{}{}{} : exact;\n{}}}\n", TAB, TAB, my_rval_decl.id, TAB);
-        }
-        _ => { 
-            my_p4_commons = my_p4_commons + &format!("{}{}{}.{} : exact;\n{}}}\n", TAB, TAB, META_HEADER, my_rval_decl.id, TAB);
-        }
-    }
+    // match my_lval_decl.type_qualifier {
+    //     TypeQualifier::Field => {
+    //         my_p4_commons = my_p4_commons + &format!("{}{}{} : exact;\n{}}}\n", TAB, TAB, my_rval_decl.id, TAB);
+    //     }
+    //     _ => { 
+    //         my_p4_commons = my_p4_commons + &format!("{}{}{}.{} : exact;\n{}}}\n", TAB, TAB, META_HEADER, my_rval_decl.id, TAB);
+    //     }
+    // }
 
+    my_p4_commons = my_p4_commons + &format!("{}{}{}.{} : exact;\n{}}}\n", TAB, TAB, META_HEADER, my_rval_decl.id, TAB);
     my_p4_commons = my_p4_commons + &format!("{}actions {{\n", TAB);
     my_p4_commons = my_p4_commons + &format!("{}{}{};\n", TAB, TAB, action1.to_string());
     my_p4_commons = my_p4_commons + &format!("{}{}{};\n", TAB, TAB, action2.to_string());
@@ -1634,6 +1639,7 @@ action _drop() {{
 }}
 
 action ipv4_forward(dstAddr, port) {{
+    modify_field(udp.checksum, 0);
     modify_field(standard_metadata.egress_spec, port);
     modify_field(ethernet.srcAddr, ethernet.dstAddr);
     modify_field(ethernet.dstAddr, dstAddr);
