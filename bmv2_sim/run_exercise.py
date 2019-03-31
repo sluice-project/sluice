@@ -92,8 +92,9 @@ class ExerciseTopo(Topo):
         for sw in switches:
             self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw))
 
-        host_ips = {}
-        host_macs = {}
+
+        self.host_ips = {}
+        self.host_macs = {}
 
         for link in host_links:
             host_name = link['node1']
@@ -103,8 +104,8 @@ class ExerciseTopo(Topo):
             host_ip = "10.0.%d.%d" % (sw_num, host_num)
             host_mac = '00:00:00:00:%02x:%02x' % (sw_num, host_num)
 
-            host_macs[host_name] = host_mac
-            host_ips[host_name] = host_ip
+            self.host_macs[host_name] = host_mac
+            self.host_ips[host_name] = host_ip
             # Each host IP should be /24, so all exercise traffic will use the
             # default gateway (the switch) without sending ARP requests.
             self.addHost(host_name, ip=host_ip+'/24', mac=host_mac)
@@ -144,10 +145,8 @@ class ExerciseTopo(Topo):
 
         shortestPaths = ShortestPath(edges)
 
-        # max 99 switches supported in dstAddr for now
+        # max 255 switches supported in dstAddr for now
         for sw in switches:
-            # f = open('%s-runtime.json' % sw, 'w')
-            # f.write(commons)
             contents = ""
             for h in hosts:
                 s = shortestPaths.get(sw, h)
@@ -158,7 +157,7 @@ class ExerciseTopo(Topo):
                         sw_port_num = i[0]
                         break
                 if 'h' in next_hop: 
-                    mac_ad = host_macs[h]
+                    mac_ad = self.host_macs[h]
                 else:
                     mac_ad = "00:00:%02x:00:00:00" % sw_macAddr_count
                     sw_macAddr_count += 1
@@ -173,7 +172,7 @@ class ExerciseTopo(Topo):
                     "dstAddr": "%s",
                     "port": %d
                   }
-                }''' % (host_ips[h], mac_ad, sw_port_num)
+                }''' % (self.host_ips[h], mac_ad, sw_port_num)
             contents = commons + contents + "]}"
             f = open('%s-runtime.json' % sw, 'w')
             f.write(contents)
@@ -191,8 +190,6 @@ class ExerciseTopo(Topo):
 # self.sw_port_mapping =  {u's3': [(1, u'h3'), (2, u's1'), (3, u's2')],
 #                          u's2': [(1, u'h2'), (2, u's1'), (3, u's3')], 
 #                          u's1': [(1, u'h1'), (2, u's2'), (3, u's3')]}
-
-
 
     def addSwitchPort(self, sw, node2):
         if sw not in self.sw_port_mapping:
@@ -405,7 +402,6 @@ class ExerciseRunner:
                   been called.
         """
       
-
         for host_name in self.topo.hosts():
             h = self.net.get(host_name)
             h_iface = h.intfs.values()[0]
@@ -425,15 +421,24 @@ class ExerciseRunner:
             h.cmd('ip route add %s dev %s' % (sw_ip, h_iface.name))
             h.setDefaultRoute("via %s" % sw_ip)
 
-            if host_name == 'h2':
-                h.cmd('arp -s 10.0.1.1 00:00:00:00:01:01')
-                h.cmd('arp -s 10.0.1.3 00:00:00:00:01:03')
-            elif host_name == 'h1':
-                h.cmd('arp -s 10.0.1.2 00:00:00:00:01:02')
-                h.cmd('arp -s 10.0.1.3 00:00:00:00:01:03')
-            elif host_name == 'h3':
-                h.cmd('arp -s 10.0.1.1 00:00:00:00:01:01')
-                h.cmd('arp -s 10.0.1.2 00:00:00:00:01:02')
+            # manually set arp tables for hosts connected to the same switch
+            for sw in self.topo.switches():
+                sw_hosts = [i[1] for i in self.topo.sw_port_mapping[sw] if i[1][0] == 'h']
+                for i in self.topo.hosts():
+                    for j in self.topo.hosts():
+                        if i != j:
+                            h.cmd("arp -s %s %s" % (str(self.topo.host_ips[j]), str(self.topo.host_macs[j])))
+
+            ## uncomment below only for P4 streaming algorithms repositories
+            # if host_name == 'h2':
+            #     h.cmd('arp -s 10.0.1.1 00:00:00:00:01:01')
+            #     h.cmd('arp -s 10.0.1.3 00:00:00:00:01:03')
+            # elif host_name == 'h1':
+            #     h.cmd('arp -s 10.0.1.2 00:00:00:00:01:02')
+            #     h.cmd('arp -s 10.0.1.3 00:00:00:00:01:03')
+            # elif host_name == 'h3':
+            #     h.cmd('arp -s 10.0.1.1 00:00:00:00:01:01')
+            #     h.cmd('arp -s 10.0.1.2 00:00:00:00:01:02')
 
     def do_net_cli(self):
         """ Starts up the mininet CLI and prints some helpful output.
