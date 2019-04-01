@@ -1,18 +1,32 @@
+global threshold : bit<32> = 111;
+
+packet n: udp(srcPort:1234) {
+  new_one : bit<32>;
+}
+
+
 @ bmv2
 snippet test1(){
   transient a : bit<32>;
   transient b : bit<32>;
   transient z : bit<1>;
   persistent reg1 : bit<32> = 0;
+  persistent reg2 : bit<32> = 0;
   a = 10;
   b = 5;
   reg1 = a + b;
+  reg2 = reg1 - 3;
+  z = reg1 > reg2;
   if(a > b) {
-    reg1 = reg1 + 2;
+    reg1 = z ? reg2 : reg1;
+    reg1 = reg1 + 7;
+    n.new_one = n.new_one + reg1;
     a = 1;
   } else {
     reg1 = reg1 + 100;
   }
-  z = a > b;
-  reg1 = z ? 1234 : 346;
+  b = reg1 - 10;
+  z = a < b;
+  reg1 = z ? b : 1234;
+  reg1 = reg2 + reg1;
 }
