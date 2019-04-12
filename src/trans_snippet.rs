@@ -501,10 +501,10 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'
     }
 }
 
-// This func creates the snippet dag and uses Domino's branch removal step to convert if/else 
+// This func creates the snippet dag and uses Domino's branch removal step to convert if/else
 // statements to single line ternary conditionals
 // TODO need to handle packet field nodes
-pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<String, String>, 
+pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<String, String>,
     my_packets : &Packets<'a>, pkt_tree : &Packets<'a>,) -> HashMap<&'a str, Dag<'a>>  {
 
     let mut dag_map : HashMap<&str, Dag>= HashMap::new();
@@ -798,7 +798,7 @@ pub fn create_packet_map<'a> (my_packets : &Packets<'a>) ->HashMap<String, Strin
     for my_packet in &my_packets.packet_vector {
         println!("my Packet : {:?}\n", my_packet);
         let packet_file = format!("{}packet.np", INCLUDE_DIR);
-        println!("Importing {}\n", packet_file);
+        println!("Importing Packet{}\n", packet_file);
         let mut f = File::open(packet_file).expect("File not found");
         let mut contents = String::new();
         f.read_to_string(&mut contents).expect("Something went wrong reading the file");
@@ -952,12 +952,12 @@ mod tests {
                               persistent reg1 : bit<32> = 0;
                               persistent reg2 : bit<32> = 0;
                               persistent reg3 : bit<32> = 0;
-                              transient if_block_tmp_2 : bit<1>; 
+                              transient if_block_tmp_2 : bit<1>;
                               transient tmp_0_if_2 : bit<32>;
                               transient tmp_1_if_3 : bit<32>;
                               q = 10;
                               r = 5;
-                              if_block_tmp_2 = q > r;  
+                              if_block_tmp_2 = q > r;
                               l = if_block_tmp_2 ? reg3 : l;
                               tmp_0_if_2 = q + l;
                               i = if_block_tmp_2 ? tmp_0_if_2 : i;

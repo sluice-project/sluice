@@ -1,7 +1,11 @@
 device psa {
-  timestamp_mac : bit<48>;
+  timestamp_rx : bit<48>;
   timestamp_ingress : bit<48>;
   timestamp_egress : bit<48>;
-  enqueue_bits : bit<32>;
-  dequeue_bits : bit<32>;
+  timestamp_tx : bit<48>;
+  ingress_port : bit<9>;
+  egress_port : bit<9>;
+  packet_length : bit<32>;
+  enq_qdepth : bit<32>;
+  deq_qdepth : bit<32>;
 }
