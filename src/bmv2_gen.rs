@@ -710,7 +710,6 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index
                         my_p4_actions = my_p4_actions + &format!("}}\n");
                     }
                 }
-
             }
 
             TypeQualifier::Persistent => {
@@ -756,9 +755,23 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index
                         my_p4_actions = my_p4_actions + &b;
                         my_p4_commons = my_p4_commons + &c;
                     }
-
                     my_p4_actions = my_p4_actions + &format!("{}{}({},", TAB, p4_func, my_lval_decl.id);
-                    my_p4_actions = my_p4_actions + &format!("{},{});\n", my_rval1_decl.id, my_rval2_decl.id);
+                    match prefix1.len() {
+                        0 => {
+                            my_p4_actions = my_p4_actions + &format!("{}, ", my_rval1_decl.id);
+                        }
+                        _ => {
+                            my_p4_actions = my_p4_actions + &format!("{}.{}, ",prefix1, my_rval1_decl.id);
+                        }
+                    }
+                    match prefix2.len() {
+                        0 => {
+                            my_p4_actions = my_p4_actions + &format!("{});\n", my_rval2_decl.id);
+                        }
+                        _ => {
+                            my_p4_actions = my_p4_actions + &format!("{}.{});\n",prefix2, my_rval2_decl.id);
+                        }
+                    }
                     if NEW_ACTION.load(Ordering::SeqCst) {
                         my_p4_actions = my_p4_actions + &format!("}}\n");
                     }
