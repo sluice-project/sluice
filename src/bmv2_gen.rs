@@ -55,19 +55,19 @@ pub fn handle_persistent_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
     let mut my_p4_header : P4Header = P4Header {meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
     match my_decl.var_type.var_info {
         VarInfo::BitArray(bit_width, var_size) => {
-            let initial_val_index : usize = 0;
+            // let initial_val_index : usize = 0;
             my_p4_header.register = format!("register {} {{\n{} width : {}; \n{} instance_count : {};\n}}\n",
             my_decl.identifier.id_name, TAB, bit_width, TAB, var_size);
             my_p4_header.meta = format!("{} : {};\n",my_decl.identifier.id_name, bit_width);
-            let my_option = my_decl.initial_values.get(initial_val_index);
+            // let my_option = my_decl.initial_values.get(initial_val_index);
 
-            match my_option {
-                Some (initial_value) => {
-                    my_p4_header.meta_init = format!("set_metadata({}.{},{});\n",
-                        META_HEADER, my_decl.identifier.id_name, initial_value.value);
-                }
-                _ => {}
-            }
+            // match my_option {
+            //     Some (initial_value) => {
+            //         my_p4_header.meta_init = format!("set_metadata({}.{},{});\n",
+            //             META_HEADER, my_decl.identifier.id_name, initial_value.value);
+            //     }
+            //     _ => {}
+            // }
         }
         _ => { }
     }
@@ -1389,6 +1389,42 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
     }
 
 
+
+
+pub fn handle_vardecl<'a> (my_decl :  &VariableDecl<'a>) -> (String, String, String, String) {
+    let mut my_p4_control : String = String::new();
+    let mut my_p4_actions : String = String::new();
+    let mut my_p4_commons : String = String::new();
+    let mut my_p4_metadecl : String = String::new();
+
+    let mut i = 0;
+    match my_decl.var_type.type_qualifier {
+
+        TypeQualifier::Persistent => {
+            // initialize register arrays with user-defined initial values
+            for val in &my_decl.initial_values {
+                if NEW_ACTION.load(Ordering::SeqCst) {
+                    let (a, b, c) = get_NEW_ACTION();
+                    my_p4_control = my_p4_control + &a;
+                    my_p4_actions = my_p4_actions + &b;
+                    my_p4_commons = my_p4_commons + &c;
+                }
+                my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}, {});\n", TAB,
+                        my_decl.identifier.id_name, i, val.value);
+                i += 1;
+                if NEW_ACTION.load(Ordering::SeqCst) {
+                    my_p4_actions = my_p4_actions + &format!("}}\n");
+                }
+            }
+        }
+
+        // transient variable initialization via metadata is handled in get_p4_header_trans, handle_transient_decl
+        _ => {}
+    }
+
+    return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
+}
+
 // Ideally to get both ingress and egress parts of conversion [0] for ingress and [1] for egress and [2] for actions
 pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Option<Statement<'a>>,
  decl_map : &'a HashMap<String, VarDecl>, import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>) -> (String, String, String, String) {
@@ -1405,6 +1441,9 @@ pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Opt
         // }
         DagNodeType::Stmt(my_statement) => {
             return handle_statement(&my_statement, node_type, pre_condition, decl_map, import_map, packet_map);
+        }
+        DagNodeType::Decl(my_decl) => {
+            return handle_vardecl(&my_decl);
         }
         _ => {
             return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
@@ -1664,27 +1703,28 @@ table ipv4_lpm {{
 
 fn gen_p4_metadata<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     let mut contents : String = String::new();
-    let mut meta_found = 0;
     contents = contents + &format!("header_type metadata_t {{ \n");
     contents = contents + &format!("{}fields {{\n", TAB);
     for my_dag_node in &my_dag.dag_vector {
-        if (my_dag_node.p4_code.p4_header.meta.len() != 0) {
+        if my_dag_node.p4_code.p4_header.meta.len() != 0 {
             contents = contents + &format!("{}{}{}",TAB, TAB,my_dag_node.p4_code.p4_header.meta);
-            meta_found = 1;
         }
     }
-    contents = contents + &format!("{}}}\n}}\n", TAB);
-    if meta_found == 1 {
-        p4_file.write(contents.as_bytes());
-    }
-    p4_file.write(b"metadata metadata_t mdata;\n");
+    contents = contents + &format!("{}}}\n}}\nmetadata metadata_t mdata;\n\n", TAB);
 
+    for my_dag_node in &my_dag.dag_vector {
+        if my_dag_node.p4_code.p4_header.meta_init.len() != 0 {
+            contents = contents + &format!("{}",my_dag_node.p4_code.p4_header.meta_init);
+        }
+    }
+
+    p4_file.write(contents.as_bytes());
 }
 
 fn gen_p4_registers<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     let mut contents : String = String::new();
     for my_dag_node in &my_dag.dag_vector {
-        if (my_dag_node.p4_code.p4_header.register.len() != 0) {
+        if my_dag_node.p4_code.p4_header.register.len() != 0 {
             contents = contents + &my_dag_node.p4_code.p4_header.register;
         }
     }
@@ -1834,7 +1874,7 @@ fn gen_p4_body<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &mut
     }
 
     // TODO : Identify placement in ingress/egress
-    contents = contents + &format!("control ingress {{\n");
+    contents = contents + &format!("\ncontrol ingress {{\n");
     let mut parser_conds : String = String::new();
     // TODO : handle multiple user-defined packets. Currently only allowing one
     let my_option  = my_packets.packet_vector.get(0);
@@ -1887,7 +1927,7 @@ fn gen_p4_body<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &mut
         apply(ipv4_lpm);
     }\n" ;
     contents = contents + &format!("}}\n");
-    contents = contents + &format!("control egress {{\n");
+    contents = contents + &format!("\ncontrol egress {{\n");
     // for my_dag_node in &my_dag.dag_vector {
     //     if (my_dag_node.p4_code.p4_control.len() != 0) {
     //         contents = contents + &my_dag_node.p4_code.p4_control;
