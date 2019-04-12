@@ -808,7 +808,7 @@ pub fn create_packet_map<'a> (my_packets : &Packets<'a>) ->HashMap<String, Strin
         for my_pkt in  pkt_tree.packet_vector {
             for my_pkt_field in &my_pkt.packet_fields.field_vector {
                 let my_id = my_pkt_field.identifier.id_name.clone();
-                let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), my_id);
+                let field_name  = format!("{}.{}{}", my_packet.packet_id.id_name.clone(), my_pkt.packet_id.id_name.clone(), my_id);
                 let identifier = format!("{}.{}", my_pkt.packet_id.id_name.clone(),my_id);
                 packet_map.insert(field_name, identifier);
             }
