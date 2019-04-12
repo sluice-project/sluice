@@ -9,6 +9,7 @@ use std::path::Path;
 use trans_snippet::*;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::process;
 
 const META_HEADER : &str = "mdata";
 const TAB : &str = "    ";
@@ -59,6 +60,7 @@ pub fn handle_persistent_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
             my_decl.identifier.id_name, TAB, bit_width, TAB, var_size);
             my_p4_header.meta = format!("{} : {};\n",my_decl.identifier.id_name, bit_width);
             let my_option = my_decl.initial_values.get(initial_val_index);
+
             match my_option {
                 Some (initial_value) => {
                     my_p4_header.meta_init = format!("set_metadata({}.{},{});\n",
@@ -1509,7 +1511,6 @@ fn gen_p4_headers<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &
     // TODO
     let mut contents : String = String::new();
     contents = contents + "#define ETHERTYPE_IPV4 0x0800\n";
-    contents = contents + "#define IP_PROTOCOLS_TCP 6\n";
     contents = contents + "#define IP_PROTOCOLS_UDP 17\n";
     contents = contents + "#define IP_PROTOCOLS_TCP 6\n";
 
@@ -1692,6 +1693,7 @@ fn gen_p4_registers<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
 
 fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &mut File) {
     let mut contents : String = String::new();
+    // TODO handle multiple user-defined packets. Currently only allowing one
     let my_option  = my_packets.packet_vector.get(0);
     let mut parse_my_ethpacket : String = String::new();
     let mut parse_my_ipv4packet : String = String::new();
@@ -1757,7 +1759,7 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
                     }
                 }
                 _ => {
-                    panic!("Need to have a derivative!\n");
+                    panic!("User-defined packet needs to have a derivative packet base!\n");
                 }
             }
         }
@@ -1816,28 +1818,69 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
 }
 
 
-fn gen_p4_body<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
+fn gen_p4_body<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &mut File) {
     let mut contents : String = String::new();
 
     for my_dag_node in &my_dag.dag_vector {
-        if (my_dag_node.p4_code.p4_actions.len() != 0) {
+        if my_dag_node.p4_code.p4_actions.len() != 0 {
             contents = contents + &my_dag_node.p4_code.p4_actions;
         }
     }
 
     for my_dag_node in &my_dag.dag_vector {
-        if (my_dag_node.p4_code.p4_commons.len() != 0) {
+        if my_dag_node.p4_code.p4_commons.len() != 0 {
             contents = contents + &my_dag_node.p4_code.p4_commons;
         }
     }
 
     // TODO : Identify placement in ingress/egress
     contents = contents + &format!("control ingress {{\n");
+    let mut parser_conds : String = String::new();
+    // TODO : handle multiple user-defined packets. Currently only allowing one
+    let my_option  = my_packets.packet_vector.get(0);
+    match my_option {
+        Some(my_packet) => {
+            parser_conds = parser_conds + &format!("    if (");
+            match my_packet.packet_parser_condition {
+                PacketParserCondition::ParserCondition(ref id, ref val) => {
+                    parser_conds = parser_conds + &format!("{}.{} == {} ", 
+                        my_packet.packet_base.id_name, id.id_name, val.value);
+                    match my_packet.packet_base.id_name {
+                        "udp" => {
+                            parser_conds = parser_conds + &format!("&& ethernet.etherType == ETHERTYPE_IPV4 && ipv4.protocol == IP_PROTOCOLS_UDP) {{\n");
+                        }
+                        "ipv4" => {
+                            parser_conds = parser_conds + &format!("&& ethernet.etherType == ETHERTYPE_IPV4) {{\n");
+                        }
+                        "ethernet" => { 
+                            parser_conds = parser_conds + &format!(") {{\n");
+                        }
+                        _ => {
+                            panic!("User-defined packet needs to have a derivative packet base!\n");
+                        }
+                    }
+                }
+                PacketParserCondition::Empty() => {
+                }
+            }
+        }
+        _ => {
+
+        }
+    }
+
+    contents = contents + &parser_conds;
+
     for my_dag_node in &my_dag.dag_vector {
-        if (my_dag_node.p4_code.p4_control.len() != 0) {
+        if my_dag_node.p4_code.p4_control.len() != 0 {
             contents = contents + &my_dag_node.p4_code.p4_control;
         }
     }
+
+    if parser_conds.len() != 0 {
+        contents = contents + &format!("\n\t}}\n");
+    }
+
     // calling ipv4_lpm for routing
     contents = contents + "
     if(valid(ipv4) and ipv4.ttl > 0) {
@@ -1855,6 +1898,7 @@ fn gen_p4_body<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
 }
 
 pub fn gen_p4_code<'a> (snippet_name : &str , my_packets : &Packets<'a>, snippet_dag : &Dag<'a>){
+
     let p4_filename : String = format!("out/{}.p4", snippet_name);
     let path = Path::new(p4_filename.as_str());
     let display  = path.display();
@@ -1872,7 +1916,7 @@ pub fn gen_p4_code<'a> (snippet_name : &str , my_packets : &Packets<'a>, snippet
     gen_p4_metadata(&snippet_dag, &mut p4_file);
     gen_p4_registers(&snippet_dag, &mut p4_file);
     //gen_p4_actions(&snippet_dag, &mut p4_file);
-    gen_p4_body(&snippet_dag, &mut p4_file);
+    gen_p4_body(&snippet_dag, my_packets, &mut p4_file);
 }
 
 
