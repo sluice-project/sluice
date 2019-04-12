@@ -17,6 +17,7 @@ packet dptp_pkt:ethernet(etherType:1234){
 @ bmv2
 snippet dptp_switch(){
   transient z : bit<1>;
-  z =1;
-  psa.a = 1;
+  transient queuing_time : bit<32>;
+  z = 1;
+  queuing_time = psa.timestamp_rx;
 }

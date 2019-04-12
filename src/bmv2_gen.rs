@@ -237,7 +237,7 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64, 
                 let (a, b, c) = get_NEW_ACTION();
                 my_p4_control = my_p4_control + &a;
                 my_p4_actions = my_p4_actions + &b;
-                my_p4_commons = my_p4_commons + &c;            
+                my_p4_commons = my_p4_commons + &c;
             }
             if prefix.len()!= 0 {
                 my_p4_actions = my_p4_actions + &format!("{}modify_field({}.{}, {}.{});\n", TAB,
@@ -279,7 +279,7 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u64, 
                 let (a, b, c) = get_NEW_ACTION();
                 my_p4_control = my_p4_control + &a;
                 my_p4_actions = my_p4_actions + &b;
-                my_p4_commons = my_p4_commons + &c;            
+                my_p4_commons = my_p4_commons + &c;
             }
 
             if prefix.len()!= 0 {
@@ -538,12 +538,12 @@ pub fn handle_condition_refval_v2<'a> (bin_op_type : &str, my_lval_decl : &VarDe
 
 
 
-//  Packet { packet_id: Identifier { id_name: "n" }, packet_base: Identifier { id_name: "udp" }, 
+//  Packet { packet_id: Identifier { id_name: "n" }, packet_base: Identifier { id_name: "udp" },
 
 // packet_fields: PacketFields { field_vector: [
-//         PacketField { identifier: Identifier { id_name: "new_one" }, 
-//                     var_type: VarType { var_info: BitArray(32, 1), type_qualifier: Field } }] 
-// }, 
+//         PacketField { identifier: Identifier { id_name: "new_one" },
+//                     var_type: VarType { var_info: BitArray(32, 1), type_qualifier: Field } }]
+// },
 
 // packet_parser_condition: ParserCondition(Identifier { id_name: "srcPort" }, Value { value: 1234 }) }
 //   // packet_map    : HashMap<String, (String, u64)>,
@@ -762,7 +762,7 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index
                 }
 
             }
-            // not handling input, output, const... 
+            // not handling input, output, const...
             _ => {}
         }
 
@@ -1156,7 +1156,7 @@ pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : u
     //     TypeQualifier::Field => {
     //         my_p4_commons = my_p4_commons + &format!("{}{}{} : exact;\n{}}}\n", TAB, TAB, my_rval_decl.id, TAB);
     //     }
-    //     _ => { 
+    //     _ => {
     //         my_p4_commons = my_p4_commons + &format!("{}{}{}.{} : exact;\n{}}}\n", TAB, TAB, META_HEADER, my_rval_decl.id, TAB);
     //     }
     // }
@@ -1203,10 +1203,10 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
         let mut my_rval2_index = 0;
         let mut is_rval1_val = false;
         let mut rval1_val = 0;
-        //println!("Handling Statement\n");
-        //println!("{:?}\n", my_statement);
+        println!("Handling Statement\n");
+        println!("{:?}\n", my_statement);
         //println!("decl_map: {:?}\n", decl_map);
-        
+
         // checking that lvalue of statement is declared
         match my_statement.lvalue {
             LValue::Scalar(ref my_id) => {
@@ -1247,13 +1247,23 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                         my_lval_decl = my_decl;
                     }
                     None => {
-                        println!("Error: {} not declared?\n", my_lval);
-                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
+                        //Could be an imported field?
+                        let my_decl_import_option = decl_map.get(&field);
+                        match my_decl_option {
+                            Some(my_decl) => {
+                                my_lval_decl = my_decl;
+                            }
+                            None => {
+                                println!("Error: {} not declared?\n", field);
+                                return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
+                            }
+                        }
                     }
                 }
                 my_lval_index = 0;
             }
         }
+        //println!("lval_done\n");
 
         match my_statement.expr.op1 {
         // checking that op1 of statement is declared if it is an lvalue
@@ -1277,16 +1287,32 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
 
                     LValue::Field(ref p, ref f) => {
                         let field = format!("{}.{}", p.id_name, f.id_name);
-                        let my_rval1 = packet_map.get(&field).unwrap();
-                        let my_decl_option = decl_map.get(&my_rval1.clone());
-                        match my_decl_option {
-                            Some(my_decl) => {
-                                my_rval_decl1 = my_decl;
-                                // expr_right to be looked into
+                        let my_rval1_option = packet_map.get(&field);
+                        match my_rval1_option {
+                            Some(my_rval1) => {
+                                let my_decl_option = decl_map.get(&my_rval1.clone());
+                                match my_decl_option {
+                                    Some(my_decl) => {
+                                        my_rval_decl1 = my_decl;
+                                        // expr_right to be looked into
+                                    }
+                                    None => {
+                                        //Could be an imported field?
+                                        panic!("Error: {} not declared?\n",my_rval1);
+                                    }
+                                }
                             }
                             None => {
-                                println!("Error: {} not declared?\n", my_rval1);
-                                return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
+                                let my_decl_import_option = decl_map.get(&field);
+                                match my_decl_import_option {
+                                    Some(my_decl) => {
+                                        my_rval_decl1 = my_decl;
+                                    }
+                                    None => {
+                                        println!("Error: {} not declared?\n", field);
+                                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
+                                    }
+                                }
                             }
                         }
                     }
@@ -1452,7 +1478,7 @@ pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Opt
 }
 
 
-pub fn fill_p4code<'a> (import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>, 
+pub fn fill_p4code<'a> (import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>,
     my_dag :  &mut Dag<'a>, pkt_tree : &Packets<'a>, my_packets : &Packets<'a>) {
 
     let mut decl_map : HashMap<String, VarDecl>= HashMap::new();
@@ -1497,6 +1523,58 @@ pub fn fill_p4code<'a> (import_map : &HashMap<String, String>, packet_map : &Has
         }
     }
 
+    // adding all  device metadata to decl_map
+    for (sluice_meta, device_meta) in import_map.iter() {
+        let mut my_vardecl : VarDecl;
+        let mut my_varinfo : VarInfo<'a>;
+        let mut my_id = "standard_metadata";
+        match device_meta.as_str() {
+            "timestamp_rx" => {
+                my_id = "intrinsic_metadata.ingress_global_timestamp";
+                my_varinfo = VarInfo::BitArray(32, 1);
+            }
+            "timestamp_ingress" => {
+                my_id = "intrinsic_metadata.ingress_global_timestamp";
+                my_varinfo = VarInfo::BitArray(32, 1);
+            }
+            "timestamp_egress" => {
+                my_id = "intrinsic_metadata.ingress_global_timestamp";
+                my_varinfo = VarInfo::BitArray(32, 1);
+            }
+            "timestamp_tx" => {
+                my_id = "intrinsic_metadata.ingress_global_timestamp";
+                my_varinfo = VarInfo::BitArray(32, 1);
+            }
+            "ingress_port" => {
+                my_id = "standard_metadata.ingress_port";
+                my_varinfo = VarInfo::BitArray(9, 1);
+            }
+            "egress_port" => {
+                my_id = "standard_metadata.egress_spec";
+                my_varinfo = VarInfo::BitArray(9, 1);
+            }
+            "packet_length" => {
+                my_id = "standard_metadata.packet_length";
+                my_varinfo = VarInfo::BitArray(32, 1);
+            }
+            "enq_qdepth" => {
+                my_id = "queueing_metadata.enq_qdepth";
+                my_varinfo = VarInfo::BitArray(19, 1);
+            }
+            "deq_qdepth" => {
+                my_id = "queueing_metadata.deq_qdepth";
+                my_varinfo = VarInfo::BitArray(19, 1);
+            }
+            _ => {
+                panic!("Currently not supported\n");
+            }
+        }
+        let my_typequalifier : TypeQualifier = TypeQualifier::Field;
+        my_vardecl = VarDecl{id : String::from(my_id), var_info : my_varinfo, type_qualifier : my_typequalifier};
+        decl_map.insert(sluice_meta.to_string(), my_vardecl);
+    }
+
+
 
     for mut my_dag_node in &mut my_dag.dag_vector {
         my_dag_node.p4_code.p4_header = get_p4_header_trans(&my_dag_node.node_type);
@@ -1521,10 +1599,10 @@ pub fn fill_p4code<'a> (import_map : &HashMap<String, String>, packet_map : &Has
             _ => {}
         }
     }
-
+    println!("decl_map : {:?}\n", decl_map);
     for mut my_dag_node in &mut my_dag.dag_vector {
         let (a, b, c, d) = get_p4_body_trans(&my_dag_node.node_type, &my_dag_node.pre_condition, &decl_map, import_map, &packet_map);
-        println!("meta header : {}\n", d);
+        //println!("meta header : {}\n", d);
         my_dag_node.p4_code.p4_control = a;
         my_dag_node.p4_code.p4_actions = b;
         my_dag_node.p4_code.p4_commons = c;
@@ -1998,7 +2076,7 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                                                         // parse out action and table names from p4_commons
                                                         let re1 = Regex::new(r"table\d+").unwrap();
                                                         let re2 = Regex::new(r"action\d+").unwrap();
-                                                        
+
                                                         let mut table_array = Vec::new();
                                                         for cap in re1.captures_iter(&dagnode.p4_code.p4_commons) {
                                                             let ref table_str = cap.get(0).unwrap().as_str();
@@ -2010,7 +2088,7 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                                                             let ref action_str = cap.get(0).unwrap().as_str();
                                                             action_array.push(action_str.clone());
                                                         }
-                        
+
                                                         contents = contents + &format!("table_add {} {} 1 => \n", table_array[0], action_array[0]);
                                                         contents = contents + &format!("table_add {} {} 0 => \n", table_array[0], action_array[1]);
                                                     }
@@ -2019,16 +2097,16 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
 
                                                 }
                                             }
-                                            None => { 
+                                            None => {
                                                 println!("Error: {} not declared?\n",my_id.id_name);
                                             }
-              
+
                                         }
                                     }
-                                    
+
                                     // TODO : handle tables for array, value and packet field operands
                                     LValue::Array(ref my_id, ref box_index_op) => {}
-                                    
+
                                     _ => {
                                         panic!("Unsuppoted operation!");
                                     }
@@ -2043,7 +2121,7 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                         // parse out action and table names from p4_commons
                         let re1 = Regex::new(r"table\d+").unwrap();
                         let re2 = Regex::new(r"action\d+").unwrap();
-                        
+
                         let mut table_array = Vec::new();
                         for cap in re1.captures_iter(&dagnode.p4_code.p4_commons) {
                             let ref table_str = cap.get(0).unwrap().as_str();
