@@ -51,6 +51,7 @@ pub fn handle_transient_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
     return my_p4_header;
 }
 
+// registers are initalized to 0 in bmv2?
 pub fn handle_persistent_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
     let mut my_p4_header : P4Header = P4Header {meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
     match my_decl.var_type.var_info {
@@ -1789,13 +1790,6 @@ fn gen_p4_metadata<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
         }
     }
     contents = contents + &format!("{}}}\n}}\nmetadata metadata_t mdata;\n\n", TAB);
-
-    for my_dag_node in &my_dag.dag_vector {
-        if my_dag_node.p4_code.p4_header.meta_init.len() != 0 {
-            contents = contents + &format!("{}",my_dag_node.p4_code.p4_header.meta_init);
-        }
-    }
-
     p4_file.write(contents.as_bytes());
 }
 
@@ -1907,6 +1901,7 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
         contents = contents + &format!("        {}\n\n", parse_my_ipv4packet);
     }
 
+    // TODO : handle tcp conditional parsing
     contents = contents + &format!("{}}}\n}}\n\nparser parse_tcp {{
     extract(tcp);
     return ingress;\n}}\n", TAB);
@@ -1923,11 +1918,22 @@ fn gen_p4_parser<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &m
         contents = contents + &format!("{}{}default: ingress;\n{}}}\n}}\n\n", TAB, TAB, TAB);
     }
 
+
+    // handling only 1 user-defined packet per file, for now
+    // snippet code transients are only initialized if incoming packet is user-defined
     match my_option {
         Some(my_packet) => {
+
+            let mut set_metadata : String = String::new();
+            for my_dag_node in &my_dag.dag_vector {
+                if my_dag_node.p4_code.p4_header.meta_init.len() != 0 {
+                    set_metadata = set_metadata + &format!("{}",my_dag_node.p4_code.p4_header.meta_init);
+                }
+            }
             contents = contents + &format!("parser parse_{} {{
-    extract({});
-    return ingress;\n}}\n\n", my_packet.packet_id.id_name, my_packet.packet_id.id_name);
+    extract({});\n{}", 
+                my_packet.packet_id.id_name, my_packet.packet_id.id_name, TAB);
+            contents = contents + &set_metadata + &format!("{}return ingress;\n}}\n\n", TAB);
         }
         _ => {}
     }
@@ -1974,7 +1980,7 @@ fn gen_p4_body<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &mut
                             parser_conds = parser_conds + &format!(") {{\n");
                         }
                         _ => {
-                            panic!("User-defined packet needs to have a derivative packet base!\n");
+                            panic!("User-defined packet needs to have a derivative packet base of either udp/ipv4/ethernet!\n");
                         }
                     }
                 }
