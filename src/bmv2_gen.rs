@@ -26,6 +26,7 @@ static NEQ_TABLE_COUNT : AtomicUsize = AtomicUsize::new(1);
 
 static NEW_ACTION : AtomicBool = AtomicBool::new(true);
 
+// from p4-spec, metadata initialized to 0 unless initial value is given
 pub fn handle_transient_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
     let mut my_p4_header : P4Header = P4Header {meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
     match my_decl.var_type.var_info {
@@ -43,6 +44,7 @@ pub fn handle_transient_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
                 }
 
             } else {
+                // see p4-14 spec "Only packet headers (not metadata instances) may be arrays (header stacks)."
                 panic!("[Error]: Array Unsupported on transient type!\n");
             }
         }
@@ -51,7 +53,7 @@ pub fn handle_transient_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
     return my_p4_header;
 }
 
-// registers are initalized to 0 in bmv2?
+// registers are initalized to 0 in bmv2 ???
 pub fn handle_persistent_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
     let mut my_p4_header : P4Header = P4Header {meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
     match my_decl.var_type.var_info {
@@ -1416,42 +1418,6 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
     }
 
 
-
-
-pub fn handle_vardecl<'a> (my_decl :  &VariableDecl<'a>) -> (String, String, String, String) {
-    let mut my_p4_control : String = String::new();
-    let mut my_p4_actions : String = String::new();
-    let mut my_p4_commons : String = String::new();
-    let mut my_p4_metadecl : String = String::new();
-
-    let mut i = 0;
-    match my_decl.var_type.type_qualifier {
-
-        TypeQualifier::Persistent => {
-            // initialize register arrays with user-defined initial values
-            for val in &my_decl.initial_values {
-                if NEW_ACTION.load(Ordering::SeqCst) {
-                    let (a, b, c) = get_NEW_ACTION();
-                    my_p4_control = my_p4_control + &a;
-                    my_p4_actions = my_p4_actions + &b;
-                    my_p4_commons = my_p4_commons + &c;
-                }
-                my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}, {});\n", TAB,
-                        my_decl.identifier.id_name, i, val.value);
-                i += 1;
-                if NEW_ACTION.load(Ordering::SeqCst) {
-                    my_p4_actions = my_p4_actions + &format!("}}\n");
-                }
-            }
-        }
-
-        // transient variable initialization via metadata is handled in get_p4_header_trans, handle_transient_decl
-        _ => {}
-    }
-
-    return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
-}
-
 // Ideally to get both ingress and egress parts of conversion [0] for ingress and [1] for egress and [2] for actions
 pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Option<Statement<'a>>,
  decl_map : &'a HashMap<String, VarDecl>, import_map : &HashMap<String, String>, packet_map : &HashMap<String, String>) -> (String, String, String, String) {
@@ -1468,9 +1434,6 @@ pub fn get_p4_body_trans<'a> (node_type : &DagNodeType<'a>, pre_condition : &Opt
         // }
         DagNodeType::Stmt(my_statement) => {
             return handle_statement(&my_statement, node_type, pre_condition, decl_map, import_map, packet_map);
-        }
-        DagNodeType::Decl(my_decl) => {
-            return handle_vardecl(&my_decl);
         }
         _ => {
             return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
@@ -2063,8 +2026,22 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
     for dagnode in &snippet_dag.dag_vector {
 
         match &dagnode.node_type {
-            DagNodeType::Decl(var_decl) => {
-                decl_map.insert(var_decl.identifier.id_name.to_string(), var_decl.clone());
+            DagNodeType::Decl(my_decl) => {
+                decl_map.insert(my_decl.identifier.id_name.to_string(), my_decl.clone());
+                let mut i = 0;
+                match my_decl.var_type.type_qualifier {
+
+                    TypeQualifier::Persistent => {
+                        // initialize register arrays with user-defined initial values
+                        for val in &my_decl.initial_values {
+                            contents = contents + &format!("register_write {} {} {}\n",
+                                    my_decl.identifier.id_name, i, val.value);
+                            i += 1;
+                        }
+                    }
+                    // transient variable initialization via metadata is handled in get_p4_header_trans, handle_transient_decl
+                    _ => {}
+                }
             }
 
             DagNodeType::Stmt(my_statement) => {
