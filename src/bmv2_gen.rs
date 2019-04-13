@@ -345,62 +345,6 @@ pub fn get_new_eq_table<'a> (my_temp_decl : &String, my_lval_decl : &VarDecl, eq
     return (my_p4_control, my_p4_actions, my_p4_commons);
 }
 
-pub fn handle_condition_refs<'a> (bin_op_type : BinOpType, my_lval_decl : &VarDecl, prefix1 : &str,
- my_rval1_decl : &VarDecl, prefix2 : &str, my_rval2_decl : &VarDecl) -> (String, String, String, String) {
-     let mut my_p4_control : String = String::new();
-     let mut my_sub_actio : String = String::new();
-     let mut my_p4_actions : String = String::new();
-
-     let mut my_p4_commons : String = String::new();
-     let mut my_p4_metadecl : String = String::new();
-     let mut my_p4func = "";
-     let bit_width = 32;
-     let my_temp_decl_id = &format!("temp{:?}", TEMP_COUNT);
-     let my_temp_use_id = &format!("{}.{}", META_HEADER, my_temp_decl_id.to_string());
-     my_p4_metadecl = my_p4_metadecl + &format!("{} : {};\n",my_temp_decl_id.to_string(), bit_width);
-     //ACTION_COUNT.fetch_add(1, Ordering::SeqCst);
-
-     let (a, b, c) = get_NEW_ACTION();
-     my_p4_control = my_p4_control + &a;
-     my_p4_actions = my_p4_actions + &b;
-     my_p4_commons = my_p4_commons + &c;
-
-     my_p4_actions = my_p4_actions + &format!("{}subtract({},", TAB, my_temp_use_id);
-     match prefix1.len() {
-        0 => {
-            my_p4_actions = my_p4_actions + &format!("{},", my_rval1_decl.id);
-        }
-        _ => {
-            my_p4_actions = my_p4_actions + &format!("{}.{},",prefix1, my_rval1_decl.id);
-        }
-    }
-    match prefix2.len() {
-        0 => {
-            my_p4_actions = my_p4_actions + &format!("{});\n", my_rval2_decl.id);
-        }
-        _ => {
-            my_p4_actions = my_p4_actions + &format!("{}.{});\n",prefix2, my_rval2_decl.id);
-        }
-    }
-    my_p4_actions = my_p4_actions + &format!("}}\n");
-     match bin_op_type {
-         BinOpType::Equal => {
-             let (a, b, c) = get_new_eq_table(my_temp_use_id, my_lval_decl, true);
-             my_p4_control = my_p4_control + &a;
-             my_p4_actions = my_p4_actions + &b;
-             my_p4_commons = my_p4_commons + &c;
-         }
-         BinOpType::NotEqual => {
-             let (a, b, c) = get_new_eq_table(my_temp_use_id, my_lval_decl, false);
-             my_p4_control = my_p4_control + &a;
-             my_p4_actions = my_p4_actions + &b;
-             my_p4_commons = my_p4_commons + &c;
-         }
-         _ => {}
-     }
-     return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
-}
-
 
 // This method is using p4 control blocks available in pipeline.
 pub fn handle_condition_refs_v2<'a> (bin_op_type : &str, my_lval_decl : &VarDecl, prefix1 : &str,
@@ -446,54 +390,6 @@ pub fn handle_condition_refs_v2<'a> (bin_op_type : &str, my_lval_decl : &VarDecl
      }
 
      my_p4_control = my_p4_control + &format!("{}}}\n", TAB);
-     return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
-}
-
-
-pub fn handle_condition_refval<'a> (bin_op_type : BinOpType, my_lval_decl : &VarDecl, prefix1 : &str,
- my_rval1_decl : &VarDecl, val : u64) -> (String, String, String, String) {
-     let mut my_p4_control : String = String::new();
-     let mut my_p4_actions : String = String::new();
-     let mut my_p4_commons : String = String::new();
-     let mut my_p4_metadecl : String = String::new();
-     let my_temp_decl_id = &format!("temp{:?}", TEMP_COUNT);
-     let my_temp_use_id = &format!("{}.{}", META_HEADER, my_temp_decl_id.to_string());
-     let bit_width = 32;
-     my_p4_metadecl = my_p4_metadecl + &format!("{} : {};\n",my_temp_decl_id.to_string(), bit_width);
-     //ACTION_COUNT.fetch_add(1, Ordering::SeqCst);
-
-     let (a, b, c) = get_NEW_ACTION();
-     my_p4_control = my_p4_control + &a;
-     my_p4_actions = my_p4_actions + &b;
-     my_p4_commons = my_p4_commons + &c;
-
-     my_p4_actions = my_p4_actions + &format!("{}subtract({},", TAB, my_temp_use_id);
-     match prefix1.len() {
-         0 => {
-             my_p4_actions = my_p4_actions + &format!("{},", my_rval1_decl.id);
-         }
-         _ => {
-             my_p4_actions = my_p4_actions + &format!("{}.{},",prefix1, my_rval1_decl.id);
-         }
-     }
-     my_p4_actions = my_p4_actions + &format!("{});\n", val);
-
-     my_p4_actions = my_p4_actions + &format!("}}\n");
-     match bin_op_type {
-         BinOpType::Equal => {
-             let (a, b, c) = get_new_eq_table(my_temp_use_id, my_lval_decl, true);
-             my_p4_control = my_p4_control + &a;
-             my_p4_actions = my_p4_actions + &b;
-             my_p4_commons = my_p4_commons + &c;
-         }
-         BinOpType::NotEqual => {
-             let (a, b, c) = get_new_eq_table(my_temp_use_id, my_lval_decl, true);
-             my_p4_control = my_p4_control + &a;
-             my_p4_actions = my_p4_actions + &b;
-             my_p4_commons = my_p4_commons + &c;
-         }
-         _ => {}
-     }
      return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
 }
 
@@ -988,12 +884,26 @@ pub fn handle_binop_refval_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_ind
 
                 my_p4_actions = my_p4_actions + &format!("{}{}({},", TAB, p4_func, my_lval_decl.id);
                 if ordering {
-                    my_p4_actions = my_p4_actions + &format!("{},{});\n", my_rval_decl.id, val2);
+                    match prefix1.len() {
+                        0 => {
+                            my_p4_actions = my_p4_actions + &format!("{},", my_rval_decl.id);
+                        }
+                        _ => {
+                            my_p4_actions = my_p4_actions + &format!("{}.{},",prefix1, my_rval_decl.id);
+                        }
+                    }
+                    my_p4_actions = my_p4_actions + &format!("{});\n", val2);
                 } else {
                     my_p4_actions = my_p4_actions + &format!("{},\n", val2);
-                    my_p4_actions = my_p4_actions + &format!("{});", my_rval_decl.id);
+                    match prefix1.len() {
+                        0 => {
+                            my_p4_actions = my_p4_actions + &format!("{});", my_rval_decl.id);
+                        }
+                        _ => {
+                            my_p4_actions = my_p4_actions + &format!("{}.{});",prefix1, my_rval_decl.id);
+                        }
+                    }
                 }
-
                 if NEW_ACTION.load(Ordering::SeqCst) {
                     my_p4_actions = my_p4_actions + &format!("}}\n");
                 }
@@ -1219,10 +1129,11 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
         let mut my_rval2_index = 0;
         let mut is_rval1_val = false;
         let mut rval1_val = 0;
+        // let mut lval_arr_ind;
         println!("Handling Statement\n");
         println!("{:?}\n", my_statement);
-        //println!("decl_map: {:?}\n", decl_map);
-
+        // println!("decl_map: {:?}\n", decl_map);
+        // process::exit(1);
         // checking that lvalue of statement is declared
         match my_statement.lvalue {
             LValue::Scalar(ref my_id) => {
@@ -1279,7 +1190,6 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                 my_lval_index = 0;
             }
         }
-        //println!("lval_done\n");
 
         match my_statement.expr.op1 {
         // checking that op1 of statement is declared if it is an lvalue
@@ -1350,7 +1260,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
 
         match my_statement.expr.expr_right {
             ExprRight::BinOp(bin_op_type, ref operand) => {
-                // Operations like a = b + c
+                // statements like a = b + c
                 match operand {
                     Operand::LValue(ref lval) => {
                         match lval {
@@ -1408,8 +1318,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
             }
 
             ExprRight::Cond(ref operand1, ref operand2) => {
-                // Operations like m = z?A:B;
-                // TODO
+                // statements like m = z ? A : B;
                 if !is_rval1_val {
                     return handle_ternary_assignment(&my_lval_decl, my_lval_index, my_rval_decl1, operand1, operand2, decl_map);
                 } else {
@@ -1418,7 +1327,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
             }
 
             ExprRight::Empty() => {
-                // This is an assignment of meta/register/packet . e.g. a = b or a = 1
+                // statements like a = b or a = 1
                 if is_rval1_val {
                     return handle_value_assignment(&my_lval_decl, my_lval_index, rval1_val);
                 } else {
@@ -2100,7 +2009,7 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                                         }
                                     }
 
-                                    // TODO : handle tables for array, value and packet field operands
+                                    // TODO : handle tables for array, value and packet field operands in Cond expr
                                     LValue::Array(ref my_id, ref box_index_op) => {}
 
                                     _ => {
@@ -2109,7 +2018,7 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                                 }
                             }
 
-                            Operand::Value(ref rval_val) => {}
+                            Operand::Value(ref rval_val) => {panic!("Ternary expr must have a boolean condition variable!")}
                         }
                     }
 
