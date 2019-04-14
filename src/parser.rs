@@ -319,7 +319,8 @@ fn parse_variable_decl<'a>(token_iter : &mut TokenIterator<'a>) -> VariableDecl<
       }
       // Check that the number of initial values matches up with the type for persistent and const
       // variables alone
-      if &var_type.type_qualifier == &TypeQualifier::Const || &var_type.type_qualifier == &TypeQualifier::Persistent {
+      // if &var_type.type_qualifier == &TypeQualifier::Const || &var_type.type_qualifier == &TypeQualifier::Persistent {
+      if &var_type.type_qualifier == &TypeQualifier::Const {
         if initial_values.len() as u64 != var_size {
           panic!("Found {} initial values. Need {} initial values for variable {}.",
                  initial_values.len(),
