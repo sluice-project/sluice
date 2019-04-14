@@ -18,3 +18,10 @@ packet ipv4 {
   srcAddr : bit<32>;
   dstAddr: bit<32>;
 }
+
+packet udp {
+  srcPort : bit<16>;
+  dstPort : bit<16>;
+  len : bit<16>;
+  checksum : bit<16>;
+}

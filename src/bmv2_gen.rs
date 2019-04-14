@@ -122,7 +122,7 @@ pub fn get_NEW_ACTION () -> (String, String, String) {
     return (my_p4_control, my_p4_actions, my_p4_commons);
 }
 
-pub fn handle_read_register (my_decl : &VarDecl, my_index : u64) -> (String, String, String) {
+pub fn handle_read_register (my_decl : &VarDecl, my_index : &str) -> (String, String, String) {
     let mut my_p4_control : String = String::new();
     let mut my_p4_actions : String = String::new();
     let mut my_p4_commons : String = String::new();
@@ -189,7 +189,7 @@ pub fn handle_value_assignment<'a> ( my_lval_decl : &VarDecl, my_lval_index : &s
             }
             return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
         }
-
+ 
         _ => {
             return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
         }
@@ -199,7 +199,7 @@ pub fn handle_value_assignment<'a> ( my_lval_decl : &VarDecl, my_lval_index : &s
 
 
 
-pub fn handle_read_register_v2 (my_decl : &VarDecl, my_index : u64) -> (String, String, String) {
+pub fn handle_read_register_v2 (my_decl : &VarDecl, my_index : &str) -> (String, String, String) {
     let mut my_p4_control : String = String::new();
     let mut my_p4_actions : String = String::new();
     let mut my_p4_commons : String = String::new();
@@ -210,8 +210,8 @@ pub fn handle_read_register_v2 (my_decl : &VarDecl, my_index : u64) -> (String, 
 
 // reg1 = if_block_tmp_2 ? tmp_0_if_2 : reg1; (see test1.np)
 // handle_ref_assignment(reg1, index, tmp_0_if_2, index, v2)
-pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &str, my_rval_decl : &VarDecl, my_rval_index : u64,
-                            read_reg_func : &Fn(&VarDecl, u64) -> (String, String, String),
+pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &str, my_rval_decl : &VarDecl, my_rval_index : &str,
+                            read_reg_func : &Fn(&VarDecl, &str) -> (String, String, String),
                             (a,b,c,d) : (String, String, String, String)) -> (String, String, String, String) {
 
     let mut my_p4_control = a;
@@ -452,8 +452,8 @@ pub fn handle_condition_refval_v2<'a> (bin_op_type : &str, my_lval_decl : &VarDe
 //   // packet_map    : HashMap<String, (String, u64)>,
 
 
-pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str, my_rval1_decl : &VarDecl, my_rval1_index : u64,
-    bin_op_type : BinOpType, my_rval2_decl : &VarDecl, my_rval2_index : u64, decl_map : &'a  HashMap<String, VarDecl>,
+pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str, my_rval1_decl : &VarDecl, my_rval1_index : &str,
+    bin_op_type : BinOpType, my_rval2_decl : &VarDecl, my_rval2_index : &str, decl_map : &'a  HashMap<String, VarDecl>,
      (a,b,c,d) : (String, String, String, String)) -> (String, String, String, String) {
 
         let mut my_p4_control = a;
@@ -589,14 +589,14 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index
                         my_p4_actions = my_p4_actions + &b;
                         my_p4_commons = my_p4_commons + &c;
                     }
-                    my_p4_actions = my_p4_actions + &format!("{}{}({}.{},", TAB, p4_func, META_HEADER, my_lval_decl.id);
+                    my_p4_actions = my_p4_actions + &format!("{}{}({}.{}, ", TAB, p4_func, META_HEADER, my_lval_decl.id);
                     match prefix1.len() {
                         0 => {
-                            my_p4_actions = my_p4_actions + &format!("{},", my_rval1_decl.id);
+                            my_p4_actions = my_p4_actions + &format!("{}, ", my_rval1_decl.id);
 
                         }
                         _ => {
-                            my_p4_actions = my_p4_actions + &format!("{}.{},",prefix1, my_rval1_decl.id);
+                            my_p4_actions = my_p4_actions + &format!("{}.{}, ",prefix1, my_rval1_decl.id);
                         }
                     }
                     match prefix2.len() {
@@ -656,7 +656,7 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index
                         my_p4_actions = my_p4_actions + &b;
                         my_p4_commons = my_p4_commons + &c;
                     }
-                    my_p4_actions = my_p4_actions + &format!("{}{}({},", TAB, p4_func, my_lval_decl.id);
+                    my_p4_actions = my_p4_actions + &format!("{}{}({}, ", TAB, p4_func, my_lval_decl.id);
                     match prefix1.len() {
                         0 => {
                             my_p4_actions = my_p4_actions + &format!("{}, ", my_rval1_decl.id);
@@ -688,7 +688,7 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index
 
 //Direction : true  for ref <op> val, false for val <op> ref
 pub fn handle_binop_refval_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str,
-    my_rval_decl : &VarDecl,  my_rval_index : u64,bin_op_type : BinOpType, val2 : u64,
+    my_rval_decl : &VarDecl,  my_rval_index : &str, bin_op_type : BinOpType, val2 : u64,
      decl_map : &'a  HashMap<String, VarDecl>, ordering : bool,
      (a,b,c,d) : (String, String, String, String)) -> (String, String, String, String) {
 
@@ -811,14 +811,14 @@ pub fn handle_binop_refval_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_ind
                     my_p4_actions = my_p4_actions + &b;
                     my_p4_commons = my_p4_commons + &c;
                 }
-                my_p4_actions = my_p4_actions + &format!("{}{}({}.{},", TAB, p4_func, META_HEADER, my_lval_decl.id);
+                my_p4_actions = my_p4_actions + &format!("{}{}({}.{}, ", TAB, p4_func, META_HEADER, my_lval_decl.id);
                 if ordering {
                     match prefix1.len() {
                         0 => {
-                            my_p4_actions = my_p4_actions + &format!("{},", my_rval_decl.id);
+                            my_p4_actions = my_p4_actions + &format!("{}, ", my_rval_decl.id);
                         }
                         _ => {
-                            my_p4_actions = my_p4_actions + &format!("{}.{},",prefix1, my_rval_decl.id);
+                            my_p4_actions = my_p4_actions + &format!("{}.{}, ",prefix1, my_rval_decl.id);
                         }
                     }
                     my_p4_actions = my_p4_actions + &format!("{});\n", val2);
@@ -849,14 +849,14 @@ pub fn handle_binop_refval_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_ind
                     my_p4_actions = my_p4_actions + &b;
                     my_p4_commons = my_p4_commons + &c;
                 }
-                my_p4_actions = my_p4_actions + &format!("{}{}({}.{},", TAB, p4_func, META_HEADER, my_lval_decl.id);
+                my_p4_actions = my_p4_actions + &format!("{}{}({}.{}, ", TAB, p4_func, META_HEADER, my_lval_decl.id);
                 if ordering {
                     match prefix1.len() {
                         0 => {
-                            my_p4_actions = my_p4_actions + &format!("{},", my_rval_decl.id);
+                            my_p4_actions = my_p4_actions + &format!("{}, ", my_rval_decl.id);
                         }
                         _ => {
-                            my_p4_actions = my_p4_actions + &format!("{}.{},",prefix1, my_rval_decl.id);
+                            my_p4_actions = my_p4_actions + &format!("{}.{}, ",prefix1, my_rval_decl.id);
                         }
                     }
                     my_p4_actions = my_p4_actions + &format!("{});\n", val2);
@@ -889,14 +889,14 @@ pub fn handle_binop_refval_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_ind
                     my_p4_commons = my_p4_commons + &c;
                 }
 
-                my_p4_actions = my_p4_actions + &format!("{}{}({},", TAB, p4_func, my_lval_decl.id);
+                my_p4_actions = my_p4_actions + &format!("{}{}({}, ", TAB, p4_func, my_lval_decl.id);
                 if ordering {
                     match prefix1.len() {
                         0 => {
-                            my_p4_actions = my_p4_actions + &format!("{},", my_rval_decl.id);
+                            my_p4_actions = my_p4_actions + &format!("{}, ", my_rval_decl.id);
                         }
                         _ => {
-                            my_p4_actions = my_p4_actions + &format!("{}.{},",prefix1, my_rval_decl.id);
+                            my_p4_actions = my_p4_actions + &format!("{}.{}, ",prefix1, my_rval_decl.id);
                         }
                     }
                     my_p4_actions = my_p4_actions + &format!("{});\n", val2);
@@ -973,7 +973,7 @@ pub fn handle_binop_vals_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index 
                     my_p4_actions = my_p4_actions + &b;
                     my_p4_commons = my_p4_commons + &c;
                 }
-                my_p4_actions = my_p4_actions + &format!("{}{}({}.{},{}, {});\n", TAB, p4_func, META_HEADER, my_lval_decl.id, val1, val2);
+                my_p4_actions = my_p4_actions + &format!("{}{}({}.{}, {}, {});\n", TAB, p4_func, META_HEADER, my_lval_decl.id, val1, val2);
 
                 if NEW_ACTION.load(Ordering::SeqCst) {
                     my_p4_actions = my_p4_actions + &format!("}}\n");
@@ -991,7 +991,7 @@ pub fn handle_binop_vals_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index 
                     my_p4_actions = my_p4_actions + &b;
                     my_p4_commons = my_p4_commons + &c;
                 }
-                my_p4_actions = my_p4_actions + &format!("{}{}({}.{},{}, {});\n", TAB, p4_func, META_HEADER, my_lval_decl.id, val1, val2);
+                my_p4_actions = my_p4_actions + &format!("{}{}({}.{}, {}, {});\n", TAB, p4_func, META_HEADER, my_lval_decl.id, val1, val2);
 
                 my_p4_actions = my_p4_actions + &format!("{}register_write({}, {}, {}.{});\n", TAB,
                         my_lval_decl.id, my_lval_index, META_HEADER, my_lval_decl.id);
@@ -1010,7 +1010,7 @@ pub fn handle_binop_vals_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index 
                     my_p4_actions = my_p4_actions + &b;
                     my_p4_commons = my_p4_commons + &c;
                 }
-                my_p4_actions = my_p4_actions + &format!("{}{}({},{}, {});\n", TAB, p4_func, my_lval_decl.id, val1, val2);
+                my_p4_actions = my_p4_actions + &format!("{}{}({}, {}, {});\n", TAB, p4_func, my_lval_decl.id, val1, val2);
 
                 if NEW_ACTION.load(Ordering::SeqCst) {
                     my_p4_actions = my_p4_actions + &format!("}}\n");
@@ -1032,7 +1032,7 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
                             (a,b,c,d) : (String, String, String, String)) -> (String, String, String, String) {
 
     let mut my_rval_decl;
-    let mut my_rval_index = 0;
+    let mut my_rval_index = ""; // TODO : fix this index since operand may be array
     match operand {
         Operand::LValue(ref lval) => {
             match lval {
@@ -1047,7 +1047,7 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
                     my_rval_decl = get_decl(&my_id, decl_map);
                 }
             }
-            return handle_ref_assignment(&my_lval_decl, my_lval_index, &my_rval_decl, my_rval_index, &handle_read_register_v2, (a,b,c,d));
+            return handle_ref_assignment(&my_lval_decl, my_lval_index, &my_rval_decl, &my_rval_index, &handle_read_register_v2, (a,b,c,d));
         }
         Operand::Value(ref rval_val) => {
             return handle_value_assignment(&my_lval_decl, my_lval_index, rval_val.value, (a,b,c,d));
@@ -1144,7 +1144,7 @@ pub fn handle_array<'a> (operand :  &Operand<'a>, decl_map : &'a  HashMap<String
                     my_decl = get_decl(my_id.id_name, decl_map);
                     match my_decl.type_qualifier {
                         TypeQualifier::Persistent => {
-                            let (a,b,c) = handle_read_register(my_decl, 0);
+                            let (a,b,c) = handle_read_register(my_decl, "0");
                             my_p4_control = my_p4_control + &a;
                             my_p4_actions = my_p4_actions + &b;
                             my_p4_commons = my_p4_commons + &c;
@@ -1198,9 +1198,9 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
         let mut my_lval_decl;
         let mut my_lval_index = String::from("0");
         let mut my_rval_decl1 = &empty_decl;
-        let mut my_rval1_index = 0;
+        let mut my_rval1_index = String::from("0");
         let mut my_rval_decl2;
-        let mut my_rval2_index = 0;
+        let mut my_rval2_index = String::from("0");
         let mut is_rval1_val = false;
         let mut rval1_val = 0;
         // let mut lval_arr_ind;
@@ -1261,9 +1261,13 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                         }
                     }
         
-                    _ => {
-                        //TODO. Do this for Array
-                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
+                    LValue::Array(ref my_id, ref box_index_op) => {
+                        my_rval_decl1 = get_decl(my_id.id_name, decl_map);
+                        let (a,b,c,d) = handle_array(box_index_op, decl_map, packet_map);
+                        my_p4_control = my_p4_control + &a;
+                        my_p4_actions = my_p4_actions + &b;
+                        my_p4_commons = my_p4_commons + &c;
+                        my_rval1_index = d;
                     }
                 }
 
@@ -1300,17 +1304,26 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                                 }
                             }
 
+                            LValue::Array(ref my_id, ref box_index_op) => {
+                                my_rval_decl2 = get_decl(my_id.id_name, decl_map);
+                                let (a,b,c,d) = handle_array(box_index_op, decl_map, packet_map);
+                                my_p4_control = my_p4_control + &a;
+                                my_p4_actions = my_p4_actions + &b;
+                                my_p4_commons = my_p4_commons + &c;
+                                my_rval2_index = d;
+                            }
+
                             _ => {
                                 //TODO. Do this for Array
                                 return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                             }
                         }
                         if is_rval1_val {
-                            return handle_binop_refval_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl1, my_rval1_index, bin_op_type, rval1_val, decl_map, 
+                            return handle_binop_refval_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl1, &my_rval1_index, bin_op_type, rval1_val, decl_map, 
                                                                  false, (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl));
                         } else {
-                            return handle_binop_refs_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl1, my_rval1_index,  
-                                                                bin_op_type, &my_rval_decl2, my_rval2_index, decl_map,
+                            return handle_binop_refs_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl1, &my_rval1_index,  
+                                                                bin_op_type, &my_rval_decl2, &my_rval2_index, decl_map,
                                                                 (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl));
                         }
                     }
@@ -1320,7 +1333,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                             return handle_binop_vals_assignment(&my_lval_decl, &my_lval_index, rval1_val, bin_op_type, val2.value, decl_map, 
                                                                 (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl));
                         } else {
-                            return handle_binop_refval_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl1, my_rval1_index, bin_op_type, val2.value, decl_map, true, 
+                            return handle_binop_refval_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl1, &my_rval1_index, bin_op_type, val2.value, decl_map, true, 
                                                                 (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl));
                         }
                     }
@@ -1342,7 +1355,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                 if is_rval1_val {
                     return handle_value_assignment(&my_lval_decl, &my_lval_index, rval1_val, (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl));
                 } else {
-                    return handle_ref_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl1, my_rval1_index, &handle_read_register,
+                    return handle_ref_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl1, &my_rval1_index, &handle_read_register,
                                                     (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl));
                 }
             }
