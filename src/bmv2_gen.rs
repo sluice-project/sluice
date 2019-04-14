@@ -861,13 +861,13 @@ pub fn handle_binop_refval_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_ind
                     }
                     my_p4_actions = my_p4_actions + &format!("{});\n", val2);
                 } else {
-                    my_p4_actions = my_p4_actions + &format!("{},\n", val2);
+                    my_p4_actions = my_p4_actions + &format!("{}, ", val2);
                     match prefix1.len() {
                         0 => {
                             my_p4_actions = my_p4_actions + &format!("{});", my_rval_decl.id);
                         }
                         _ => {
-                            my_p4_actions = my_p4_actions + &format!("{}.{});",prefix1, my_rval_decl.id);
+                            my_p4_actions = my_p4_actions + &format!("{}.{});", prefix1, my_rval_decl.id);
                         }
                     }
                 }
@@ -1319,7 +1319,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                             }
                         }
                         if is_rval1_val {
-                            return handle_binop_refval_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl1, &my_rval1_index, bin_op_type, rval1_val, decl_map, 
+                            return handle_binop_refval_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl2, &my_rval2_index, bin_op_type, rval1_val, decl_map, 
                                                                  false, (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl));
                         } else {
                             return handle_binop_refs_assignment(&my_lval_decl, &my_lval_index, &my_rval_decl1, &my_rval1_index,  
