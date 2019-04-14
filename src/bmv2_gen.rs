@@ -1137,54 +1137,23 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
         // checking that lvalue of statement is declared
         match my_statement.lvalue {
             LValue::Scalar(ref my_id) => {
-                let my_lval : String = String::from(my_id.id_name);
-                //println!("Checking for {:?}\n", my_lval);
-                let my_decl_option = decl_map.get(&my_lval);
-                match my_decl_option {
-                    Some(my_decl) => {
-                        my_lval_decl = my_decl;
-                    }
-                    None => {
-                        println!("Error: {} not declared?\n",my_lval);
-                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
-                    }
-                }
+                my_lval_decl = get_decl(my_id.id_name, decl_map);
             }
             LValue::Array(ref my_id, ref box_index_op) => {
-                let my_lval : String = String::from(my_id.id_name);
-                let my_decl_option = decl_map.get(&my_lval);
-                match my_decl_option {
-                    Some(my_decl) => {
-                        my_lval_decl = my_decl;
-                    }
-                    None => {
-                        println!("Error: {} not declared?\n",my_lval);
-                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
-                    }
-                }
-                my_lval_index = 0;
+                my_lval_decl = get_decl(my_id.id_name, decl_map);
+                my_lval_index = 0; // TODO
             }
 
             LValue::Field(ref p, ref f) => {
                 let field = format!("{}.{}", p.id_name, f.id_name);
-                let my_lval = packet_map.get(&field).unwrap();
-                let my_decl_option = decl_map.get(&my_lval.clone());
-                match my_decl_option {
+                let my_lval_option = packet_map.get(&field);
+                match my_lval_option {
                     Some(my_decl) => {
-                        my_lval_decl = my_decl;
+                        my_lval_decl = get_decl(my_decl, decl_map);
                     }
                     None => {
-                        //Could be an imported field?
-                        let my_decl_import_option = decl_map.get(&field);
-                        match my_decl_option {
-                            Some(my_decl) => {
-                                my_lval_decl = my_decl;
-                            }
-                            None => {
-                                println!("Error: {} not declared?\n", field);
-                                return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
-                            }
-                        }
+                        //Could be an imported field
+                        my_lval_decl = get_decl(&field, decl_map);
                     }
                 }
                 my_lval_index = 0;
@@ -1197,18 +1166,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                 // Could be an assignment or operation. e.g a = b or  a = b + c
                 match lval {
                     LValue::Scalar(ref my_id2) => {
-                        let my_rval1 : String = String::from(my_id2.id_name);
-                        let my_decl_option = decl_map.get(&my_rval1);
-                        match my_decl_option {
-                            Some(my_decl) => {
-                                my_rval_decl1 = my_decl;
-                                // expr_right to be looked into
-                            }
-                            None => {
-                                println!("Error: {} not declared?\n",my_rval1);
-                                return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
-                            }
-                        }
+                        my_rval_decl1 = get_decl(my_id2.id_name, decl_map);
                     }
 
                     LValue::Field(ref p, ref f) => {
@@ -1216,29 +1174,11 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                         let my_rval1_option = packet_map.get(&field);
                         match my_rval1_option {
                             Some(my_rval1) => {
-                                let my_decl_option = decl_map.get(&my_rval1.clone());
-                                match my_decl_option {
-                                    Some(my_decl) => {
-                                        my_rval_decl1 = my_decl;
-                                        // expr_right to be looked into
-                                    }
-                                    None => {
-                                        //Could be an imported field?
-                                        panic!("Error: {} not declared?\n",my_rval1);
-                                    }
-                                }
+                                my_rval_decl1 = get_decl(my_rval1, decl_map);
                             }
                             None => {
-                                let my_decl_import_option = decl_map.get(&field);
-                                match my_decl_import_option {
-                                    Some(my_decl) => {
-                                        my_rval_decl1 = my_decl;
-                                    }
-                                    None => {
-                                        println!("Error: {} not declared?\n", field);
-                                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
-                                    }
-                                }
+                                //Could be an imported field
+                                my_rval_decl1 = get_decl(&field, decl_map);
                             }
                         }
                     }
@@ -1265,32 +1205,19 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
                     Operand::LValue(ref lval) => {
                         match lval {
                             LValue::Scalar(ref my_id3) => {
-                                let my_lval3 : String = String::from(my_id3.id_name);
-                                let my_decl_option = decl_map.get(&my_lval3);
-                                match my_decl_option {
-                                    Some(my_decl) => {
-                                        my_rval_decl2 = my_decl;
-                                        // expr_right to be looked into
-                                    }
-                                    None => {
-                                        println!("Error: {} not declared?\n",my_lval3);
-                                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
-                                    }
-                                }
+                                my_rval_decl2 = get_decl(my_id3.id_name, decl_map);
                             }
 
                             LValue::Field(ref p, ref f) => {
                                 let field = format!("{}.{}", p.id_name, f.id_name);
-                                let my_lval3 = packet_map.get(&field).unwrap();
-                                let my_decl_option = decl_map.get(&my_lval3.clone());
-                                match my_decl_option {
-                                    Some(my_decl) => {
-                                        my_rval_decl2 = my_decl;
-                                        // expr_right to be looked into
+                                let my_rval2_option = packet_map.get(&field);
+                                match my_rval2_option {
+                                    Some(my_rval2) => {
+                                        my_rval_decl2 = get_decl(my_rval2, decl_map);
                                     }
                                     None => {
-                                        println!("Error: {} not declared?\n", my_lval3);
-                                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
+                                        //Could be an imported field
+                                        my_rval_decl2 = get_decl(&field, decl_map);
                                     }
                                 }
                             }

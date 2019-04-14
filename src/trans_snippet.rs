@@ -758,8 +758,8 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
 // }
 
 pub fn gen_code<'a> (my_packets : &Packets<'a>, dag_map : HashMap<&'a str, Dag<'a>>){
+    
     for (snippet_name, snippet_dag) in dag_map {
-
         if snippet_dag.device_id.contains("bmv2") {
             bmv2_gen::gen_p4_code(&snippet_name, my_packets, &snippet_dag);
             bmv2_gen::gen_control_plane_commands(&snippet_name, my_packets, &snippet_dag);
