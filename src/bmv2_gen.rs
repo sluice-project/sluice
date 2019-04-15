@@ -279,8 +279,6 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &str,
             if NEW_ACTION.load(Ordering::SeqCst) {
                 my_p4_actions = my_p4_actions + &format!("}}\n");
             }
-            // println!("HEYYY {}\n{}\n{}\n{}\n{:?}", my_p4_control, my_p4_actions, my_p4_commons, my_lval_index, my_rval_decl);
-            // process::exit(1);
 
             return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
         }
@@ -1042,7 +1040,7 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
     let mut my_p4_metadecl = d;
 
     let mut my_rval_decl;
-    let mut my_rval_index = String::from("0"); // TODO : fix this index since operand may be array
+    let mut my_rval_index = String::from("0");
     match operand {
         Operand::LValue(ref lval) => {
             match lval {
@@ -2048,8 +2046,16 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                                                             action_array.push(action_str.clone());
                                                         }
 
-                                                        contents = contents + &format!("table_add {} {} 1 => \n", table_array[0], action_array[0]);
-                                                        contents = contents + &format!("table_add {} {} 0 => \n", table_array[0], action_array[1]);
+                                                        if table_array.len() == 1 && action_array.len() == 2 {
+                                                            contents = contents + &format!("table_add {} {} 1 => \n", table_array[0], action_array[0]);
+                                                            contents = contents + &format!("table_add {} {} 0 => \n", table_array[0], action_array[1]);
+                                                        } else {
+                                                            // If lvalue of statement is an array, there needs to be an extra 
+                                                            // control plane entry for reading array index into metadata
+                                                            contents = contents + &format!("table_set_default {} {}\n", table_array[0], action_array[0]);
+                                                            contents = contents + &format!("table_add {} {} 1 => \n", table_array[1], action_array[1]);
+                                                            contents = contents + &format!("table_add {} {} 0 => \n", table_array[1], action_array[2]);
+                                                        }
                                                     }
                                                     //TODO : add support for 32 bit table indices and tables with multiple read vars
                                                     _ => {panic!("Unsupported table index type!");}
@@ -2063,7 +2069,7 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                                         }
                                     }
 
-                                    // TODO : handle tables for array, value and packet field operands in Cond expr
+                                    // TODO : handle tables for array, value and packet fields in condition var like "a = n.field ? b : c"
                                     LValue::Array(ref my_id, ref box_index_op) => {}
 
                                     _ => {
