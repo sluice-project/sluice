@@ -1,23 +1,24 @@
 import device psa;
+global DPTP_REQUEST : bit<8> = 2;
+global DPTP_RESPONSE : bit<8> = 3;
 
 packet dptp_pkt:ethernet(etherType:1234){
   magic : bit<16>;
   command : bit<8>;
-  reference_ts_hi : bit<32>;
-  reference_ts_lo : bit<32>;
-  era_ts_hi : bit<32>;
-  current_rate : bit<32>;
-  igmacts : bit<48>;
-  igts : bit<48>;
-  egts : bit<48>;
-  capturets : bit<48>;
+  dptp_now : bit<64>;
+  traffic_rate : bit<32>;
 }
 
 
 @ bmv2
 snippet dptp_switch(){
-  transient z : bit<1>;
-  transient queuing_time : bit<32>;
-  z = 1;
-  queuing_time = psa.timestamp_rx;
+  persistent dptp_ref : bit<64>;
+  persistent switch_id : bit<64>;
+  if (dptp_pkt.command == 2) {
+    dptp_pkt.dptp_now = dptp_ref + psa.timestamp_egress;
+    dptp_pkt.command = 3;
+
+  }
+
+
 }

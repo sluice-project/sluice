@@ -1035,10 +1035,7 @@ pub fn handle_binop_vals_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index 
 pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str, operand : &Operand<'a>,
                             decl_map : &'a  HashMap<String, VarDecl>, packet_map : &HashMap<String, String>,
                             (a,b,c,d) : (String, String, String, String)) -> (String, String, String, String) {
-    let empty_control = String::from("");
-    let empty_actions = String::from("");
-    let empty_commons = String::from("");
-    let empty_metadecl = String::from("");
+
     let mut my_p4_control = a;
     let mut my_p4_actions = b;
     let mut my_p4_commons = c;
@@ -1053,7 +1050,7 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
                 LValue::Scalar(ref my_id) => {
                     if (my_lval_decl.id == my_id.id_name) {
                         println!("Empty\n");
-                        return (empty_control, empty_actions, empty_commons, empty_metadecl);
+                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                     }
                     my_rval_decl = get_decl(my_id.id_name, decl_map);
                 }
@@ -1061,14 +1058,23 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
                 LValue::Field(ref p, ref f) => {
                     let my_id = format!("{}.{}", p.id_name, f.id_name);
                     if (my_lval_decl.id == my_id) {
-                        return (empty_control, empty_actions, empty_commons, empty_metadecl);
+                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                     }
-                    my_rval_decl = get_decl(&my_id, decl_map);
+                    let my_lval_option = packet_map.get(&my_id);
+                    match my_lval_option {
+                        Some(decl) => {
+                            my_rval_decl = get_decl(&my_id, decl_map);
+                        }
+                        None => {
+                            //Could be an imported field
+                            my_rval_decl = get_decl(&my_id, decl_map);
+                        }
+                    }
                 }
 
                 LValue::Array(ref my_id, ref box_index_op) => {
                     if (my_lval_decl.id == my_id.id_name) {
-                        return (empty_control, empty_actions, empty_commons, empty_metadecl);
+                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                     }
                     my_rval_decl = get_decl(my_id.id_name, decl_map);
                     let (a,b,c,d) = handle_array(box_index_op, decl_map, packet_map, &handle_read_register_v2);
@@ -1119,7 +1125,7 @@ pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &
     ACTION_COUNT.fetch_add(1, Ordering::SeqCst);
     NEW_ACTION.store(false, Ordering::SeqCst);
     my_p4_actions = my_p4_actions + &format!("action {} () {{\n", action1.to_string());
-
+    println!("action before : {:?}\n", my_p4_actions);
     // handle_action_operand(l, index, reg3, decl_map) (see first1.np)
     let (a,b,c,d) = handle_action_operand(my_lval_decl, my_lval_index, operand1, decl_map, packet_map,
         (my_p4_control.clone(), my_p4_actions.clone(), my_p4_commons.clone(), my_p4_metadecl.clone()));
@@ -1154,7 +1160,6 @@ pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &
     my_p4_commons = my_p4_commons + &format!("{}{}{};\n", TAB, TAB, action2.to_string());
     my_p4_commons = my_p4_commons + &format!("{}}}\n", TAB);
     my_p4_commons = my_p4_commons + &format!("}}\n");
-    my_p4_control = my_p4_control + &format!("{}apply(table{:?});\n", TAB, TABLE_COUNT);
     TABLE_COUNT.fetch_add(1, Ordering::SeqCst);
     NEW_ACTION.store(true, Ordering::SeqCst);
 
