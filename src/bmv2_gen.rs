@@ -219,6 +219,7 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &str,
     let mut my_p4_commons = c;
     let mut my_p4_metadecl = d;
 
+
     let mut prefix = "";
     match my_rval_decl.type_qualifier {
         TypeQualifier::Persistent => {
@@ -237,6 +238,7 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &str,
             // For others, nothing to be done.
         }
     }
+
     match my_lval_decl.type_qualifier {
         TypeQualifier::Transient => {
             // Metadata
@@ -277,6 +279,9 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &str,
             if NEW_ACTION.load(Ordering::SeqCst) {
                 my_p4_actions = my_p4_actions + &format!("}}\n");
             }
+            // println!("HEYYY {}\n{}\n{}\n{}\n{:?}", my_p4_control, my_p4_actions, my_p4_commons, my_lval_index, my_rval_decl);
+            // process::exit(1);
+
             return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
         }
 
@@ -1028,42 +1033,68 @@ pub fn handle_binop_vals_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index 
 
 // handle_action_operand(l, index, reg3, decl_map)
 pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str, operand : &Operand<'a>, 
-                            decl_map : &'a  HashMap<String, VarDecl>,
+                            decl_map : &'a  HashMap<String, VarDecl>, packet_map : &HashMap<String, String>,
                             (a,b,c,d) : (String, String, String, String)) -> (String, String, String, String) {
 
+    let mut my_p4_control = a;
+    let mut my_p4_actions = b;
+    let mut my_p4_commons = c;
+    let mut my_p4_metadecl = d;
+
     let mut my_rval_decl;
-    let mut my_rval_index = ""; // TODO : fix this index since operand may be array
+    let mut my_rval_index = String::from("0"); // TODO : fix this index since operand may be array
     match operand {
         Operand::LValue(ref lval) => {
             match lval {
                 LValue::Scalar(ref my_id) => {
                     my_rval_decl = get_decl(my_id.id_name, decl_map);
                 }
-                LValue::Array(ref my_id, ref box_index_op) => {
-                    my_rval_decl = get_decl(my_id.id_name, decl_map);
-                }
                 LValue::Field(ref p, ref f) => {
                     let my_id = format!("{}.{}", p.id_name, f.id_name);
                     my_rval_decl = get_decl(&my_id, decl_map);
                 }
+    
+                LValue::Array(ref my_id, ref box_index_op) => {
+                    my_rval_decl = get_decl(my_id.id_name, decl_map);
+                    let (a,b,c,d) = handle_array(box_index_op, decl_map, packet_map, &handle_read_register_v2);
+                    my_p4_control = my_p4_control + &a;
+                    my_p4_actions = my_p4_actions + &b;
+                    my_p4_commons = my_p4_commons + &c;
+                    my_rval_index = d;
+                }
             }
-            return handle_ref_assignment(&my_lval_decl, my_lval_index, &my_rval_decl, &my_rval_index, &handle_read_register_v2, (a,b,c,d));
+            return handle_ref_assignment(&my_lval_decl, my_lval_index, &my_rval_decl, &my_rval_index, &handle_read_register_v2, 
+                                    (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl));
         }
+
         Operand::Value(ref rval_val) => {
-            return handle_value_assignment(&my_lval_decl, my_lval_index, rval_val.value, (a,b,c,d));
+            return handle_value_assignment(&my_lval_decl, my_lval_index, rval_val.value, (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl));
         }
     }
 }
 
 // reg1 = if_block_tmp_2 ? tmp_0_if_2 : reg1; (test1.np)
 pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &str,
- my_rval_decl : &VarDecl<'a>, operand1 : &Operand<'a>, operand2 : &Operand<'a>, decl_map : &'a  HashMap<String, VarDecl>,
-    (a,b,c,d) : (String, String, String, String)) -> (String, String, String, String) {
+ my_rval_decl : &VarDecl<'a>, my_rval_index : &str, operand1 : &Operand<'a>, operand2 : &Operand<'a>, decl_map : &'a  HashMap<String, VarDecl>,
+    packet_map : &HashMap<String, String>, (a,b,c,d) : (String, String, String, String)) -> (String, String, String, String) {
     
     let mut my_p4_control = a;
     let mut my_p4_actions = b;
     let mut my_p4_commons = c;
     let mut my_p4_metadecl = d;
+
+    match my_rval_decl.type_qualifier {
+        TypeQualifier::Persistent => {
+            // If register, then first need to read the register val to meta.
+            let (a,b,c) = handle_read_register(my_rval_decl, my_rval_index);
+            my_p4_control = my_p4_control + &a;
+            my_p4_actions = my_p4_actions + &b;
+            my_p4_commons = my_p4_commons + &c;
+        }
+        _ => {
+            // For others, nothing to be done.
+        }
+    }
 
     my_p4_control = my_p4_control + &format!("{}apply(table{:?});\n", TAB, TABLE_COUNT);
     let action1 = &format!("action{:?}", ACTION_COUNT);
@@ -1074,35 +1105,35 @@ pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &
     my_p4_actions = my_p4_actions + &format!("action {} () {{\n", action1.to_string());
 
     // handle_action_operand(l, index, reg3, decl_map) (see first1.np)
-    let (a,b,c,d) = handle_action_operand(my_lval_decl, my_lval_index, operand1, decl_map, 
+    let (a,b,c,d) = handle_action_operand(my_lval_decl, my_lval_index, operand1, decl_map, packet_map,
         (my_p4_control.clone(), my_p4_actions.clone(), my_p4_commons.clone(), my_p4_metadecl.clone()));
-    my_p4_control = my_p4_control + &a;
-    my_p4_actions = my_p4_actions + &b;
-    my_p4_commons = my_p4_commons + &c;
-    my_p4_metadecl = my_p4_metadecl + &d;
+    my_p4_control = a;
+    my_p4_actions = b;
+    my_p4_commons = c;
+    my_p4_metadecl = d;
+
     my_p4_actions = my_p4_actions + &format!("}}\n");
     my_p4_actions = my_p4_actions + &format!("action {} () {{\n", action2.to_string());
-    let (a,b,c,d) = handle_action_operand(my_lval_decl, my_lval_index, operand2, decl_map, 
+    let (a,b,c,d) = handle_action_operand(my_lval_decl, my_lval_index, operand2, decl_map, packet_map,
         (my_p4_control.clone(), my_p4_actions.clone(), my_p4_commons.clone(), my_p4_metadecl.clone()));
-    my_p4_control = my_p4_control + &a;
-    my_p4_actions = my_p4_actions + &b;
-    my_p4_commons = my_p4_commons + &c;
-    my_p4_metadecl = my_p4_metadecl + &d;
+    my_p4_control = a;
+    my_p4_actions = b;
+    my_p4_commons = c;
+    my_p4_metadecl = d;
+
     my_p4_actions = my_p4_actions + &format!("}}\n");
     my_p4_commons = my_p4_commons + &format!("table table{:?} {{\n", TABLE_COUNT);
     my_p4_commons = my_p4_commons + &format!("{}reads {{\n", TAB);
 
-
-    // match my_lval_decl.type_qualifier {
-    //     TypeQualifier::Field => {
-    //         my_p4_commons = my_p4_commons + &format!("{}{}{} : exact;\n{}}}\n", TAB, TAB, my_rval_decl.id, TAB);
-    //     }
-    //     _ => {
-    //         my_p4_commons = my_p4_commons + &format!("{}{}{}.{} : exact;\n{}}}\n", TAB, TAB, META_HEADER, my_rval_decl.id, TAB);
-    //     }
-    // }
-
-    my_p4_commons = my_p4_commons + &format!("{}{}{}.{} : exact;\n{}}}\n", TAB, TAB, META_HEADER, my_rval_decl.id, TAB);
+    match my_rval_decl.type_qualifier {
+        TypeQualifier::Field => {
+            my_p4_commons = my_p4_commons + &format!("{}{}{} : exact;\n{}}}\n", TAB, TAB, my_rval_decl.id, TAB);
+        }
+        _ => {
+            my_p4_commons = my_p4_commons + &format!("{}{}{}.{} : exact;\n{}}}\n", TAB, TAB, META_HEADER, my_rval_decl.id, TAB);
+        }
+    }
+    // my_p4_commons = my_p4_commons + &format!("{}{}{}.{} : exact;\n{}}}\n", TAB, TAB, META_HEADER, my_rval_decl.id, TAB);
     my_p4_commons = my_p4_commons + &format!("{}actions {{\n", TAB);
     my_p4_commons = my_p4_commons + &format!("{}{}{};\n", TAB, TAB, action1.to_string());
     my_p4_commons = my_p4_commons + &format!("{}{}{};\n", TAB, TAB, action2.to_string());
@@ -1113,6 +1144,7 @@ pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &
 
     return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
 }
+
 
 pub fn get_decl<'a> (my_id : &str,  decl_map : &'a  HashMap<String, VarDecl>) -> &'a VarDecl<'a> {
     let my_lval : String = String::from(my_id);
@@ -1129,7 +1161,8 @@ pub fn get_decl<'a> (my_id : &str,  decl_map : &'a  HashMap<String, VarDecl>) ->
 
 
 pub fn handle_array<'a> (operand :  &Operand<'a>, decl_map : &'a  HashMap<String, VarDecl>, 
-                        packet_map : &HashMap<String, String>) -> (String, String, String, String) {
+                        packet_map : &HashMap<String, String>, 
+                        read_reg_func : &Fn(&VarDecl, &str) -> (String, String, String)) -> (String, String, String, String) {
 
     let mut my_p4_control : String = String::new();
     let mut my_p4_actions : String = String::new();
@@ -1144,7 +1177,8 @@ pub fn handle_array<'a> (operand :  &Operand<'a>, decl_map : &'a  HashMap<String
                     my_decl = get_decl(my_id.id_name, decl_map);
                     match my_decl.type_qualifier {
                         TypeQualifier::Persistent => {
-                            let (a,b,c) = handle_read_register(my_decl, "0");
+                            // array index can be a register with size 1 (so index 0) but not size > 1 (an array)
+                            let (a,b,c) = read_reg_func(my_decl, "0");
                             my_p4_control = my_p4_control + &a;
                             my_p4_actions = my_p4_actions + &b;
                             my_p4_commons = my_p4_commons + &c;
@@ -1195,11 +1229,11 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
         let mut my_p4_commons : String = String::new();
         let mut my_p4_metadecl : String = String::new();
         let empty_decl = VarDecl {id : String::new(), var_info : VarInfo::BitArray(0,0), type_qualifier: TypeQualifier::Input};
-        let mut my_lval_decl;
-        let mut my_lval_index = String::from("0");
+        let mut my_lval_decl = &empty_decl;
         let mut my_rval_decl1 = &empty_decl;
+        let mut my_rval_decl2 = &empty_decl;
+        let mut my_lval_index = String::from("0");
         let mut my_rval1_index = String::from("0");
-        let mut my_rval_decl2;
         let mut my_rval2_index = String::from("0");
         let mut is_rval1_val = false;
         let mut rval1_val = 0;
@@ -1230,7 +1264,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
 
             LValue::Array(ref my_id, ref box_index_op) => {
                 my_lval_decl = get_decl(my_id.id_name, decl_map);
-                let (a,b,c,d) = handle_array(box_index_op, decl_map, packet_map);
+                let (a,b,c,d) = handle_array(box_index_op, decl_map, packet_map, &handle_read_register);
                 my_p4_control = my_p4_control + &a;
                 my_p4_actions = my_p4_actions + &b;
                 my_p4_commons = my_p4_commons + &c;
@@ -1263,7 +1297,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
         
                     LValue::Array(ref my_id, ref box_index_op) => {
                         my_rval_decl1 = get_decl(my_id.id_name, decl_map);
-                        let (a,b,c,d) = handle_array(box_index_op, decl_map, packet_map);
+                        let (a,b,c,d) = handle_array(box_index_op, decl_map, packet_map, &handle_read_register);
                         my_p4_control = my_p4_control + &a;
                         my_p4_actions = my_p4_actions + &b;
                         my_p4_commons = my_p4_commons + &c;
@@ -1306,16 +1340,11 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
 
                             LValue::Array(ref my_id, ref box_index_op) => {
                                 my_rval_decl2 = get_decl(my_id.id_name, decl_map);
-                                let (a,b,c,d) = handle_array(box_index_op, decl_map, packet_map);
+                                let (a,b,c,d) = handle_array(box_index_op, decl_map, packet_map, &handle_read_register);
                                 my_p4_control = my_p4_control + &a;
                                 my_p4_actions = my_p4_actions + &b;
                                 my_p4_commons = my_p4_commons + &c;
                                 my_rval2_index = d;
-                            }
-
-                            _ => {
-                                //TODO. Do this for Array
-                                return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                             }
                         }
                         if is_rval1_val {
@@ -1343,7 +1372,7 @@ pub fn handle_statement<'a> (my_statement :  &Statement<'a>, node_type : &DagNod
             ExprRight::Cond(ref operand1, ref operand2) => {
                 // statements like m = z ? A : B;
                 if !is_rval1_val {
-                    return handle_ternary_assignment(&my_lval_decl, &my_lval_index, my_rval_decl1, operand1, operand2, decl_map,
+                    return handle_ternary_assignment(&my_lval_decl, &my_lval_index, my_rval_decl1, &my_rval1_index, operand1, operand2, decl_map, packet_map,
                                                     (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl));
                 } else {
                     panic!("Static ternary not supported for now.\n");
