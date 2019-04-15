@@ -1081,7 +1081,6 @@ pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &
     let mut my_p4_metadecl = d;
 
     println!("Handling Ternary Assigment\n");
-    //my_p4_control = my_p4_control + &format!("{}apply(table{:?});\n", TAB, TABLE_COUNT);
     let action1 = &format!("action{:?}", ACTION_COUNT);
     //ACTION_COUNT.fetch_add(1, Ordering::SeqCst);
     //let action2 = &format!("action{:?}", ACTION_COUNT);
@@ -1128,6 +1127,8 @@ pub fn handle_ternary_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &
     my_p4_commons = my_p4_commons + &format!("{}{}{};\n", TAB, TAB, action2.to_string());
     my_p4_commons = my_p4_commons + &format!("{}}}\n", TAB);
     my_p4_commons = my_p4_commons + &format!("}}\n");
+    my_p4_control = my_p4_control + &format!("{}apply(table{:?});\n", TAB, TABLE_COUNT);
+
     TABLE_COUNT.fetch_add(1, Ordering::SeqCst);
     NEW_ACTION.store(true, Ordering::SeqCst);
 
