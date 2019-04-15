@@ -46,10 +46,8 @@ fn main() {
   println!("Packet tree: {:?}\n", pkt_tree);
   // process::exit(1);
 
-  trans_snippets(&parse_tree.imports, &parse_tree.packets, &parse_tree.snippets, &pkt_tree);//, &mut my_dag);
+  trans_snippets(&parse_tree.imports,&parse_tree.globals, &parse_tree.packets, &parse_tree.snippets, &pkt_tree);//, &mut my_dag);
   // Check that identifiers are defined before use
 }
 
     // let mut field_decls : HashMap<String, VarType> = HashMap::new();
-
-

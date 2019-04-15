@@ -675,7 +675,7 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
                                 tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
                                                 expr_right: ExprRight::Cond(Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(tmp_var.into_boxed_str()),})),
                                                 Operand::LValue(my_statement.lvalue.clone())) };
-
+                                println!("Assigning a cond expr\n");
                             } else if my_if_block.condtype == 2 {
                                 let if_var =  format!("if_block_tmp_{}", my_if_block.id - 1); // for else condition, use the previous
                                                                                              // if block's condition bit var to set
@@ -713,6 +713,7 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
                             tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
                                             expr_right: ExprRight::Cond(my_statement.expr.op1.clone(),
                                             Operand::LValue(my_statement.lvalue.clone())) };
+                            println!("Assigning a cond expr\n");
 
                         } else if my_if_block.condtype == 2 {
                             let if_var =  format!("if_block_tmp_{}", my_if_block.id - 1);
@@ -720,6 +721,7 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
                                             expr_right: ExprRight::Cond(Operand::LValue(my_statement.lvalue.clone()),
                                              my_statement.expr.op1.clone()) };
                         }
+                        println!("tmp_expr : {:?}\n", tmp_expr);
 
                         let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
                         let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
@@ -758,7 +760,7 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
 // }
 
 pub fn gen_code<'a> (my_packets : &Packets<'a>, dag_map : HashMap<&'a str, Dag<'a>>){
-    
+
     for (snippet_name, snippet_dag) in dag_map {
         if snippet_dag.device_id.contains("bmv2") {
             bmv2_gen::gen_p4_code(&snippet_name, my_packets, &snippet_dag);
@@ -831,12 +833,12 @@ pub fn create_packet_map<'a> (my_packets : &Packets<'a>) ->HashMap<String, Strin
 
 
 // need to use either 'bmv2' or 'tofino' for device annotation
-pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_packets : &Packets<'a>, my_snippets : &Snippets<'a>, pkt_tree : &Packets<'a>) {
+pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_globals : &Globals<'a>, my_packets : &Packets<'a>, my_snippets : &Snippets<'a>, pkt_tree : &Packets<'a>) {
     // TODO : Deal with mutability of my_dag
     let import_map = create_import_map(my_imports);
     let packet_map = create_packet_map(my_packets);
     let mut dag_map = create_dag_nodes(&my_snippets, &packet_map, my_packets, pkt_tree);
-    // println!("\n\n\n Empty Dag Map: {:?}\n\n\n\n", dag_map);
+    println!("\n\n\n Empty Dag Map: {:?}\n\n\n\n", dag_map);
 
     for my_snippet in &my_snippets.snippet_vector {
 
@@ -847,9 +849,9 @@ pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_packets : &Packets<'a>,
                 create_connections(&my_snippet, &mut snippet_dag);
                 // println!("Snippet DAG with connections: {:?}\n", snippet_dag);
                 if device_type.contains("bmv2") {
-                    bmv2_gen::fill_p4code(&import_map, &packet_map, &mut snippet_dag, &pkt_tree, &my_packets);
+                    bmv2_gen::fill_p4code(&import_map, &my_globals, &packet_map, &mut snippet_dag, &pkt_tree,  &my_packets);
                 } else if device_type.contains("tofino") {
-                    tofino_gen::fill_p4code(&import_map, &packet_map, &mut snippet_dag, &pkt_tree, &my_packets );
+                    tofino_gen::fill_p4code(&import_map, &my_globals, &packet_map, &mut snippet_dag, &pkt_tree, &my_packets);
                 }
                 // println!("Snippet DAG: {:?}\n", snippet_dag);
            }
