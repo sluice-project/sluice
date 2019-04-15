@@ -7,6 +7,10 @@ Things to be taken care in sluice :
 2) Need to access timestamp of switch state.
 3) Need to represent switch-to-switch interaction based on topology.
 
-## 2) QoE Monitoring
+## 2) Record & Replay Snapshots
+Capture switch states periodically, and enable mechanism to capture synchronized snapshots
+upon a trigger (e.g buffer above threshold)
 
-## 3) PERC
+## 3) QoE Monitoring
+
+## 4) PERC
