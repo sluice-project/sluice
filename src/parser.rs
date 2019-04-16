@@ -537,7 +537,7 @@ macro_rules! expr_right_parser {
 }
 
 // generate parser using macro
-expr_right_parser!(BooleanAnd, BooleanOr, Plus, Minus, Mul, Div, Modulo, Equal, NotEqual, LTEQOp, GTEQOp, LessThan, GreaterThan);
+expr_right_parser!(BooleanAnd, BooleanOr, Plus, Minus, Mul, Div, Modulo, ShiftLeft, ShiftRight, Equal, NotEqual, LTEQOp, GTEQOp, LessThan, GreaterThan);
 
 fn parse_identifier<'a>(token_iter : &mut TokenIterator<'a>) -> Identifier<'a> {
   let identifier_token = token_iter.next().unwrap();

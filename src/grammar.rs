@@ -269,7 +269,7 @@ macro_rules! bin_op_type {
     }
   };
 }
-bin_op_type!(BooleanAnd, BooleanOr, Plus, Minus, Mul, Div, Modulo, Equal, NotEqual, LTEQOp, GTEQOp, LessThan, GreaterThan);
+bin_op_type!(BooleanAnd, BooleanOr, Plus, Minus, Mul, Div, Modulo, ShiftLeft, ShiftRight, Equal, NotEqual, LTEQOp, GTEQOp, LessThan, GreaterThan);
 
 #[derive(Debug)]
 #[derive(PartialEq)]

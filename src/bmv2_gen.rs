@@ -507,6 +507,12 @@ pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index
             BinOpType::BooleanOr => {
                 p4_func = "bit_or";
             }
+            BinOpType::ShiftLeft => {
+                p4_func = "shift_left";
+            }
+            BinOpType::ShiftRight => {
+                p4_func = "shift_right";
+            }
             BinOpType::Plus => {
                 p4_func = "add";
             }
@@ -728,6 +734,12 @@ pub fn handle_binop_refval_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_ind
         BinOpType::BooleanOr => {
             p4_func = "bit_or";
         }
+        BinOpType::ShiftLeft => {
+            p4_func = "shift_left";
+        }
+        BinOpType::ShiftRight => {
+            p4_func = "shift_right";
+        }
         BinOpType::Plus => {
             p4_func = "add";
         }
@@ -947,6 +959,12 @@ pub fn handle_binop_vals_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index 
         BinOpType::BooleanOr => {
             p4_func = "bit_or";
         }
+        BinOpType::ShiftLeft => {
+            p4_func = "shift_left";
+        }
+        BinOpType::ShiftRight => {
+            p4_func = "shift_right";
+        }
         BinOpType::Plus => {
             p4_func = "add";
         }
@@ -1057,16 +1075,20 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
 
                 LValue::Field(ref p, ref f) => {
                     let my_id = format!("{}.{}", p.id_name, f.id_name);
-                    if (my_lval_decl.id == my_id) {
-                        return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
-                    }
+
                     let my_lval_option = packet_map.get(&my_id);
                     match my_lval_option {
                         Some(decl) => {
-                            my_rval_decl = get_decl(&my_id, decl_map);
+                            if (my_lval_decl.id == *decl) {
+                                return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
+                            }
+                            my_rval_decl = get_decl(&decl, decl_map);
                         }
                         None => {
-                            //Could be an imported field
+                            //Could be an imported field?
+                            if (my_lval_decl.id == my_id) {
+                                return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
+                            }
                             my_rval_decl = get_decl(&my_id, decl_map);
                         }
                     }
@@ -1521,11 +1543,11 @@ pub fn fill_p4code<'a> (import_map : &HashMap<String, String>, my_globals : &Glo
                 my_varinfo = VarInfo::BitArray(32, 1);
             }
             "timestamp_egress" => {
-                my_id = "intrinsic_metadata.ingress_global_timestamp";
+                my_id = "intrinsic_metadata.egress_global_timestamp";
                 my_varinfo = VarInfo::BitArray(32, 1);
             }
             "timestamp_tx" => {
-                my_id = "intrinsic_metadata.ingress_global_timestamp";
+                my_id = "intrinsic_metadata.egress_global_timestamp";
                 my_varinfo = VarInfo::BitArray(32, 1);
             }
             "ingress_port" => {

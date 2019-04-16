@@ -41,6 +41,10 @@ pub enum Token<'a> {
   Modulo,
   Cond,
 
+  //BitWise
+  ShiftLeft,
+  ShiftRight,
+
   // Comparison operators
   Equal,
   NotEqual,

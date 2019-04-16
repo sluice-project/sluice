@@ -49,7 +49,7 @@ impl<'a> TreeFold<'a> for PrettyPrinter {
   fn visit_condition(&mut self, tree : &'a Condition) {
     // check that the condition isnt a dummyCondition
     if tree.expr.expr_right == ExprRight::Empty() && tree.expr.op1 == Operand::Value(Value {value : 1}) { }
-    else {self.visit_expr(&tree.expr);} 
+    else {self.visit_expr(&tree.expr);}
   }
 
   fn visit_expr(&mut self, tree : &'a Expr) {
@@ -71,6 +71,8 @@ impl<'a> TreeFold<'a> for PrettyPrinter {
           BinOpType::GTEQOp     => self.pretty_print_str.push_str(" >= "),
           BinOpType::LessThan   => self.pretty_print_str.push_str(" < "),
           BinOpType::GreaterThan=> self.pretty_print_str.push_str(" > "),
+          BinOpType::ShiftLeft  => self.pretty_print_str.push_str(" << "),
+          BinOpType::ShiftRight => self.pretty_print_str.push_str(" >> "),
         };
         self.pretty_print_str.push_str(&op2.get_string());
       },
