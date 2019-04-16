@@ -1,4 +1,5 @@
 import device psa;
+global DPTP_STARTREQUEST : bit<8> = 1;
 global DPTP_REQUEST : bit<8> = 2;
 global DPTP_RESPONSE : bit<8> = 3;
 
@@ -6,6 +7,8 @@ packet dptp_pkt:ethernet(etherType:1234){
   magic : bit<16>;
   command : bit<8>;
   dptp_now : bit<64>;
+  timestamp_rx : bit<48>;
+  timestamp_tx : bit<48>;
   traffic_rate : bit<32>;
 }
 
@@ -13,12 +16,34 @@ packet dptp_pkt:ethernet(etherType:1234){
 @ bmv2
 snippet dptp_switch(){
   persistent dptp_ref : bit<64>;
+  persistent dptp_offset : bit<64>;
+  persistent dptp_era : bit<64>;
   persistent switch_id : bit<64>;
-  if (dptp_pkt.command == 2) {
-    dptp_pkt.dptp_now = dptp_ref + psa.timestamp_egress;
-    dptp_pkt.command = 3;
-
+  persistent send_req_tx : bit<48>;
+  transient owd : bit<32>;
+  transient twd : bit<32>;
+  transient switch_delay : bit<48>;
+  transient rtt : bit<48>;
+  transient elapsed : bit<48>;
+  if (dptp_pkt.command == 1) {
+    dptp_pkt.command = 2;
+    send_req_tx = psa.timestamp_egress;
   }
-
-
+  if (dptp_pkt.command == 2) {
+    elapsed = psa.timestamp_tx - psa.timestamp_rx;
+    dptp_pkt.dptp_now = dptp_ref + elapsed;
+    dptp_pkt.dptp_now = dptp_pkt.dptp_now + dptp_era;
+    dptp_pkt.command = 3;
+    dptp_pkt.ethernetdstAddr = dptp_pkt.ethernetsrcAddr;
+    dptp_pkt.ethernetsrcAddr = switch_id;
+    dptp_pkt.timestamp_rx = psa.timestamp_rx;
+    dptp_pkt.timestamp_tx = psa.timestamp_tx;
+  }
+  if (dptp_pkt.command == 3) {
+    switch_delay = dptp_pkt.timestamp_tx - dptp_pkt.timestamp_rx;
+    rtt = psa.timestamp_ingress - send_req_tx;
+    twd = rtt - switch_delay;
+    owd = twd >> 2;
+    dptp_ref = dptp_pkt.dptp_now + owd;
+  }
 }
