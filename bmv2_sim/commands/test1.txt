@@ -2,37 +2,7 @@ table_set_default table1 action1
 table_set_default table2 action2
 table_set_default table3 action3
 table_set_default table4 action4
-table_set_default table5 action5
-table_set_default table6 action6
-table_set_default table7 action7
-table_set_default table8 action8
-table_set_default table9 action9
-table_set_default table10 action10
-table_set_default table11 action11
-table_add table12 action12 1 => 
-table_add table12 action13 0 => 
-table_add table13 action14 1 => 
-table_add table13 action15 0 => 
-table_set_default table14 action16
-table_set_default table15 action17
-table_add table16 action18 1 => 
-table_add table16 action19 0 => 
-table_set_default table17 action20
-table_set_default table18 action21
-table_add table19 action22 1 => 
-table_add table19 action23 0 => 
-table_add table20 action24 1 => 
-table_add table20 action25 0 => 
-table_set_default table21 action26
-table_set_default table22 action27
-table_add table23 action28 1 => 
-table_add table23 action29 0 => 
-table_set_default table24 action30
-table_set_default table25 action31
-table_set_default table26 action32
-table_set_default table27 action33
-table_add table28 action34 1 => 
-table_add table28 action35 0 => 
-table_set_default table29 action36
-table_set_default table30 action37
-table_set_default table31 action38
+table_add table5 action5 1 => 
+table_add table5 action6 0 => 
+table_add table6 action7 1 => 
+table_add table6 action8 0 => 

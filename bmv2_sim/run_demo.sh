@@ -5,6 +5,5 @@ cd ..
 cargo run --bin sluice $sluice_file_path
 cp out/${sluice_file}.p4 bmv2_sim/
 cd bmv2_sim
-source env.sh
 
-make stop; make clean; make run
+make clean; make run

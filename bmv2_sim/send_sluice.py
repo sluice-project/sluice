@@ -42,19 +42,20 @@ def main():
     iface = get_if()
     print "sending on interface %s to %s" % (iface, str(addr))
 
-    new_ones = random.sample(range(0, 100), 100)
-    print "\nnew_ones : " + str(new_ones) + "\n"
+
+
+    nhops = [0]
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(('', srcPort))
     count = 0
-    for t in new_ones: 
+    for t in xrange(1): 
         try:
-            data = struct.pack('>I', t)
+            data = struct.pack('>I', nhops[t])
             s.sendto(data, (addr, DPORT))
             count = count + 1
             time.sleep(0.01)
-            print(t), count
+            print(nhops[t])
 
         except Exception as error:
             print error
