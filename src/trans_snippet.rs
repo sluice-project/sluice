@@ -14,7 +14,8 @@ use tofino_gen;
 
 
 use std::process;
-
+use std::process::Command;
+use std::env;
 //use handlebars::Handlebars;
 
 const META_HEADER : &str = "mdata";
@@ -68,7 +69,8 @@ pub struct P4Header {
 #[derive(Clone)]
 pub struct Dag<'a> {
     pub snippet_id       : &'a str,
-    pub device_id        : &'a str,
+    pub device_type : &'a str,
+    pub device_vector : Vec<Identifier<'a>>,
     pub dag_vector : Vec<DagNode<'a>>
 }
 
@@ -530,7 +532,8 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
 
         let mut symbol_table : HashMap<&'a str, VarType<'a>> = HashMap::new();
         let mut my_dag : Dag = Dag { snippet_id : my_snippet.snippet_id.id_name,
-            device_id : my_snippet.device_id.id_name, dag_vector : Vec::new()};
+            device_type : my_snippet.device_annotation.device_type.id_name, 
+            device_vector : my_snippet.device_annotation.device_vector.clone(), dag_vector : Vec::new()};
 
         for my_variable_decl in &my_snippet.variable_decls.decl_vector {
 
@@ -759,13 +762,13 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
 //     println!("{}", reg.render("tpl_1", &json!({"name": "foo"})).unwrap());
 // }
 
-pub fn gen_code<'a> (my_packets : &Packets<'a>, dag_map : HashMap<&'a str, Dag<'a>>){
+pub fn gen_code<'a> (my_packets : &Packets<'a>, dag_map : HashMap<&'a str, Dag<'a>>) {
 
     for (snippet_name, snippet_dag) in dag_map {
-        if snippet_dag.device_id.contains("bmv2") {
+        if snippet_dag.device_type.contains("bmv2") {
             bmv2_gen::gen_p4_code(&snippet_name, my_packets, &snippet_dag);
             bmv2_gen::gen_control_plane_commands(&snippet_name, my_packets, &snippet_dag);
-        } else if snippet_dag.device_id.contains("tofino"){
+        } else if snippet_dag.device_type.contains("tofino"){
             tofino_gen::gen_p4_code(&snippet_name, my_packets,  &snippet_dag);
         }
     }
@@ -832,6 +835,52 @@ pub fn create_packet_map<'a> (my_packets : &Packets<'a>) ->HashMap<String, Strin
 }
 
 
+// TODO : figure out how to get multiple p4 programs on a single switch
+// Currently, if there are no devices specified in the annotation and if
+// there is only a single snippet, then installs that single snippet on all devices
+pub fn gen_topology_json<'a> (dag_map : &HashMap<&'a str, Dag<'a>>) {
+
+    let topo : String = format!("bmv2_sim/topology.json");
+    let path = Path::new(topo.as_str());
+    let display  = path.display();
+    let mut topo_file = match File::create(path) {
+        Err(why) => panic!("couldn't create {}: {}",
+                           display,
+                           why.description()),
+        Ok(topo_file) => topo_file,
+    };
+
+    let mut contents = String::new();
+
+    if dag_map.len() == 1 {
+        for key in dag_map.keys() {
+            contents += &format!("{{\"snippet_loc\" : \"{}\"}}", key);
+        }
+    } else {
+
+        contents += "{\"snippet_loc\" : {";
+        for (snippet_name, snippet_dag) in dag_map {
+            for d in &snippet_dag.device_vector {
+                contents += &format!("\"{}\" : \"{}\",", d.id_name, snippet_name);
+            }
+        }
+
+        assert_eq!(contents.pop(), Some(','));
+        contents += "}}";
+    }
+
+    topo_file.write(contents.as_bytes());
+    let mut root = Path::new("bmv2_sim");
+    assert!(env::set_current_dir(&root).is_ok());
+    let _output = Command::new("python")
+            .arg("gen_topo.py")
+            .output()
+            .expect("failed to execute process");
+
+    root = Path::new("..");
+    assert!(env::set_current_dir(&root).is_ok());
+}
+
 // need to use either 'bmv2' or 'tofino' for device annotation
 pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_globals : &Globals<'a>, my_packets : &Packets<'a>, my_snippets : &Snippets<'a>, pkt_tree : &Packets<'a>) {
     // TODO : Deal with mutability of my_dag
@@ -843,7 +892,7 @@ pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_globals : &Globals<'a>,
     for my_snippet in &my_snippets.snippet_vector {
 
         let mut my_option = dag_map.get_mut(&my_snippet.snippet_id.id_name);
-        let device_type : String = String::from(my_snippet.device_id.id_name);
+        let device_type : String = String::from(my_snippet.device_annotation.device_type.id_name);
         match my_option {
            Some(mut snippet_dag) => {
                 create_connections(&my_snippet, &mut snippet_dag);
@@ -858,6 +907,8 @@ pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_globals : &Globals<'a>,
            None => {}
         }
     }
+
+    gen_topology_json(&dag_map);    
     // dag_map now contains p4 code and connection information (next/prev node)
     println!("\n\n\n Filled Dag Map: {:?}\n\n\n\n", dag_map);
     // process::exit(1);
@@ -879,8 +930,9 @@ mod tests {
         let tokens = &mut get_tokens(input);
         let token_iter = &mut tokens.iter().peekable();
         let parse_tree = parse_prog(token_iter);
+        let pkt_tree = parser::parse_import_packets(token_iter);
         // TODO : need to replace &parse_tree.packets (the 4th func input) with the actual pkt_tree
-        $trans_snippet_routine(&parse_tree.imports, &parse_tree.packets, &parse_tree.snippets, &parse_tree.packets);
+        $trans_snippet_routine(&parse_tree.imports, &parse_tree.globals, &parse_tree.packets, &parse_tree.snippets, &pkt_tree);
         assert!(token_iter.peek().is_none(), "token iterator is not empty");
       }
     )
