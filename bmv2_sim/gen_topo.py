@@ -7,9 +7,15 @@ with open("topology.json", 'r') as f:
 	sn_loc = json.load(f)
 
 data = {}
-for i in topo['switches']:
-	data[i] = { "runtime_json" : "%s-runtime.json" % i, 
-		"cli_input" : "commands/%s.txt" % sn_loc['snippet_loc'][i] }
+
+if type(sn_loc['snippet_loc']) == unicode:
+	for i in topo['switches']:
+		data[i] = { "runtime_json" : "%s-runtime.json" % i, 
+			"cli_input" : "commands/%s.txt" % sn_loc['snippet_loc'] }
+else:
+	for i in topo['switches']:
+		data[i] = { "runtime_json" : "%s-runtime.json" % i, 
+			"cli_input" : "commands/%s.txt" % sn_loc['snippet_loc'][i] }
  
 topo['switches'] = data
 topo['snippet_loc'] = sn_loc['snippet_loc']
