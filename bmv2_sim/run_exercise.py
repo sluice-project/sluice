@@ -72,7 +72,7 @@ class ExerciseTopo(Topo):
         A custom class is used because the exercises make a few topology
         assumptions, mostly about the IP and MAC addresses.
     """
-    def __init__(self, hosts, switches, links, sluice_file, log_dir, **opts):
+    def __init__(self, hosts, switches, links, snippet_loc, log_dir, **opts):
         Topo.__init__(self, **opts)
         host_links = []
         switch_links = []
@@ -121,20 +121,7 @@ class ExerciseTopo(Topo):
             self.addSwitchPort(link['node2'], link['node1'])
 
         self.printPortMapping()
-
         print "\nGenerating runtime switch json files for Sluice routing\n"
-        commons = '''{ \
-          "target": "bmv2", 
-          "p4info": "build/%s.p4info", 
-          "bmv2_json": "build/%s.json", 
-          "table_entries": [\n 
-              {
-              "table": "ipv4_lpm",
-              "default_action": true,
-              "action_name": "_drop",
-              "action_params": { }
-            }\n''' % (sluice_file, sluice_file)
-
         sw_macAddr_count = 1;
         edges = []
 
@@ -147,7 +134,19 @@ class ExerciseTopo(Topo):
 
         # max 255 switches supported in dstAddr for now
         for sw in switches:
-            contents = ""
+
+            contents = '''{ \
+              "target": "bmv2", 
+              "p4info": "build/%s.p4info", 
+              "bmv2_json": "build/%s.json", 
+              "table_entries": [\n 
+                  {
+                  "table": "ipv4_lpm",
+                  "default_action": true,
+                  "action_name": "_drop",
+                  "action_params": { }
+                }\n''' % (snippet_loc[sw], snippet_loc[sw])
+
             for h in hosts:
                 s = shortestPaths.get(sw, h)
                 next_hop = s[1]
@@ -173,7 +172,7 @@ class ExerciseTopo(Topo):
                     "port": %d
                   }
                 }''' % (self.host_ips[h], mac_ad, sw_port_num)
-            contents = commons + contents + "]}"
+            contents += "]}"
             f = open('%s-runtime.json' % sw, 'w')
             f.write(contents)
 
@@ -257,7 +256,7 @@ class ExerciseRunner:
             topo = json.load(f)
 
         # natesh edit
-        self.sluice_file = topo['sluice_file']
+        self.snippet_loc = topo['snippet_loc']
 
         self.hosts = topo['hosts']
         self.switches = topo['switches']
@@ -334,7 +333,7 @@ class ExerciseRunner:
         """
         self.logger("Building mininet topology.")
 
-        self.topo = ExerciseTopo(self.hosts, self.switches.keys(), self.links, self.sluice_file, self.log_dir)
+        self.topo = ExerciseTopo(self.hosts, self.switches.keys(), self.links, self.snippet_loc, self.log_dir)
 
         switchClass = configureP4Switch(
                 sw_path=self.bmv2_exe,
@@ -347,6 +346,11 @@ class ExerciseRunner:
                       host = P4Host,
                       switch = switchClass,
                       controller = None)
+        
+        with open("thrift_port.json", 'w') as f:
+            data = {i : self.net.get(i).thrift_port for i in self.switches.keys()}
+            json.dump(data, f)
+
 
     def program_switch_p4runtime(self, sw_name, sw_dict):
         """ This method will use P4Runtime to program the switch using the
@@ -383,11 +387,14 @@ class ExerciseRunner:
                 subprocess.Popen([cli, '--thrift-port', str(thrift_port)],
                                  stdin=fin, stdout=fout)
 
+    # this function populations control plane with routing info and match/action 
+    # needed for the user's sluice program
     def program_switches(self):
         """ This method will program each switch using the BMv2 CLI and/or
             P4Runtime, depending if any command or runtime JSON files were
             provided for the switches.
         """
+        # self.switches is just the "switches" element in topology.json
         for sw_name, sw_dict in self.switches.iteritems():
             if 'cli_input' in sw_dict:
                 self.program_switch_cli(sw_name, sw_dict)
