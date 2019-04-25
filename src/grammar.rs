@@ -108,9 +108,17 @@ pub struct Snippets<'a> {
 #[derive(Clone)]
 pub struct Snippet<'a> {
   pub snippet_id       : Identifier<'a>,
-  pub device_id        : Identifier<'a>,
+  pub device_annotation  : DeviceAnnotation<'a>,
   pub variable_decls   : VariableDecls<'a>,
   pub ifblocks         : IfBlocks<'a>,
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
+pub struct DeviceAnnotation<'a> {
+  pub device_type : Identifier<'a>,
+  pub device_vector : Vec<Identifier<'a>>,
 }
 
 #[derive(Debug)]
