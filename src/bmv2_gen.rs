@@ -62,15 +62,6 @@ pub fn handle_persistent_decl<'a> (my_decl :  &VariableDecl<'a>) -> P4Header {
             my_p4_header.register = format!("register {} {{\n{} width : {}; \n{} instance_count : {};\n}}\n",
             my_decl.identifier.id_name, TAB, bit_width, TAB, var_size);
             my_p4_header.meta = format!("{} : {};\n",my_decl.identifier.id_name, bit_width);
-            // let my_option = my_decl.initial_values.get(initial_val_index);
-
-            // match my_option {
-            //     Some (initial_value) => {
-            //         my_p4_header.meta_init = format!("set_metadata({}.{},{});\n",
-            //             META_HEADER, my_decl.identifier.id_name, initial_value.value);
-            //     }
-            //     _ => {}
-            // }
         }
         _ => { }
     }
@@ -96,7 +87,6 @@ pub fn get_p4_header_trans<'a> (node_type : &'a DagNodeType<'a>) -> P4Header {
                 }
                 _ => {}
             }
-
 
             return my_p4_header;
         }
@@ -195,8 +185,6 @@ pub fn handle_value_assignment<'a> ( my_lval_decl : &VarDecl, my_lval_index : &s
         }
     }
 }
-
-
 
 
 pub fn handle_read_register_v2 (my_decl : &VarDecl, my_index : &str) -> (String, String, String) {
@@ -312,46 +300,6 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &str,
     }
 }
 
-pub fn get_new_eq_table<'a> (my_temp_decl : &String, my_lval_decl : &VarDecl, eq : bool) -> (String, String, String) {
-    let mut my_p4_control : String = String::new();
-    let mut my_p4_actions : String = String::new();
-    let mut my_p4_commons : String = String::new();
-
-    let mut tablename : String;
-    let mut actionname : String;
-    match eq {
-        true => {
-            tablename = format!("eqtable{:?}", EQ_TABLE_COUNT).to_string();
-            actionname = format!("eqaction{:?}_", EQ_TABLE_COUNT).to_string();
-            EQ_TABLE_COUNT.fetch_add(1, Ordering::SeqCst);
-        }
-        false => {
-            tablename = format!("neqtable{:?}", NEQ_TABLE_COUNT).to_string();
-            actionname = format!("neqaction{:?}_", EQ_TABLE_COUNT).to_string();
-            NEQ_TABLE_COUNT.fetch_add(1, Ordering::SeqCst);
-        }
-    }
-    my_p4_control = my_p4_control + &format!("{}apply({});\n", TAB, tablename);
-
-    my_p4_actions = my_p4_actions + &format!("action {}0 () {{\n", actionname);
-    my_p4_actions = my_p4_actions + &format!("{}modify_field({}.{}, 0); \n}}\n", TAB, META_HEADER, my_lval_decl.id);
-    my_p4_actions = my_p4_actions + &format!("action {}1 () {{\n", actionname);
-    my_p4_actions = my_p4_actions + &format!("{}modify_field({}.{}, 1); \n}}\n", TAB, META_HEADER, my_lval_decl.id);
-
-    my_p4_commons = my_p4_commons + &format!("table {} {{\n", tablename);
-    my_p4_commons = my_p4_commons + &format!("{}reads {{\n", TAB);
-    my_p4_commons = my_p4_commons + &format!("{}{}{} : exact;\n{}}}\n", TAB, TAB, my_temp_decl, TAB);
-
-    my_p4_commons = my_p4_commons + &format!("{}actions {{\n", TAB);
-    my_p4_commons = my_p4_commons + &format!("{}{}{}0;\n", TAB, TAB, actionname);
-    my_p4_commons = my_p4_commons + &format!("{}{}{}1;\n", TAB, TAB, actionname);
-    my_p4_commons = my_p4_commons + &format!("{}}}\n", TAB);
-    my_p4_commons = my_p4_commons + &format!("}}\n");
-    EQ_TABLE_COUNT.fetch_add(1, Ordering::SeqCst);
-
-    return (my_p4_control, my_p4_actions, my_p4_commons);
-}
-
 
 // This method is using p4 control blocks available in pipeline.
 pub fn handle_condition_refs_v2<'a> (bin_op_type : &str, my_lval_decl : &VarDecl, prefix1 : &str,
@@ -441,18 +389,6 @@ pub fn handle_condition_refval_v2<'a> (bin_op_type : &str, my_lval_decl : &VarDe
      my_p4_control = my_p4_control + &format!("{}}}\n", TAB);
      return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
 }
-
-
-
-//  Packet { packet_id: Identifier { id_name: "n" }, packet_base: Identifier { id_name: "udp" },
-
-// packet_fields: PacketFields { field_vector: [
-//         PacketField { identifier: Identifier { id_name: "new_one" },
-//                     var_type: VarType { var_info: BitArray(32, 1), type_qualifier: Field } }]
-// },
-
-// packet_parser_condition: ParserCondition(Identifier { id_name: "srcPort" }, Value { value: 1234 }) }
-//   // packet_map    : HashMap<String, (String, u64)>,
 
 
 pub fn handle_binop_refs_assignment<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str, my_rval1_decl : &VarDecl, my_rval1_index : &str,
@@ -1066,7 +1002,7 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
         Operand::LValue(ref lval) => {
             match lval {
                 LValue::Scalar(ref my_id) => {
-                    if (my_lval_decl.id == my_id.id_name) {
+                    if my_lval_decl.id == my_id.id_name {
                         println!("Empty\n");
                         return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                     }
@@ -1079,14 +1015,14 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
                     let my_lval_option = packet_map.get(&my_id);
                     match my_lval_option {
                         Some(decl) => {
-                            if (my_lval_decl.id == *decl) {
+                            if my_lval_decl.id == *decl {
                                 return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                             }
                             my_rval_decl = get_decl(&decl, decl_map);
                         }
                         None => {
                             //Could be an imported field?
-                            if (my_lval_decl.id == my_id) {
+                            if my_lval_decl.id == my_id {
                                 return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                             }
                             my_rval_decl = get_decl(&my_id, decl_map);
@@ -1095,7 +1031,7 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
                 }
 
                 LValue::Array(ref my_id, ref box_index_op) => {
-                    if (my_lval_decl.id == my_id.id_name) {
+                    if my_lval_decl.id == my_id.id_name {
                         return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                     }
                     my_rval_decl = get_decl(my_id.id_name, decl_map);
@@ -1201,7 +1137,6 @@ pub fn get_decl<'a> (my_id : &str,  decl_map : &'a  HashMap<String, VarDecl>) ->
         }
     }
 }
-
 
 
 pub fn handle_array<'a> (operand :  &Operand<'a>, decl_map : &'a  HashMap<String, VarDecl>,
@@ -1623,7 +1558,7 @@ fn gen_p4_includes<'a> ( p4_file : &mut File) {
 fn gen_p4_globals<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     let mut contents : String = String::new();
     for my_dag_node in &my_dag.dag_vector {
-        if (my_dag_node.p4_code.p4_header.define.len() != 0) {
+        if my_dag_node.p4_code.p4_header.define.len() != 0 {
             contents = contents + &my_dag_node.p4_code.p4_header.define
         }
     }
@@ -1702,23 +1637,6 @@ fn gen_p4_headers<'a> (my_dag : &Dag<'a>, my_packets : &Packets<'a>, p4_file : &
         }
     }
 
-    // let my_option  = my_packets.packet_vector.get(0);
-    // match my_option {
-    //     Some(my_packet) => {
-    //         for my_field in &my_packet.packet_fields.field_vector {
-    //
-    //         }
-            // match my_field.var_type.var_info {
-            //     VarInfo::BitArray(size, no) => {
-            //          contents = contents + &format!("{} : {};\n", my_field.identifier.id_name, size)
-            //     }
-            //     _ => {
-            //         println!("Un-supported entry in packet field!");
-            //     }
-            // }
-    //     }
-    //     _ => {}
-    // }
     contents = contents + &format!("header ethernet_t ethernet;\n");
     contents = contents + &format!("header ipv4_t ipv4;\n");
     contents = contents + &format!("header tcp_t tcp;\n");
@@ -2155,7 +2073,7 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                         let re1 = Regex::new(r"table\d+").unwrap();
                         let re2 = Regex::new(r"action\d+").unwrap();
 
-                        let mut table_array = Vec::new();
+                        let mut table_array = Vec::new(); 
                         for cap in re1.captures_iter(&dagnode.p4_code.p4_commons) {
                             let ref table_str = cap.get(0).unwrap().as_str();
                             table_array.push(table_str.clone());
