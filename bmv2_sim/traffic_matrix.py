@@ -1,5 +1,6 @@
 import os
 import shlex
+import json
 from subprocess import *
 
 BMV2_PATH = "/home/vagrant/tutorials/vm/behavioral-model"
