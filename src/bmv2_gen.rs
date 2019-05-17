@@ -301,6 +301,7 @@ pub fn handle_ref_assignment<'a> (my_lval_decl : &VarDecl, my_lval_index : &str,
 }
 
 
+
 // This method is using p4 control blocks available in pipeline.
 pub fn handle_condition_refs_v2<'a> (bin_op_type : &str, my_lval_decl : &VarDecl, prefix1 : &str,
  my_rval1_decl : &VarDecl, prefix2 : &str, my_rval2_decl : &VarDecl) -> (String, String, String, String) {
@@ -1022,7 +1023,7 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
                         }
                         None => {
                             //Could be an imported field?
-                            if my_lval_decl.id == my_id {
+                            if (my_lval_decl.id == my_id) {
                                 return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                             }
                             my_rval_decl = get_decl(&my_id, decl_map);
@@ -1031,7 +1032,7 @@ pub fn handle_action_operand<'a> (my_lval_decl : &VarDecl,  my_lval_index : &str
                 }
 
                 LValue::Array(ref my_id, ref box_index_op) => {
-                    if my_lval_decl.id == my_id.id_name {
+                    if (my_lval_decl.id == my_id.id_name) {
                         return (my_p4_control, my_p4_actions, my_p4_commons, my_p4_metadecl);
                     }
                     my_rval_decl = get_decl(my_id.id_name, decl_map);
@@ -1137,6 +1138,7 @@ pub fn get_decl<'a> (my_id : &str,  decl_map : &'a  HashMap<String, VarDecl>) ->
         }
     }
 }
+
 
 
 pub fn handle_array<'a> (operand :  &Operand<'a>, decl_map : &'a  HashMap<String, VarDecl>,
@@ -1558,7 +1560,7 @@ fn gen_p4_includes<'a> ( p4_file : &mut File) {
 fn gen_p4_globals<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     let mut contents : String = String::new();
     for my_dag_node in &my_dag.dag_vector {
-        if my_dag_node.p4_code.p4_header.define.len() != 0 {
+        if (my_dag_node.p4_code.p4_header.define.len() != 0) {
             contents = contents + &my_dag_node.p4_code.p4_header.define
         }
     }
@@ -2073,7 +2075,7 @@ pub fn gen_control_plane_commands<'a> (snippet_name : &str , my_packets : &Packe
                         let re1 = Regex::new(r"table\d+").unwrap();
                         let re2 = Regex::new(r"action\d+").unwrap();
 
-                        let mut table_array = Vec::new(); 
+                        let mut table_array = Vec::new();
                         for cap in re1.captures_iter(&dagnode.p4_code.p4_commons) {
                             let ref table_str = cap.get(0).unwrap().as_str();
                             table_array.push(table_str.clone());

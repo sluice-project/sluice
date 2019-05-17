@@ -835,7 +835,6 @@ pub fn create_packet_map<'a> (my_packets : &Packets<'a>) ->HashMap<String, Strin
 }
 
 
-// TODO : figure out how to get multiple p4 programs on a single switch
 // Currently, if there is only a single snippet, then the program
 // installs that single snippet on all devices, regardless of any annotations
 pub fn gen_topology_json<'a> (dag_map : &HashMap<&'a str, Dag<'a>>) {

@@ -42,8 +42,6 @@ def main():
     iface = get_if()
     print "sending on interface %s to %s" % (iface, str(addr))
 
-
-
     nhops = [0]
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
