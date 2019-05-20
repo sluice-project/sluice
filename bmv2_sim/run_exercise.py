@@ -176,6 +176,8 @@ class ExerciseTopo(Topo):
             f = open('%s-runtime.json' % sw, 'w')
             f.write(contents)
 
+        # store port_map for use in traffic sim
+        json.dump(self.sw_port_mapping, open("port_map.txt", 'w'))    
 
         # build mininet script to start poisson traffic simualation
         print "\nGenerating mininet script for poisson traffic simualation\n\n"
@@ -190,12 +192,6 @@ class ExerciseTopo(Topo):
         with open("mininet_setup", 'w') as f:
             f.write(traffic_gen)
 
-        print 'switch_links = ' + str(switch_links)
-        print
-        print 'sw_port_mapping = ' + str(self.sw_port_mapping)
-        print
-
-        sys.exit(1)
 # switch_links = [{'node1': u's1', 'latency': '0ms', 'bandwidth': None, 'node2': u's2'}, 
 # {'node1': u's1', 'latency': '0ms', 'bandwidth': None, 'node2': u's3'},
 #  {'node1': u's2', 'latency': '0ms', 'bandwidth': None, 'node2': u's3'}]
