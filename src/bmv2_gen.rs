@@ -1707,6 +1707,19 @@ table ipv4_lpm {{
 
 fn gen_p4_metadata<'a> (my_dag : &Dag<'a>, p4_file : &mut File) {
     let mut contents : String = String::new();
+
+    contents = contents + &format!("header_type queueing_metadata_t {{
+    fields {{
+        enq_timestamp : 48;
+        enq_qdepth : 16;
+        deq_timedelta : 32;
+        deq_qdepth : 16;
+        qid : 8;
+    }}
+}}\n
+metadata queueing_metadata_t queueing_metadata;
+ \n");
+
     contents = contents + &format!("header_type metadata_t {{ \n");
     contents = contents + &format!("{}fields {{\n", TAB);
     for my_dag_node in &my_dag.dag_vector {
