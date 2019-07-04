@@ -8,7 +8,9 @@ import matplotlib.mlab as mlab
 from subprocess import *
 from scipy.optimize import curve_fit
 from scipy.misc import factorial
-
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
 
 BMV2_PATH = "/home/vagrant/tutorials/vm/behavioral-model"
 
@@ -41,7 +43,7 @@ if __name__ == '__main__':
 	ingress_counts = []
 	# collect ingress port counts once every second, run simulation for a couple min
 	start = time.time()
-	while time.time() < start + 180:
+	while time.time() < start + 600:
 		s = time.time()
 		ingress_counts.append(gen_traffic_matrix('traffic_example','cnt'))
 		time.sleep(1 - (time.time() -  s))
@@ -65,23 +67,23 @@ if __name__ == '__main__':
 	for i in link_counts:
 		link_util[i] = (np.array(link_counts[i])[1:] - np.array(link_counts[i])[:-1])
 
-	for i in link_util:
-		plt.plot(range(len(link_util[i])), link_util[i], label = "link %s" % str(i), marker='o' , )
+	# for i in link_util:
+	# 	plt.plot(range(len(link_util[i])), link_util[i], label = "link %s" % str(i), marker='o' , )
 
-	plt.title("Scatter Plot - Utilization over Time")
-	plt.xlabel("Time (sec)")
-	plt.ylabel("Link Utilization")
-	plt.tight_layout()
-	plt.legend()
-	plt.show()
-	plt.clf()
+	# plt.title("Scatter Plot - Utilization over Time")
+	# plt.xlabel("Time (sec)")
+	# plt.ylabel("Link Utilization")
+	# plt.tight_layout()
+	# plt.legend()
+	# plt.show()
+	# plt.clf()
 
 	# the bins should be of integer width, because poisson is an integer distribution
 	# entries, bin_edges, patches = plt.hist(link_util[('s1','s2')], bins=11, range=[-0.5, 10.5], normed=True)
-	
+
 	# plt.figure(figsize=(3.2,4))
 	# plot cumulative histogram of packet rate on link (s1','s2)
-	entries, bin_edges, patches = plt.hist(link_util[('s1','s3')], bins=11, 
+	entries, bin_edges, patches = plt.hist(link_util[('s1','s3')], bins=50, 
 								range=[-0.5, max(link_util[('s1','s3')])], 
 								normed=True, cumulative=True, label = "Observed",
 								color = 'skyblue', ec="black")
@@ -103,25 +105,25 @@ if __name__ == '__main__':
 
 
 	# calculate binmiddles
-	bin_middles = 0.5*(bin_edges[1:] + bin_edges[:-1])
-	# poisson function, parameter lamb is the fit parameter
-	# fit with curve_fit
-	parameters, cov_matrix = curve_fit(poisson, bin_middles, entries) 
-	# plot poisson-deviation with fitted parameter
-	x_plot = np.linspace(0, 20, 1000)
-	plt.plot(x_plot, poisson(x_plot, *parameters), 'r-', lw=2)
-	plt.show()
-	plt.clf()
+	# bin_middles = 0.5*(bin_edges[1:] + bin_edges[:-1])
+	# # poisson function, parameter lamb is the fit parameter
+	# # fit with curve_fit
+	# parameters, cov_matrix = curve_fit(poisson, bin_middles, entries) 
+	# # plot poisson-deviation with fitted parameter
+	# x_plot = np.linspace(0, 20, 1000)
+	# plt.plot(x_plot, poisson(x_plot, *parameters), 'r-', lw=2)
+	# plt.show()
+	# plt.clf()
 
 
-	m, s = stats.poisson.fit(link_util[('s1','s3')]) # get mean and standard deviation  
-	pdf_g = stats.poisson.pdf(range(len(link_util[('s1','s3')])), m, s) # now get theoretical values in our interval  
-	plt.plot(lnspc, pdf_g, label="Norm")
-	plt.title("Packets/sec on Link ('s3','s4')")
-	plt.xlabel("payout")
-	plt.ylabel("normed frequency")
-	plt.tight_layout()
-	plt.grid([True])
+	# m, s = stats.poisson.fit(link_util[('s1','s3')]) # get mean and standard deviation  
+	# pdf_g = stats.poisson.pdf(range(len(link_util[('s1','s3')])), m, s) # now get theoretical values in our interval  
+	# plt.plot(lnspc, pdf_g, label="Norm")
+	# plt.title("Packets/sec on Link ('s3','s4')")
+	# plt.xlabel("payout")
+	# plt.ylabel("normed frequency")
+	# plt.tight_layout()
+	# plt.grid([True])
 
 
 
