@@ -572,10 +572,234 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_packets : &Packe
         }
     }
 
+    create_dependency_dag(&mut my_dag.clone());
+    println!("new nodes{:?}\n\n", my_dag);
+    process::exit(1);
+
 }
 
 
 
+pub fn create_dependency_dag<'a> (my_dag : &mut Dag<'a>) {
+
+    let out_f : String = format!("test/dependency_dag.txt");
+    let path = Path::new(out_f.as_str());
+    let display  = path.display();
+    let mut out_file1 = match File::create(path) {
+        Err(why) => panic!("couldn't create {}: {}",
+                           display,
+                           why.description()),
+        Ok(out_file1) => out_file1,
+    };
+
+    let out_f : String = format!("test/next_prev_nodes.txt");
+    let path = Path::new(out_f.as_str());
+    let display  = path.display();
+    let mut out_file2 = match File::create(path) {
+        Err(why) => panic!("couldn't create {}: {}",
+                           display,
+                           why.description()),
+        Ok(out_file2) => out_file2,
+    };
+
+    let mut contents = String::new();
+    let mut next_prev_nodes = String::new();
+
+    for dagnode in my_dag.dag_vector.clone() {
+        match &dagnode.node_type {
+
+            DagNodeType::Decl(var_decl) => {
+                contents += &format!("{:?} {:?} : {:?}", var_decl.var_type.type_qualifier, 
+                    var_decl.identifier.id_name, var_decl.var_type.var_info);
+                next_prev_nodes += &format!("{:?}:{:?}\n", dagnode.next_nodes, dagnode.prev_nodes);
+
+                if(!var_decl.initial_values.is_empty()) {
+                    contents += &format!("[");
+                    for i in var_decl.initial_values.clone() {
+                        contents += &format!("{:?},", i.value);
+                    }
+                    contents += &format!("]");
+                }
+                contents +=  &format!("\n");
+            }
+
+            DagNodeType::Stmt(stmt) => {
+                
+                match &stmt.lvalue {
+                    LValue::Scalar(ref id) => {
+                        contents += &format!("{:?} = ", id.id_name);
+                    }
+
+                    LValue::Array(id1,  id2) => {
+                        contents += &format!("{:?}[{:?}] = ", id1.id_name, handle_array_op(id2));
+                    }
+
+                    LValue::Field(ref p, ref f) => {
+                        contents += &format!("{:?}.{:?} = ", p.id_name, f.id_name);
+                    }
+                }
+
+                contents += &handle_operand(&stmt.expr.op1);
+
+                match &stmt.expr.expr_right {
+                    ExprRight::BinOp(bin_op_type, ref operand) => {
+                        contents += &handle_binop(*bin_op_type);
+                        contents += &handle_operand(operand);                    
+                    }
+
+                    ExprRight::Cond(ref operand1, ref operand2) => {
+                        contents += &format!(" ? ");
+                        contents += &handle_operand(operand1);
+                        contents += &format!(" : ");
+                        contents += &handle_operand(operand2);
+                    }
+
+                    ExprRight::Empty() => {}
+                }
+
+                contents += &format!("\n");
+                next_prev_nodes += &format!("{:?}:{:?}\n", dagnode.next_nodes, dagnode.prev_nodes);
+            }
+
+            _ => {}
+        }
+    }
+
+    let clean_contents : String = contents.replace('"', "").replace('\\',"");
+    out_file1.write(clean_contents.as_bytes());
+    out_file2.write(next_prev_nodes.as_bytes());
+
+    let mut root = Path::new("test");
+    assert!(env::set_current_dir(&root).is_ok());
+    let _output = Command::new("python3")
+            .arg("gen_dependency_dag.py")
+            .output()
+            .expect("failed to execute process");
+
+    root = Path::new("..");
+    assert!(env::set_current_dir(&root).is_ok());
+
+    println!("new nodes{:?}", my_dag);
+    // process::exit(1);
+}
+
+
+    // let mut u = Vec::new();
+    // let mut k : usize = 0;
+    // for dagnode in my_dag.dag_vector.clone() {
+    //     u[k] = "w";
+    // }
+    // let time = 0;
+    // let my_parent_dag_option = my_dag.dag_vector.get_mut(p_index_1);
+
+    // for 
+    // for node in 
+
+
+pub fn handle_binop<'a> (bin_op_type : BinOpType) -> String {
+    let mut contents = String::new();
+    match bin_op_type {
+        BinOpType::BooleanAnd => {
+            contents = " & ".to_string();
+        }
+        BinOpType::BooleanOr => {
+            contents += " | ";
+        }
+        BinOpType::ShiftLeft => {
+            contents += " << ";
+        }
+        BinOpType::ShiftRight => {
+            contents += " >> ";
+        }
+        BinOpType::Plus => {
+            contents += " + ";
+        }
+        BinOpType::Minus => {
+            contents += " - ";
+        }
+        BinOpType::Mul => {
+            contents += " * ";
+        }
+        BinOpType::Div => {
+            contents += " / ";
+        }
+        BinOpType::Modulo => {
+            contents += " % ";
+        } 
+        BinOpType::Equal => {
+            contents += " == ";
+        }
+        BinOpType::NotEqual => {
+            contents += " != ";
+        }
+        BinOpType::GreaterThan => {
+            contents += " > ";
+        }
+        BinOpType::LessThan => {
+            contents += " < ";
+        }
+        BinOpType::GTEQOp => {
+            contents += " >= ";
+        }
+        BinOpType::LTEQOp => {
+            contents += " <= ";
+        }
+        _ => {}
+    }
+
+    return contents;
+}
+
+
+pub fn handle_operand<'a> (operand :  &Operand<'a>) -> String {
+    let mut contents = String::new();
+    match operand {
+        Operand::LValue(ref lval) => {
+            match lval {
+                LValue::Scalar(ref id) => {
+                    contents += &format!("{:?}", id.id_name);
+                }
+
+                LValue::Array(id1,  id2) => {
+                    contents += &format!("{:?}[{:?}]", id1.id_name, handle_array_op(id2));
+                }
+
+                LValue::Field(ref p, ref f) => {
+                    contents += &format!("{:?}.{:?}", p.id_name, f.id_name);
+                }
+            }
+        }
+
+        Operand::Value(ref val) => {
+            contents += &format!("{:?}", val.value);
+        }
+    }
+
+    return contents;
+}
+
+
+pub fn handle_array_op<'a> (operand :  &Operand<'a>) -> String {
+    let mut contents = String::new();
+    match operand {
+        Operand::LValue(ref lval) => {
+            match lval {
+                LValue::Scalar(ref my_id) => {
+                    contents += &format!("{:?}", my_id.id_name);
+                }
+                LValue::Field(ref p, ref f) => {
+                    contents += &format!("{:?}.{:?}", p.id_name, f.id_name);
+                }
+                _ => {}
+            }
+        }
+        Operand::Value(ref rval_val) => {
+            contents += &format!("{:?}", rval_val.value);
+        }
+    }
+    
+    return contents;
+}
 
 
 
