@@ -99,6 +99,23 @@ pub fn get_identifiers<'a> (my_operand : &'a Operand<'a>) -> Vec<&'a str> {
 pub fn get_indices_lval<'a> (decl_map : &HashMap<String, usize>, lval : LValue<'a>) -> HashMap< String, usize> {
 
     let mut my_indices : HashMap< String, usize> = HashMap::new();
+
+    // If lval is a packet field, concat the packet name and field name then search in decl_map
+    match lval {
+        LValue::Field(ref id, ref field_name) => {
+            let a = format!("{}.{}", id.id_name.to_string(), field_name.id_name.to_string());
+            let my_option = decl_map.get(&a);
+            match my_option {
+                Some(index) => {
+                    my_indices.insert(a.to_string(), *index);
+                    return my_indices;
+                }
+                None => {}
+            }
+        }
+        _ => {}
+    }
+
     let my_vec = lval.get_string_vec().to_owned();
     let my_vec_ids : Vec<&str> = my_vec.iter().cloned().collect() ;
 
@@ -239,13 +256,69 @@ pub fn check_clone_condition<'a> (my_pre_condition_dag_option : Option<&'a DagNo
     return pre_condition;
 }
 
+
+
 // Construct the connections between each line of code within a snippet to create dag-vector for that snippet
 // TODO : Make it modular. Curently baffled by how to pass mutable reference of Dag again
 // TODO : add support for packet fields here and in code gen file. Connections currently not being made for statements
 // containing only packet fields and/or values
-pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'a>) {
+pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_packets : &Packets<'a>, 
+                                pkt_tree : &Packets<'a>, my_imports : &Imports<'a>, my_dag : &mut Dag<'a>) {
     // A HashMap to keep track of declarations.
     let mut decl_map : HashMap<String, usize>= HashMap::new();
+
+    // find the index where the variable_decl nodes end 
+    let mut insert_ind : usize = 0;
+    for dagnode in my_dag.dag_vector.clone() {
+        match &dagnode.node_type {
+            // All vardecls will always be parsed first, before any other lines of code. If/else blocks follow
+            DagNodeType::Decl(var_decl) => {
+                insert_ind += 1;
+            }
+            _ => {}
+        }
+    }
+
+    // First create new nodes for each packet header (packet.np, psa.np, and user-defined packet) 
+    // as a Decl(VariableDecl) (with identifier: Identifier { id_name: "pac.header" }, with initial_values: [],
+    //  with VarType::Type_Qualifier = field, and VarType::Var_Info = bitarray(len, 1)) 
+    // Clone the whole my_dag and insert these new nodes right after the var_decl nodes so they may
+    // be treated as var_decls later on. Now all the indicies calculations should remain correct...
+
+    // Create new nodes for each packet header (packet.np, (not psa.np for now), and user-defined packets) and insert them
+    // into the dag_vector starting at insert_ind
+    for my_packet in &my_packets.packet_vector {
+
+        for field in &my_packet.packet_fields.field_vector {
+            let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), field.identifier.id_name.clone());
+            
+            let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+            let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+            let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
+                initial_values : Vec::<Value>::new(), var_type : field.var_type.clone()};
+            let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
+                p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+            my_dag.dag_vector.insert(insert_ind, packet_decl_node);
+            insert_ind += 1
+        }
+
+        for my_pkt in &pkt_tree.packet_vector {
+            for my_pkt_field in &my_pkt.packet_fields.field_vector {
+
+                let my_id = my_pkt_field.identifier.id_name.clone();
+                let field_name  = format!("{}.{}{}", my_packet.packet_id.id_name.clone(), my_pkt.packet_id.id_name.clone(), my_id);
+                
+                let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
+                    initial_values : Vec::<Value>::new(), var_type : my_pkt_field.var_type.clone()};
+                let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
+                    p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+                my_dag.dag_vector.insert(insert_ind, packet_decl_node);
+                insert_ind += 1
+            }
+        }
+    }
 
     //First, process variable decls
     // after adding in if/else handling, for loop through my_dag.dag_vector and match for variabledecl. Then use that
@@ -288,9 +361,6 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'
                         my_indices_5 = get_indices_op(&decl_map, op_false.clone());
                         // Fill in the pre-condition statement
                         let my_option = get_pre_condition_op(&decl_map, my_statement.expr.op1.clone());
-                        // println!("node : {:?}\n\n", dagnode);
-                        // println!("pre-cond : {:?}\n\n", my_option);
-                        // println!("decl_map : {:?}\n\n", decl_map);
 
                         match my_option {
                             Some(vector) => {
@@ -303,7 +373,7 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'
                     ExprRight::Empty() => {
                     }
                 }
-
+                
                 // Populate next_nodes
                 for (my_id_1,p_index_1) in my_indices_1.clone() {
                     let my_parent_dag_option = my_dag.dag_vector.get_mut(p_index_1);
@@ -501,7 +571,13 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_dag : &mut Dag<'
             _ => {}
         }
     }
+
 }
+
+
+
+
+
 
 // This func creates the snippet dag and uses Domino's branch removal step to convert if/else
 // statements to single line ternary conditionals
@@ -783,14 +859,13 @@ pub fn create_import_map<'a> (my_imports : &Imports<'a>) ->HashMap<String, Strin
         let mut f = File::open(import_file).expect("File not found");
         let mut contents = String::new();
         f.read_to_string(&mut contents).expect("Something went wrong reading the file");
-        let tokens = & mut lexer::get_tokens(&contents);
-        let token_iter = & mut tokens.iter().peekable();
+        let tokens = &mut lexer::get_tokens(&contents);
+        let token_iter = &mut tokens.iter().peekable();
         let dev_tree = parser::parse_device(token_iter);
-        for my_dev_field in  dev_tree.device_fields.field_vector {
-            let field_name  = format!("{}.{}", dev_tree.device_id.id_name.clone(), my_dev_field.identifier.id_name.clone());
+        for my_dev_field in dev_tree.device_fields.field_vector {
+            let field_name = format!("{}.{}", dev_tree.device_id.id_name.clone(), my_dev_field.identifier.id_name.clone());
             let identifier = format!("{}", my_dev_field.identifier.id_name.clone());
             import_map.insert(field_name, identifier);
-            //import_map.push()
         }
     }
     println!("Import Map:{:?}\n", import_map);
@@ -818,10 +893,6 @@ pub fn create_packet_map<'a> (my_packets : &Packets<'a>) ->HashMap<String, Strin
                 packet_map.insert(field_name, identifier);
             }
             println!("Packet : {:?}\n", my_pkt);
-            // let field_name  = format!("{}.{}", dev_tree.device_id.id_name.clone(), my_dev_field.identifier.id_name.clone());
-            // let identifier = format!("{}", my_dev_field.identifier.id_name.clone());
-            // import_map.insert(field_name, identifier);
-            //import_map.push()
         }
 
         for field in &my_packet.packet_fields.field_vector {
@@ -880,6 +951,8 @@ pub fn gen_topology_json<'a> (dag_map : &HashMap<&'a str, Dag<'a>>) {
     assert!(env::set_current_dir(&root).is_ok());
 }
 
+
+
 // need to use either 'bmv2' or 'tofino' for device annotation
 pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_globals : &Globals<'a>, my_packets : &Packets<'a>, my_snippets : &Snippets<'a>, pkt_tree : &Packets<'a>) {
     // TODO : Deal with mutability of my_dag
@@ -888,13 +961,16 @@ pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_globals : &Globals<'a>,
     let mut dag_map = create_dag_nodes(&my_snippets, &packet_map, my_packets, pkt_tree);
     println!("\n\n\n Empty Dag Map: {:?}\n\n\n\n", dag_map);
 
+
     for my_snippet in &my_snippets.snippet_vector {
 
         let mut my_option = dag_map.get_mut(&my_snippet.snippet_id.id_name);
         let device_type : String = String::from(my_snippet.device_annotation.device_type.id_name);
         match my_option {
            Some(mut snippet_dag) => {
-                create_connections(&my_snippet, &mut snippet_dag);
+                // create_connections(&my_snippet, &mut snippet_dag);
+
+                create_connections(&my_snippet, &my_packets, &pkt_tree, &my_imports, &mut snippet_dag.clone());
                 // println!("Snippet DAG with connections: {:?}\n", snippet_dag);
                 if device_type.contains("bmv2") {
                     bmv2_gen::fill_p4code(&import_map, &my_globals, &packet_map, &mut snippet_dag, &pkt_tree,  &my_packets);
