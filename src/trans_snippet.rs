@@ -574,10 +574,68 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_packets : &Packe
 
     create_dependency_dag(&mut my_dag.clone());
     println!("new nodes{:?}\n\n", my_dag);
+    hazard_checker(&mut my_dag.clone());
     process::exit(1);
 
 }
 
+
+pub fn hazard_checker<'a> (my_dag : &mut Dag<'a>) {
+
+    let mut offload_header = Vec::<DagNode>::new();
+    let mut color = Vec::new();
+    let mut k : usize = 0;
+    let mut start = 0;
+
+    for dagnode in my_dag.dag_vector.clone() {
+        match &dagnode.node_type {
+            DagNodeType::Decl(var_decl) => {
+                color.insert(k, 2);
+                k += 1;
+                start += 1;   
+            }
+            DagNodeType::Stmt(my_statement) => {
+                color.insert(k, 0);
+                k += 1;
+            }
+
+            _ => {}
+        }
+    }
+
+    // DFS algorithm : white = 0, gray = 1, black = 2
+    let mut i : usize = start;
+    let mut accum : usize = 0;
+
+    while i < color.len() {
+        // let c =  color[i];
+        if(color[i] == 0) {
+            println!("HEYYYYYY");
+            DFS_visit(my_dag.dag_vector.clone(), i, &mut color, &mut offload_header);
+            // println!("{:?}", i);
+        }
+        println!("YOOOO {:?}", i);
+        i += 1;  
+    }
+}
+
+
+pub fn DFS_visit<'a> (G : Vec<DagNode>, i : usize, color : &mut Vec<usize>, offload_header : &mut Vec<DagNode> ) {
+    println!("{:?}", color.get_mut(i).unwrap().to_string());
+    color[i] = 1;
+    println!("{:?}", color.get_mut(i).unwrap().to_string());
+    println!("{:?}", G.get(i).unwrap());
+    println!();
+    let mut accum : usize = 1;
+    for v in G.get(i).unwrap().next_nodes.clone() {
+        // let c = color[v];
+        if(color[v] == 0) {
+            DFS_visit(G.clone(), v,  color,  offload_header); 
+
+        }
+    }
+    color[i] = 2;
+}
 
 
 pub fn create_dependency_dag<'a> (my_dag : &mut Dag<'a>) {
