@@ -1,0 +1,40 @@
+Transient a : BitArray(32, 1)
+Transient b : BitArray(32, 1)[6,]
+Persistent reg1 : BitArray(32, 1)
+Persistent z : BitArray(32, 1)
+Transient c : BitArray(32, 1)
+Transient d : BitArray(32, 1)[3,]
+Transient f : BitArray(32, 1)[10,]
+Transient q : BitArray(32, 1)[56,]
+Field p.x : BitArray(32, 1)
+Field p.y : BitArray(32, 1)
+Field p.z : BitArray(32, 1)
+Field p.ethernetdstAddr : BitArray(48, 1)
+Field p.ethernetsrcAddr : BitArray(48, 1)
+Field p.ethernetetherType : BitArray(16, 1)
+Field p.ipv4version : BitArray(4, 1)
+Field p.ipv4ihl : BitArray(4, 1)
+Field p.ipv4diffserv : BitArray(8, 1)
+Field p.ipv4totalLen : BitArray(16, 1)
+Field p.ipv4identification : BitArray(16, 1)
+Field p.ipv4flags : BitArray(3, 1)
+Field p.ipv4fragOffset : BitArray(13, 1)
+Field p.ipv4ttl : BitArray(8, 1)
+Field p.ipv4protocol : BitArray(8, 1)
+Field p.ipv4hdrChecksum : BitArray(16, 1)
+Field p.ipv4srcAddr : BitArray(32, 1)
+Field p.ipv4dstAddr : BitArray(32, 1)
+Field p.udpsrcPort : BitArray(16, 1)
+Field p.udpdstPort : BitArray(16, 1)
+Field p.udplen : BitArray(16, 1)
+Field p.udpchecksum : BitArray(16, 1)
+a = 2
+c = a / b
+z = c + d
+p.x = c
+c = c - d
+q = a / 3
+p.y = p.y + c
+d = f + 12
+p.z = q + c
+reg1 = c
