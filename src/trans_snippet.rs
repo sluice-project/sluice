@@ -576,8 +576,302 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_packets : &Packe
     println!("new nodes{:?}\n\n", my_dag);
     hazard_checker(&mut my_dag.clone());
     process::exit(1);
-
 }
+
+
+pub fn get_write_var<'a> (decl_map : &HashMap<String, usize>, lval : LValue<'a>) -> usize {
+
+    // If lval is a packet field, concat the packet name and field name then search in decl_map
+    match lval {
+        LValue::Field(ref id, ref field_name) => {
+            let a = format!("{}.{}", id.id_name.to_string(), field_name.id_name.to_string());
+            let my_option = decl_map.get(&a);
+            match my_option {
+                Some(index) => {
+                    return *index;
+                }
+                None => {panic!("write_var not found in decl_map");}
+            }
+        }
+
+        LValue::Array(name, ind) => {
+            let my_option = decl_map.get(name.id_name);
+            match my_option {
+                Some(index) => {
+                    return *index;
+                }
+                None => {panic!("write_var not found in decl_map");}
+            }
+        }
+
+        LValue::Scalar(id) => {
+            let my_option = decl_map.get(id.id_name);
+            match my_option {
+                Some(index) => {
+                    return *index;
+                }
+                None => {panic!("write_var not found in decl_map");}
+            }
+        }
+        _ => {{panic!("write_var is not an lvalue");}}
+    }
+}
+
+
+pub fn get_array_ind_val<'a> (decl_map : &HashMap<String, usize>, operand :  &Operand<'a>) -> usize {
+
+    match operand {
+        Operand::LValue(ref lval) => {
+            match lval {
+                LValue::Scalar(ref my_id) => {
+                    let my_option = decl_map.get(my_id.id_name);
+                    match my_option {
+                        Some(index) => {
+                            return *index;
+                        }
+                        None => {panic!("read_var not found in decl_map");}
+                    }
+                }
+
+                LValue::Field(ref id, ref field_name) => {
+                    let a = format!("{}.{}", id.id_name.to_string(), field_name.id_name.to_string());
+                    let my_option = decl_map.get(&a);
+                    match my_option {
+                        Some(index) => {
+                            return *index;
+                        }
+                        None => {panic!("read_var not found in decl_map");}
+                    }
+                }
+
+                _ => {panic!("array index cannot be an array itself");}
+            }
+        }
+
+        Operand::Value(ref rval_val) => {
+            return std::usize::MAX;
+        }
+    }
+}
+
+
+
+pub fn get_operand_val<'a> (decl_map : &HashMap<String, usize>, operand :  &Operand<'a>) -> Vec<usize> {
+
+    let mut read_vec = Vec::new();
+
+    match operand {
+        Operand::LValue(ref lval) => {
+            match lval {
+                LValue::Field(ref id, ref field_name) => {
+                    let a = format!("{}.{}", id.id_name.to_string(), field_name.id_name.to_string());
+                    let my_option = decl_map.get(&a);
+                    match my_option {
+                        Some(index) => {
+                            read_vec.push(*index);
+                        }
+                        None => {}
+                    }
+                }
+        
+                LValue::Array(name, ind) => {
+                    let my_option = decl_map.get(name.id_name);
+                    match my_option {
+                        Some(index) => {
+                            read_vec.push(*index);
+                        }
+                        None => {panic!("write_var not found in decl_map");}
+                    }
+
+                    let val = get_array_ind_val(&decl_map, ind);
+                    if val != std::usize::MAX {
+                        read_vec.push(val);
+                    }
+                }
+
+                LValue::Scalar(id) => {
+                    let my_option = decl_map.get(id.id_name);
+                    match my_option {
+                        Some(index) => {
+                            read_vec.push(*index);
+                        }
+                        None => {panic!("write_var not found in decl_map");}
+                    }
+                }
+
+            }
+
+        }
+
+        _ => {}
+    }
+
+    return read_vec; 
+}
+
+
+pub fn get_read_vars<'a> (decl_map : &HashMap<String, usize>, my_statement : Statement<'a>) -> Vec<usize> {
+
+    let mut read_vec = Vec::new();
+    // If lval is a packet field, concat the packet name and field name then search in decl_map
+    match my_statement.lvalue {
+        LValue::Array(name, ind) => {
+            let index = get_array_ind_val(&decl_map, &ind);
+            if index != std::usize::MAX {
+                read_vec.push(index);
+            }
+        }
+
+        _ => {}
+    }
+
+    read_vec.append(&mut get_operand_val(&decl_map, &my_statement.expr.op1));
+
+    match my_statement.expr.expr_right {
+        ExprRight::BinOp(bin_op_type, ref operand) => {
+            read_vec.append(&mut get_operand_val(&decl_map, operand));
+        }
+
+        ExprRight::Cond(ref operand1, ref operand2) => {
+            read_vec.append(&mut get_operand_val(&decl_map, operand1));
+            read_vec.append(&mut get_operand_val(&decl_map, operand2));
+        }
+
+        ExprRight::Empty() => {}
+    }
+
+    return read_vec;
+}
+
+
+
+// TODO : create new nodes for psa.np variables
+pub fn create_RAW_connections<'a> (_my_snippet: &'a Snippet<'a>, my_packets : &Packets<'a>, 
+                                pkt_tree : &Packets<'a>, my_imports : &Imports<'a>, my_dag : &mut Dag<'a>) {
+    // A HashMap to keep track of declarations.
+    let mut decl_map : HashMap<String, usize>= HashMap::new();
+
+    // find the index where the variable_decl nodes end 
+    let mut insert_ind : usize = 0;
+    for dagnode in my_dag.dag_vector.clone() {
+        match &dagnode.node_type {
+            // All vardecls will always be parsed first, before any other lines of code. If/else blocks follow
+            DagNodeType::Decl(var_decl) => {
+                insert_ind += 1;
+            }
+            _ => {}
+        }
+    }
+
+    for my_packet in &my_packets.packet_vector {
+
+        for field in &my_packet.packet_fields.field_vector {
+            let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), field.identifier.id_name.clone());
+            
+            let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+            let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+            let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
+                initial_values : Vec::<Value>::new(), var_type : field.var_type.clone()};
+            let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
+                p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+            my_dag.dag_vector.insert(insert_ind, packet_decl_node);
+            insert_ind += 1
+        }
+
+        for my_pkt in &pkt_tree.packet_vector {
+            for my_pkt_field in &my_pkt.packet_fields.field_vector {
+
+                let my_id = my_pkt_field.identifier.id_name.clone();
+                let field_name  = format!("{}.{}{}", my_packet.packet_id.id_name.clone(), my_pkt.packet_id.id_name.clone(), my_id);
+                
+                let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
+                    initial_values : Vec::<Value>::new(), var_type : my_pkt_field.var_type.clone()};
+                let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
+                    p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+                my_dag.dag_vector.insert(insert_ind, packet_decl_node);
+                insert_ind += 1
+            }
+        }
+    }
+
+    let mut i : usize = 0;
+    let mut j : usize = 0;
+    let mut write_var : usize = 0;
+    let mut read_vars : Vec<usize> = Vec::new();
+
+
+    let mut print_write_var : usize = 0;
+    let mut print_read_vars : Vec<usize> = Vec::new();
+
+    // building RAW dag
+    for dagnode in my_dag.dag_vector.clone() {
+
+        match &dagnode.node_type {
+            // All vardecls will always be parsed first, before any other lines of code. If/else blocks follow
+            DagNodeType::Decl(var_decl) => {
+                decl_map.insert(var_decl.identifier.id_name.to_string(), i);
+                i += 1;
+            }
+
+            DagNodeType::Stmt(my_statement) => {
+
+                print_write_var = get_write_var(&decl_map, my_statement.lvalue.clone());
+                println!("write_var {:?} {:?}", i, my_dag.dag_vector.get_mut(print_write_var));
+                println!("");
+
+                print_read_vars = get_read_vars(&decl_map, my_statement.clone());
+                for r in print_read_vars {
+                    println!("read_var {:?} {:?}", r, my_dag.dag_vector.get_mut(r));
+                    println!("");
+                }
+
+                j = i + 1;
+                let write_var = get_write_var(&decl_map, my_statement.lvalue.clone());
+                
+                while j < my_dag.dag_vector.len() {
+
+                    let next_statement = my_dag.dag_vector.get_mut(j).unwrap();
+                    // println!("AHHH {:?}", next_statement);
+                    // process::exit(1);
+                    match &next_statement.node_type {
+                        DagNodeType::Stmt(stmt) => {
+                            read_vars = get_read_vars(&decl_map, stmt.clone());
+                        }
+                        _ => {}
+                    }
+                    
+                    for r in read_vars.clone() {
+                        if r == write_var {
+                            let my_parent_dag_option = my_dag.dag_vector.get_mut(i);
+                            match my_parent_dag_option {
+                                Some(mut my_parent_dag_node) => {
+                                    if !&my_parent_dag_node.next_nodes.contains(&j) {
+                                        my_parent_dag_node.next_nodes.push(j);
+                                    }
+                                }
+                                None => {}
+                            }                            
+                        }
+                    }
+
+                    j += 1;
+                }
+
+                i += 1;
+            }
+
+            _ => {}
+        }
+    }
+
+    create_dependency_dag(&mut my_dag.clone());
+    println!("new nodes{:?}\n\n", my_dag);
+    hazard_checker(&mut my_dag.clone());
+    process::exit(1);
+}
+
 
 
 pub fn hazard_checker<'a> (my_dag : &mut Dag<'a>) {
@@ -638,9 +932,10 @@ pub fn DFS_visit<'a> (G : Vec<DagNode>, i : usize, color : &mut Vec<usize>, offl
 }
 
 
+
 pub fn create_dependency_dag<'a> (my_dag : &mut Dag<'a>) {
 
-    let out_f : String = format!("test/dependency_dag.txt");
+    let out_f : String = format!("plots/dependency_dag.txt");
     let path = Path::new(out_f.as_str());
     let display  = path.display();
     let mut out_file1 = match File::create(path) {
@@ -650,7 +945,7 @@ pub fn create_dependency_dag<'a> (my_dag : &mut Dag<'a>) {
         Ok(out_file1) => out_file1,
     };
 
-    let out_f : String = format!("test/next_prev_nodes.txt");
+    let out_f : String = format!("plots/next_prev_nodes.txt");
     let path = Path::new(out_f.as_str());
     let display  = path.display();
     let mut out_file2 = match File::create(path) {
@@ -727,7 +1022,7 @@ pub fn create_dependency_dag<'a> (my_dag : &mut Dag<'a>) {
     out_file1.write(clean_contents.as_bytes());
     out_file2.write(next_prev_nodes.as_bytes());
 
-    let mut root = Path::new("test");
+    let mut root = Path::new("plots");
     assert!(env::set_current_dir(&root).is_ok());
     let _output = Command::new("python3")
             .arg("gen_dependency_dag.py")
@@ -741,17 +1036,6 @@ pub fn create_dependency_dag<'a> (my_dag : &mut Dag<'a>) {
     // process::exit(1);
 }
 
-
-    // let mut u = Vec::new();
-    // let mut k : usize = 0;
-    // for dagnode in my_dag.dag_vector.clone() {
-    //     u[k] = "w";
-    // }
-    // let time = 0;
-    // let my_parent_dag_option = my_dag.dag_vector.get_mut(p_index_1);
-
-    // for 
-    // for node in 
 
 
 pub fn handle_binop<'a> (bin_op_type : BinOpType) -> String {
@@ -1250,9 +1534,8 @@ pub fn trans_snippets<'a> (my_imports : &Imports<'a>, my_globals : &Globals<'a>,
         let device_type : String = String::from(my_snippet.device_annotation.device_type.id_name);
         match my_option {
            Some(mut snippet_dag) => {
-                // create_connections(&my_snippet, &mut snippet_dag);
-
-                create_connections(&my_snippet, &my_packets, &pkt_tree, &my_imports, &mut snippet_dag.clone());
+                // create_connections(&my_snippet, &my_packets, &pkt_tree, &my_imports, &mut snippet_dag.clone());
+                create_RAW_connections(&my_snippet, &my_packets, &pkt_tree, &my_imports, &mut snippet_dag.clone());
                 // println!("Snippet DAG with connections: {:?}\n", snippet_dag);
                 if device_type.contains("bmv2") {
                     bmv2_gen::fill_p4code(&import_map, &my_globals, &packet_map, &mut snippet_dag, &pkt_tree,  &my_packets);
