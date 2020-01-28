@@ -574,7 +574,7 @@ pub fn create_connections<'a> (_my_snippet: &'a Snippet<'a>, my_packets : &Packe
 
     create_dependency_dag(&mut my_dag.clone());
     println!("new nodes{:?}\n\n", my_dag);
-    hazard_checker(&mut my_dag.clone());
+    create_offload_header(&mut my_dag.clone());
     process::exit(1);
 }
 
@@ -745,67 +745,21 @@ pub fn get_read_vars<'a> (decl_map : &HashMap<String, usize>, my_statement : Sta
 
 
 
-// TODO : create new nodes for psa.np variables
+// TODO : create new vardecl nodes for psa.np variables
 pub fn create_RAW_connections<'a> (_my_snippet: &'a Snippet<'a>, my_packets : &Packets<'a>, 
                                 pkt_tree : &Packets<'a>, my_imports : &Imports<'a>, my_dag : &mut Dag<'a>) {
     // A HashMap to keep track of declarations.
     let mut decl_map : HashMap<String, usize>= HashMap::new();
-
-    // find the index where the variable_decl nodes end 
-    let mut insert_ind : usize = 0;
-    for dagnode in my_dag.dag_vector.clone() {
-        match &dagnode.node_type {
-            // All vardecls will always be parsed first, before any other lines of code. If/else blocks follow
-            DagNodeType::Decl(var_decl) => {
-                insert_ind += 1;
-            }
-            _ => {}
-        }
-    }
-
-    for my_packet in &my_packets.packet_vector {
-
-        for field in &my_packet.packet_fields.field_vector {
-            let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), field.identifier.id_name.clone());
-            
-            let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-            let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-            let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
-                initial_values : Vec::<Value>::new(), var_type : field.var_type.clone()};
-            let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
-                p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-            my_dag.dag_vector.insert(insert_ind, packet_decl_node);
-            insert_ind += 1
-        }
-
-        for my_pkt in &pkt_tree.packet_vector {
-            for my_pkt_field in &my_pkt.packet_fields.field_vector {
-
-                let my_id = my_pkt_field.identifier.id_name.clone();
-                let field_name  = format!("{}.{}{}", my_packet.packet_id.id_name.clone(), my_pkt.packet_id.id_name.clone(), my_id);
-                
-                let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-                let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
-                    initial_values : Vec::<Value>::new(), var_type : my_pkt_field.var_type.clone()};
-                let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
-                    p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-                my_dag.dag_vector.insert(insert_ind, packet_decl_node);
-                insert_ind += 1
-            }
-        }
-    }
-
     let mut i : usize = 0;
     let mut j : usize = 0;
     let mut write_var : usize = 0;
     let mut read_vars : Vec<usize> = Vec::new();
 
-
     let mut print_write_var : usize = 0;
     let mut print_read_vars : Vec<usize> = Vec::new();
 
-    // building RAW dag
+    // building RAW (read-after-write) dependency dag. Control dependencies were eliminated
+    // after converting if/else to single-line cond statements.
     for dagnode in my_dag.dag_vector.clone() {
 
         match &dagnode.node_type {
@@ -828,7 +782,7 @@ pub fn create_RAW_connections<'a> (_my_snippet: &'a Snippet<'a>, my_packets : &P
                 }
 
                 j = i + 1;
-                let write_var = get_write_var(&decl_map, my_statement.lvalue.clone());
+                write_var = get_write_var(&decl_map, my_statement.lvalue.clone());
                 
                 while j < my_dag.dag_vector.len() {
 
@@ -868,25 +822,26 @@ pub fn create_RAW_connections<'a> (_my_snippet: &'a Snippet<'a>, my_packets : &P
 
     create_dependency_dag(&mut my_dag.clone());
     println!("new nodes{:?}\n\n", my_dag);
-    hazard_checker(&mut my_dag.clone());
+    create_offload_header(&mut my_dag.clone());
     process::exit(1);
 }
 
 
 
-pub fn hazard_checker<'a> (my_dag : &mut Dag<'a>) {
+pub fn create_offload_header<'a> (my_dag : &mut Dag<'a>) {
 
     let mut offload_header = Vec::<DagNode>::new();
+    let mut var_map : HashMap<String, Vec<String>> = HashMap::new();
     let mut color = Vec::new();
     let mut k : usize = 0;
-    let mut start = 0;
+    let mut i = 0;
 
     for dagnode in my_dag.dag_vector.clone() {
         match &dagnode.node_type {
             DagNodeType::Decl(var_decl) => {
                 color.insert(k, 2);
                 k += 1;
-                start += 1;   
+                i += 1;   
             }
             DagNodeType::Stmt(my_statement) => {
                 color.insert(k, 0);
@@ -897,8 +852,8 @@ pub fn hazard_checker<'a> (my_dag : &mut Dag<'a>) {
         }
     }
 
+    // DFS is used to traverse the dependency DAG in topological order.
     // DFS algorithm : white = 0, gray = 1, black = 2
-    let mut i : usize = start;
     let mut accum : usize = 0;
 
     while i < color.len() {
@@ -920,6 +875,8 @@ pub fn DFS_visit<'a> (G : Vec<DagNode>, i : usize, color : &mut Vec<usize>, offl
     println!("{:?}", color.get_mut(i).unwrap().to_string());
     println!("{:?}", G.get(i).unwrap());
     println!();
+    // var_map[] = ;
+
     let mut accum : usize = 1;
     for v in G.get(i).unwrap().next_nodes.clone() {
         // let c = color[v];
@@ -1101,17 +1058,14 @@ pub fn handle_operand<'a> (operand :  &Operand<'a>) -> String {
                 LValue::Scalar(ref id) => {
                     contents += &format!("{:?}", id.id_name);
                 }
-
                 LValue::Array(id1,  id2) => {
                     contents += &format!("{:?}[{:?}]", id1.id_name, handle_array_op(id2));
                 }
-
                 LValue::Field(ref p, ref f) => {
                     contents += &format!("{:?}.{:?}", p.id_name, f.id_name);
                 }
             }
         }
-
         Operand::Value(ref val) => {
             contents += &format!("{:?}", val.value);
         }
@@ -1145,7 +1099,7 @@ pub fn handle_array_op<'a> (operand :  &Operand<'a>) -> String {
 
 
 
-// This func creates the snippet dag and uses Domino's branch removal step to convert if/else
+// This func creates the snippet dag and performs branch removal step to convert if/else
 // statements to single line ternary conditionals
 // TODO need to handle packet field nodes
 pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<String, String>,
@@ -1176,6 +1130,52 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
         let mut my_dag : Dag = Dag { snippet_id : my_snippet.snippet_id.id_name,
             device_type : my_snippet.device_annotation.device_type.id_name, 
             device_vector : my_snippet.device_annotation.device_vector.clone(), dag_vector : Vec::new()};
+
+
+        let mut insert_ind : usize = 0;
+        for dagnode in my_dag.dag_vector.clone() {
+            match &dagnode.node_type {
+                // All vardecls will always be parsed first, before any other lines of code. If/else blocks follow
+                DagNodeType::Decl(var_decl) => {
+                    insert_ind += 1;
+                }
+                _ => {}
+            }
+        }
+
+        for my_packet in &my_packets.packet_vector {
+
+            for field in &my_packet.packet_fields.field_vector {
+                let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), field.identifier.id_name.clone());
+                
+                let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
+                    initial_values : Vec::<Value>::new(), var_type : field.var_type.clone()};
+                let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
+                    p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+                my_dag.dag_vector.insert(insert_ind, packet_decl_node);
+                insert_ind += 1
+            }
+
+            for my_pkt in &pkt_tree.packet_vector {
+                for my_pkt_field in &my_pkt.packet_fields.field_vector {
+
+                    let my_id = my_pkt_field.identifier.id_name.clone();
+                    let field_name  = format!("{}.{}{}", my_packet.packet_id.id_name.clone(), my_pkt.packet_id.id_name.clone(), my_id);
+                    
+                    let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                    let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                    let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
+                        initial_values : Vec::<Value>::new(), var_type : my_pkt_field.var_type.clone()};
+                    let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
+                        p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+                    my_dag.dag_vector.insert(insert_ind, packet_decl_node);
+                    insert_ind += 1
+                }
+            }
+        }
+
 
         for my_variable_decl in &my_snippet.variable_decls.decl_vector {
 
