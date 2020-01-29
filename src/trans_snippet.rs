@@ -989,7 +989,7 @@ pub fn create_dependency_dag<'a> (my_dag : &mut Dag<'a>) {
     root = Path::new("..");
     assert!(env::set_current_dir(&root).is_ok());
 
-    println!("new nodes{:?}", my_dag);
+    // println!("new nodes{:?}", my_dag);
     // process::exit(1);
 }
 
@@ -1099,8 +1099,271 @@ pub fn handle_array_op<'a> (operand :  &Operand<'a>) -> String {
 
 
 
-// This func creates the snippet dag and performs branch removal step to convert if/else
-// statements to single line ternary conditionals
+pub fn insert_packet_decls<'a> (my_dag : &mut Dag<'a>, my_packets : &Packets<'a>, pkt_tree : &Packets<'a>) {
+
+    let mut insert_ind : usize = 0;
+    for dagnode in my_dag.dag_vector.clone() {
+        match &dagnode.node_type {
+            // All vardecls will always be parsed first, before any other lines of code. If/else blocks follow
+            DagNodeType::Decl(var_decl) => {
+                insert_ind += 1;
+            }
+            _ => {}
+        }
+    }
+
+    for my_packet in &my_packets.packet_vector {
+
+        for field in &my_packet.packet_fields.field_vector {
+            let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), field.identifier.id_name.clone());
+            
+            let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+            let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+            let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
+                initial_values : Vec::<Value>::new(), var_type : field.var_type.clone()};
+            let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
+                p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+            my_dag.dag_vector.insert(insert_ind, packet_decl_node);
+            insert_ind += 1
+        }
+
+        for my_pkt in &pkt_tree.packet_vector {
+            for my_pkt_field in &my_pkt.packet_fields.field_vector {
+
+                let my_id = my_pkt_field.identifier.id_name.clone();
+                let field_name  = format!("{}.{}{}", my_packet.packet_id.id_name.clone(), my_pkt.packet_id.id_name.clone(), my_id);
+                
+                let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
+                    initial_values : Vec::<Value>::new(), var_type : my_pkt_field.var_type.clone()};
+                let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
+                    p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+                my_dag.dag_vector.insert(insert_ind, packet_decl_node);
+                insert_ind += 1
+            }
+        }
+    }
+}
+
+
+
+pub fn branch_removal<'a> (my_dag : &mut Dag<'a>, packet_map : &HashMap<String, String>, my_snippet : &Snippet<'a>, field_decls : &HashMap<String, VarType>) {
+
+    let mut symbol_table : HashMap<&'a str, VarType<'a>> = HashMap::new();
+
+    for my_variable_decl in &my_snippet.variable_decls.decl_vector {
+
+        let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+        let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+        let my_dag_start_node = DagNode {node_type : DagNodeType::Decl(my_variable_decl.clone()),
+            p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+        my_dag.dag_vector.push(my_dag_start_node);
+        // populate symbol table here
+        symbol_table.insert(my_variable_decl.identifier.id_name, my_variable_decl.var_type.clone());
+    }
+
+    let mut last_decl_ind : usize = my_dag.dag_vector.len();
+    let mut tmp_var_count : usize = 0;
+
+    for my_if_block in &my_snippet.ifblocks.ifblock_vector {
+
+        if my_if_block.condtype == 3 {
+
+            for my_statement in &my_if_block.statements.stmt_vector {
+                let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                let dummpyp4 = P4Code{p4_header:dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                let mut my_dag_node = DagNode {node_type: DagNodeType::Stmt(my_statement.clone()),
+                    p4_code : dummpyp4, next_nodes: Vec::new(), prev_nodes: Vec::new(), pre_condition : None};
+                my_dag.dag_vector.push(my_dag_node);
+            }
+
+        } else {
+
+            if my_if_block.condtype == 1 {
+
+                // adds node for if_bit declaration
+                {
+                    // need to change variable names so they are more unique and do not conflict with
+                    // variable names in other snippets i.e. include snippet_id, device_id in if_var string
+                    let if_var =  format!("if_block_tmp_{}", my_if_block.id);
+                    let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                    let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                    let if_bit_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(if_var.into_boxed_str()) },
+                                initial_values : Vec::<Value>::new(),
+                                var_type : VarType { var_info : VarInfo::BitArray(1, 1), type_qualifier : TypeQualifier::Transient }};
+
+                    let mut if_bit_node = DagNode {node_type : DagNodeType::Decl(if_bit_decl.clone()),
+                        p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+
+                    my_dag.dag_vector.insert(last_decl_ind, if_bit_node);
+                    last_decl_ind += 1;
+                }
+
+                // adds node for statement of setting if_bit to condition expression
+                {
+                    let if_var =  format!("if_block_tmp_{}", my_if_block.id);
+                    let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                    let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                    let if_bit_stmt = Statement {
+                                        lvalue : LValue::Scalar(Identifier { id_name : Box::leak(if_var.into_boxed_str()) }),
+                                        expr : my_if_block.condition.expr.clone()};
+
+                    let mut if_bit_node = DagNode {node_type : DagNodeType::Stmt(if_bit_stmt.clone()),
+                        p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+
+                    my_dag.dag_vector.push(if_bit_node);
+                }
+            }
+
+
+            for my_statement in &my_if_block.statements.stmt_vector {
+
+                if my_statement.expr.expr_right != ExprRight::Empty() {
+                    // if expr_right exists (Binop or Cond), then create a new var for the RHS of the statement
+
+                    {
+                        let tmp_var =  format!("tmp_{}_if_{}", tmp_var_count, my_if_block.id);
+                        let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                        let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                        let mut vinfo : VarInfo = VarInfo::BitArray(1,1); // temp value for vinfo
+
+                        // get varinfo's 1st index in bitarray from varinfo field of my_statement.expr.lvalue.scalar.id_name variable(match on scalar/
+                        // array/packet_field then extract id_name) in symbol table
+                        match my_statement.lvalue {
+
+                            LValue::Scalar(ref id) => {
+                                vinfo = symbol_table.get_mut(id.id_name).unwrap().var_info.clone();
+                            }
+
+                            LValue::Array(ref id, _) => {
+                                let a = symbol_table.get_mut(id.id_name).unwrap();
+                                let width =  match a.var_info {
+                                              VarInfo::BitArray(bit_width, _var_size) => bit_width,
+                                              _ => {0}
+                                            };
+                                vinfo = VarInfo::BitArray(width, 1);
+                            }
+                            // _ => {}
+                            LValue::Field(ref p, ref f) => {
+                                let field = format!("{}.{}", p.id_name, f.id_name);
+                                let field_name_map = packet_map.get(&field).unwrap();
+                                let vtype = field_decls.get(field_name_map).unwrap();
+                                let width =  match vtype.var_info {
+                                              VarInfo::BitArray(bit_width, _var_size) => bit_width,
+                                              _ => {0}
+                                            };
+                                vinfo = VarInfo::BitArray(width, 1);
+                            }
+                        }
+
+                        let tmp_var_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(tmp_var.into_boxed_str()) },
+                                    initial_values : Vec::<Value>::new(),
+                                    var_type : VarType { var_info : vinfo, type_qualifier : TypeQualifier::Transient }};
+
+                        let mut tmp_node = DagNode {node_type : DagNodeType::Decl(tmp_var_decl.clone()),
+                            p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+
+                        my_dag.dag_vector.insert(last_decl_ind, tmp_node);
+                    }
+
+                    {
+                        let tmp_var =  format!("tmp_{}_if_{}", tmp_var_count, my_if_block.id);
+                        let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                        let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                        let tmp_stmt = Statement {
+                                            lvalue : LValue::Scalar(Identifier { id_name : Box::leak(tmp_var.into_boxed_str()) }),
+                                            expr : my_statement.expr.clone()};
+
+                        let mut tmp_node = DagNode {node_type : DagNodeType::Stmt(tmp_stmt.clone()),
+                            p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+
+                        my_dag.dag_vector.push(tmp_node);
+                    }
+
+                    // add node to set variable conditional on if bit
+                    {
+
+                        let tmp_var =  format!("tmp_{}_if_{}", tmp_var_count, my_if_block.id);
+                        let mut tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: ""})),
+                                            expr_right: ExprRight::Cond(Operand::LValue(LValue::Scalar(Identifier{id_name: ""})),
+                                            Operand::LValue(LValue::Scalar(Identifier{id_name: ""})))};
+
+                        if my_if_block.condtype == 1 {
+                            let if_var =  format!("if_block_tmp_{}", my_if_block.id);
+                            tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
+                                            expr_right: ExprRight::Cond(Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(tmp_var.into_boxed_str()),})),
+                                            Operand::LValue(my_statement.lvalue.clone())) };
+                            println!("Assigning a cond expr\n");
+                        } else if my_if_block.condtype == 2 {
+                            let if_var =  format!("if_block_tmp_{}", my_if_block.id - 1); // for else condition, use the previous
+                                                                                         // if block's condition bit var to set
+                                                                                         // else statements
+                            // For else statement, switch op1 and op2 in cond
+                            tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
+                                            expr_right: ExprRight::Cond(Operand::LValue(my_statement.lvalue.clone()),
+                                            Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(tmp_var.into_boxed_str()),}))) };
+                        }
+
+                        let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                        let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                        let tmp_stmt = Statement {
+                                            lvalue : my_statement.lvalue.clone(),
+                                            expr : tmp_expr};
+
+                        let mut tmp_node = DagNode {node_type : DagNodeType::Stmt(tmp_stmt.clone()),
+                            p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+                        my_dag.dag_vector.push(tmp_node);
+
+                    }
+
+                    last_decl_ind += 1;
+                    tmp_var_count += 1;
+
+
+                } else {
+
+                    let mut tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: ""})),
+                                        expr_right: ExprRight::Cond(Operand::LValue(LValue::Scalar(Identifier{id_name: ""})),
+                                        Operand::LValue(LValue::Scalar(Identifier{id_name: ""})))};
+
+                    if my_if_block.condtype == 1 {
+                        let if_var =  format!("if_block_tmp_{}", my_if_block.id);
+                        tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
+                                        expr_right: ExprRight::Cond(my_statement.expr.op1.clone(),
+                                        Operand::LValue(my_statement.lvalue.clone())) };
+                        println!("Assigning a cond expr\n");
+
+                    } else if my_if_block.condtype == 2 {
+                        let if_var =  format!("if_block_tmp_{}", my_if_block.id - 1);
+                        tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
+                                        expr_right: ExprRight::Cond(Operand::LValue(my_statement.lvalue.clone()),
+                                         my_statement.expr.op1.clone()) };
+                    }
+                    println!("tmp_expr : {:?}\n", tmp_expr);
+
+                    let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                    let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+
+                    let tmp_stmt = Statement {
+                                        lvalue : my_statement.lvalue.clone(),
+                                        expr : tmp_expr};
+
+                    let mut tmp_node = DagNode {node_type : DagNodeType::Stmt(tmp_stmt.clone()),
+                        p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+
+                    my_dag.dag_vector.push(tmp_node);
+                }
+            }
+
+        }
+    }
+}
+
+
+
+// This func creates the snippet dag. It performs branch removal (to convert if/else
+// statements to single line ternary conditionals) and single-static assignment for each snippet 
 // TODO need to handle packet field nodes
 pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<String, String>,
     my_packets : &Packets<'a>, pkt_tree : &Packets<'a>,) -> HashMap<&'a str, Dag<'a>>  {
@@ -1126,283 +1389,19 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
 
     for my_snippet in &my_snippets.snippet_vector {
 
-        let mut symbol_table : HashMap<&'a str, VarType<'a>> = HashMap::new();
         let mut my_dag : Dag = Dag { snippet_id : my_snippet.snippet_id.id_name,
             device_type : my_snippet.device_annotation.device_type.id_name, 
             device_vector : my_snippet.device_annotation.device_vector.clone(), dag_vector : Vec::new()};
 
-
-        let mut insert_ind : usize = 0;
-        for dagnode in my_dag.dag_vector.clone() {
-            match &dagnode.node_type {
-                // All vardecls will always be parsed first, before any other lines of code. If/else blocks follow
-                DagNodeType::Decl(var_decl) => {
-                    insert_ind += 1;
-                }
-                _ => {}
-            }
-        }
-
-        for my_packet in &my_packets.packet_vector {
-
-            for field in &my_packet.packet_fields.field_vector {
-                let field_name  = format!("{}.{}", my_packet.packet_id.id_name.clone(), field.identifier.id_name.clone());
-                
-                let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-                let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
-                    initial_values : Vec::<Value>::new(), var_type : field.var_type.clone()};
-                let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
-                    p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-                my_dag.dag_vector.insert(insert_ind, packet_decl_node);
-                insert_ind += 1
-            }
-
-            for my_pkt in &pkt_tree.packet_vector {
-                for my_pkt_field in &my_pkt.packet_fields.field_vector {
-
-                    let my_id = my_pkt_field.identifier.id_name.clone();
-                    let field_name  = format!("{}.{}{}", my_packet.packet_id.id_name.clone(), my_pkt.packet_id.id_name.clone(), my_id);
-                    
-                    let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                    let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-                    let header_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(field_name.into_boxed_str()) },
-                        initial_values : Vec::<Value>::new(), var_type : my_pkt_field.var_type.clone()};
-                    let packet_decl_node = DagNode {node_type : DagNodeType::Decl(header_decl.clone()),
-                        p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-                    my_dag.dag_vector.insert(insert_ind, packet_decl_node);
-                    insert_ind += 1
-                }
-            }
-        }
-
-
-        for my_variable_decl in &my_snippet.variable_decls.decl_vector {
-
-            let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-            let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-            let my_dag_start_node = DagNode {node_type : DagNodeType::Decl(my_variable_decl.clone()),
-                p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-            //println!("{:?}\n", my_dag_start_node);
-            my_dag.dag_vector.push(my_dag_start_node);
-            // populate symbol table here
-            symbol_table.insert(my_variable_decl.identifier.id_name, my_variable_decl.var_type.clone());
-        }
-        // process::exit(1);
-        let mut last_decl_ind : usize = my_dag.dag_vector.len();
-        let mut tmp_var_count : usize = 0;
-
-        for my_if_block in &my_snippet.ifblocks.ifblock_vector {
-
-            if my_if_block.condtype == 3 {
-
-                for my_statement in &my_if_block.statements.stmt_vector {
-                    let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                    let dummpyp4 = P4Code{p4_header:dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-                    let mut my_dag_node = DagNode {node_type: DagNodeType::Stmt(my_statement.clone()),
-                        p4_code : dummpyp4, next_nodes: Vec::new(), prev_nodes: Vec::new(), pre_condition : None};
-                    my_dag.dag_vector.push(my_dag_node);
-                }
-
-            } else {
-
-                if my_if_block.condtype == 1 {
-
-                    // adds node for if_bit declaration
-                    {
-                        // need to change variable names so they are more unique and do not conflict with
-                        // variable names in other snippets i.e. include snippet_id, device_id in if_var string
-                        let if_var =  format!("if_block_tmp_{}", my_if_block.id);
-                        let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                        let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-                        let if_bit_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(if_var.into_boxed_str()) },
-                                    initial_values : Vec::<Value>::new(),
-                                    var_type : VarType { var_info : VarInfo::BitArray(1, 1), type_qualifier : TypeQualifier::Transient }};
-
-                        let mut if_bit_node = DagNode {node_type : DagNodeType::Decl(if_bit_decl.clone()),
-                            p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-
-                        my_dag.dag_vector.insert(last_decl_ind, if_bit_node);
-                        last_decl_ind += 1;
-                    }
-
-                    // adds node for statement of setting if_bit to condition expression
-                    {
-                        let if_var =  format!("if_block_tmp_{}", my_if_block.id);
-                        let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                        let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-                        let if_bit_stmt = Statement {
-                                            lvalue : LValue::Scalar(Identifier { id_name : Box::leak(if_var.into_boxed_str()) }),
-                                            expr : my_if_block.condition.expr.clone()};
-
-                        let mut if_bit_node = DagNode {node_type : DagNodeType::Stmt(if_bit_stmt.clone()),
-                            p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-
-                        my_dag.dag_vector.push(if_bit_node);
-                    }
-                }
-
-
-                for my_statement in &my_if_block.statements.stmt_vector {
-
-                    if my_statement.expr.expr_right != ExprRight::Empty() {
-                        // if expr_right exists (Binop or Cond), then create a new var for the RHS of the statement
-
-                        {
-                            let tmp_var =  format!("tmp_{}_if_{}", tmp_var_count, my_if_block.id);
-                            let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                            let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-                            let mut vinfo : VarInfo = VarInfo::BitArray(1,1); // temp value for vinfo
-
-                            // get varinfo's 1st index in bitarray from varinfo field of my_statement.expr.lvalue.scalar.id_name variable(match on scalar/
-                            // array/packet_field then extract id_name) in symbol table
-                            match my_statement.lvalue {
-
-                                LValue::Scalar(ref id) => {
-                                    vinfo = symbol_table.get_mut(id.id_name).unwrap().var_info.clone();
-                                }
-
-                                LValue::Array(ref id, _) => {
-                                    let a = symbol_table.get_mut(id.id_name).unwrap();
-                                    let width =  match a.var_info {
-                                                  VarInfo::BitArray(bit_width, _var_size) => bit_width,
-                                                  _ => {0}
-                                                };
-                                    vinfo = VarInfo::BitArray(width, 1);
-                                }
-                                // _ => {}
-                                LValue::Field(ref p, ref f) => {
-                                    let field = format!("{}.{}", p.id_name, f.id_name);
-                                    let field_name_map = packet_map.get(&field).unwrap();
-                                    let vtype = field_decls.get(field_name_map).unwrap();
-                                    let width =  match vtype.var_info {
-                                                  VarInfo::BitArray(bit_width, _var_size) => bit_width,
-                                                  _ => {0}
-                                                };
-                                    vinfo = VarInfo::BitArray(width, 1);
-                                }
-                            }
-
-                            let tmp_var_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(tmp_var.into_boxed_str()) },
-                                        initial_values : Vec::<Value>::new(),
-                                        var_type : VarType { var_info : vinfo, type_qualifier : TypeQualifier::Transient }};
-
-                            let mut tmp_node = DagNode {node_type : DagNodeType::Decl(tmp_var_decl.clone()),
-                                p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-
-                            my_dag.dag_vector.insert(last_decl_ind, tmp_node);
-                        }
-
-                        {
-                            let tmp_var =  format!("tmp_{}_if_{}", tmp_var_count, my_if_block.id);
-                            let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                            let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-                            let tmp_stmt = Statement {
-                                                lvalue : LValue::Scalar(Identifier { id_name : Box::leak(tmp_var.into_boxed_str()) }),
-                                                expr : my_statement.expr.clone()};
-
-                            let mut tmp_node = DagNode {node_type : DagNodeType::Stmt(tmp_stmt.clone()),
-                                p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-
-                            my_dag.dag_vector.push(tmp_node);
-                        }
-
-                        // add node to set variable conditional on if bit
-                        {
-
-                            let tmp_var =  format!("tmp_{}_if_{}", tmp_var_count, my_if_block.id);
-                            let mut tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: ""})),
-                                                expr_right: ExprRight::Cond(Operand::LValue(LValue::Scalar(Identifier{id_name: ""})),
-                                                Operand::LValue(LValue::Scalar(Identifier{id_name: ""})))};
-
-                            if my_if_block.condtype == 1 {
-                                let if_var =  format!("if_block_tmp_{}", my_if_block.id);
-                                tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
-                                                expr_right: ExprRight::Cond(Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(tmp_var.into_boxed_str()),})),
-                                                Operand::LValue(my_statement.lvalue.clone())) };
-                                println!("Assigning a cond expr\n");
-                            } else if my_if_block.condtype == 2 {
-                                let if_var =  format!("if_block_tmp_{}", my_if_block.id - 1); // for else condition, use the previous
-                                                                                             // if block's condition bit var to set
-                                                                                             // else statements
-                                // For else statement, switch op1 and op2 in cond
-                                tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
-                                                expr_right: ExprRight::Cond(Operand::LValue(my_statement.lvalue.clone()),
-                                                Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(tmp_var.into_boxed_str()),}))) };
-                            }
-
-                            let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                            let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-                            let tmp_stmt = Statement {
-                                                lvalue : my_statement.lvalue.clone(),
-                                                expr : tmp_expr};
-
-                            let mut tmp_node = DagNode {node_type : DagNodeType::Stmt(tmp_stmt.clone()),
-                                p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-                            my_dag.dag_vector.push(tmp_node);
-
-                        }
-
-                        last_decl_ind += 1;
-                        tmp_var_count += 1;
-
-
-                    } else {
-
-                        let mut tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: ""})),
-                                            expr_right: ExprRight::Cond(Operand::LValue(LValue::Scalar(Identifier{id_name: ""})),
-                                            Operand::LValue(LValue::Scalar(Identifier{id_name: ""})))};
-
-                        if my_if_block.condtype == 1 {
-                            let if_var =  format!("if_block_tmp_{}", my_if_block.id);
-                            tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
-                                            expr_right: ExprRight::Cond(my_statement.expr.op1.clone(),
-                                            Operand::LValue(my_statement.lvalue.clone())) };
-                            println!("Assigning a cond expr\n");
-
-                        } else if my_if_block.condtype == 2 {
-                            let if_var =  format!("if_block_tmp_{}", my_if_block.id - 1);
-                            tmp_expr = Expr { op1: Operand::LValue(LValue::Scalar(Identifier{id_name: Box::leak(if_var.into_boxed_str()),})),
-                                            expr_right: ExprRight::Cond(Operand::LValue(my_statement.lvalue.clone()),
-                                             my_statement.expr.op1.clone()) };
-                        }
-                        println!("tmp_expr : {:?}\n", tmp_expr);
-
-                        let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
-                        let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
-
-                        let tmp_stmt = Statement {
-                                            lvalue : my_statement.lvalue.clone(),
-                                            expr : tmp_expr};
-
-                        let mut tmp_node = DagNode {node_type : DagNodeType::Stmt(tmp_stmt.clone()),
-                            p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
-
-                        my_dag.dag_vector.push(tmp_node);
-                    }
-                }
-
-            }
-        }
+        insert_packet_decls(&mut my_dag, my_packets, pkt_tree);
+        branch_removal(&mut my_dag, &packet_map, my_snippet, &field_decls);
         dag_map.insert(&my_snippet.snippet_id.id_name, my_dag);
     }
-    dag_map
+
+    return dag_map;
 }
 
 
-//
-// pub fn init_handlebars<'a> (dag_map : HashMap<&'a str, Dag<'a>>) {
-//     let mut reg = Handlebars::new();
-//     reg.set_strict_mode(true);
-//
-//     // render without register
-//     println!("{}", reg.render_template("Hello {{name}}", &json!({"name": "foo"})).unwrap());
-//
-//     // register template using given name
-//     reg.register_template_string("tpl_1", "Good afternoon, {{name}}").unwrap();
-//     //reg.register_template_file("tp1_2", "foobar").unwrap();
-//     println!("{}", reg.render("tpl_1", &json!({"name": "foo"})).unwrap());
-// }
 
 pub fn gen_code<'a> (my_packets : &Packets<'a>, dag_map : HashMap<&'a str, Dag<'a>>) {
 
