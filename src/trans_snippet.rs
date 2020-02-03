@@ -16,6 +16,8 @@ use tofino_gen;
 use std::process;
 use std::process::Command;
 use std::env;
+use std::mem;
+
 //use handlebars::Handlebars;
 
 const META_HEADER : &str = "mdata";
@@ -698,9 +700,7 @@ pub fn get_operand_val<'a> (decl_map : &HashMap<String, usize>, operand :  &Oper
                         None => {panic!("write_var not found in decl_map");}
                     }
                 }
-
             }
-
         }
 
         _ => {}
@@ -787,8 +787,7 @@ pub fn create_RAW_connections<'a> (_my_snippet: &'a Snippet<'a>, my_packets : &P
                 while j < my_dag.dag_vector.len() {
 
                     let next_statement = my_dag.dag_vector.get_mut(j).unwrap();
-                    // println!("AHHH {:?}", next_statement);
-                    // process::exit(1);
+
                     match &next_statement.node_type {
                         DagNodeType::Stmt(stmt) => {
                             read_vars = get_read_vars(&decl_map, stmt.clone());
@@ -1361,6 +1360,318 @@ pub fn branch_removal<'a> (my_dag : &mut Dag<'a>, packet_map : &HashMap<String, 
 }
 
 
+// let read_var = decl_map.get(i);
+// if read_var != table[read_var][-1]:
+//     new_var_names.append(table[read_var]) 
+
+
+pub fn rename_array_ind<'a> (assign_table : &HashMap<String, String>, operand :  &Operand<'a>) -> Operand<'a> {
+
+    match operand {
+        Operand::LValue(ref lval) => {
+            match lval {
+
+                LValue::Scalar(ref my_id) => {
+                    let my_option = assign_table.get(my_id.id_name);
+                    match my_option {
+                        Some(lval_name) => {
+                            return Operand::LValue(LValue::Scalar(Identifier{
+                                   id_name: Box::leak(lval_name.to_string().into_boxed_str())}))
+                            // my_statement.lvalue = LValue::Scalar(Identifier{
+                            //        id_name: Box::leak(lval_name.to_string().into_boxed_str())});
+                        }
+                        None => {panic!("scalar array index not found in assign_table");}
+                    }
+                }
+
+                LValue::Field(ref id, ref field_name) => {
+                    let a = format!("{}.{}", id.id_name.to_string(), field_name.id_name.to_string());
+                    // assign_table.insert(a.to_string(), "fuckkgyy".to_string());
+                    let my_option = assign_table.get(&a);
+                    match my_option {
+                        Some(f_name) => {
+                            return Operand::LValue(LValue::Field(Identifier{
+                                   id_name: id.id_name}, 
+                                   Identifier{
+                                   id_name: Box::leak(f_name.to_string().into_boxed_str())}));
+                            // my_statement.lvalue = LValue::Field(Identifier{
+                            //        id_name: id.id_name}, 
+                            //        Identifier{
+                            //        id_name: Box::leak(f_name.to_string().into_boxed_str())});
+                        }
+                        None => {panic!("Field array index not found in assign_table");}
+                    }
+                }
+
+                _ => {panic!("array index cannot be an array itself");}
+            }
+        }
+
+        _ => {}
+    }
+    return operand.clone();
+}
+
+
+
+pub fn rename_operand<'a> (assign_table : &HashMap<String, String>, my_operand : &Operand<'a>) -> Operand<'a> {
+
+    match my_operand {
+        Operand::LValue(ref lval) => {
+            match lval {
+                LValue::Scalar(id) => {
+                    // assign_table.insert(id.id_name.to_string(), "Hello".to_string());
+                    let my_option = assign_table.get(id.id_name);
+                    match my_option {
+                        Some(new_name) => {
+                            return Operand::LValue(LValue::Scalar(Identifier{
+                                           id_name: Box::leak(new_name.to_string().into_boxed_str())}));
+                        }
+
+                        None => {panic!("scalar lval not found in assign_table");}
+                    }
+                }
+
+                LValue::Field(id, field_name) => {
+                    let a = format!("{}.{}", id.id_name.to_string(), field_name.id_name.to_string());
+                    // assign_table.insert(a.to_string(), "ohhh my".to_string());
+                    let my_option = assign_table.get(&a);
+                    match my_option {
+                        Some(new_name) => {
+                            return Operand::LValue(LValue::Field(Identifier{
+                                           id_name: id.id_name}, 
+                                           Identifier{
+                                           id_name: Box::leak(new_name.to_string().into_boxed_str())}));
+                        }
+
+                        None => {panic!("Field lval not found in assign_table");}
+                    }
+                }
+        
+                LValue::Array(name, ind) => {
+                    // assign_table.insert(name.id_name.to_string(), "dudee".to_string());
+                    let my_option = assign_table.get(name.id_name);
+                    match my_option {
+                        Some(new_name) => {
+                            return Operand::LValue(LValue::Array(Identifier { id_name: Box::leak(new_name.to_string().into_boxed_str())}, 
+                                    Box::new(rename_array_ind(&assign_table, &ind))));
+                        }
+
+                        None => {panic!("Array lval not found in assign_table");}
+                    }
+                }
+            }
+        }
+
+        _ => {}
+
+    }
+    return my_operand.clone();
+}
+
+
+                // write_var_ind = get_write_var(&decl_map, my_statement.lvalue.clone());
+                // write_var = decl_map.get(write_var).identifier.id_name
+
+//                 if write_check[write_var]:
+//                     num_names_table[write_var] += 1
+//                     new_var = format!("{}{}", write_var, num_names_table[write_var]);
+//                     assign_table[write_var] = new_var
+//                 else:
+//                     write_check[write_var] = true
+
+//                 if new_var_names not empty, create new node replacing old var names with new var names in expr, and
+//                 replace old lval name with new_var. Also create a new decl node for new_var (lval write)
+pub fn rename_write_operand<'a> (assign_table : &mut HashMap<String, String>, 
+                        write_check : &mut HashMap<String, bool>, name_count : &mut HashMap<String, usize>,
+                        my_statement : &mut Statement<'a>) -> (String, String) {
+
+    match my_statement.lvalue.clone() {
+        LValue::Scalar(id) => {
+            // assign_table.insert(id.id_name.to_string(), "Hello".to_string());
+            let my_option = write_check.get(id.id_name);
+            match my_option {
+                Some(written) => {
+
+                    if *written {
+                        *name_count.get_mut(id.id_name).unwrap() += 1;
+                        let new_var = format!("{}{}", id.id_name, name_count.get_mut(id.id_name).unwrap());
+                        assign_table.insert(id.id_name.to_string(), new_var.to_string());
+                        my_statement.lvalue = LValue::Scalar(Identifier{
+                                   id_name: Box::leak(new_var.to_string().into_boxed_str())});
+                        return (id.id_name.to_string(), new_var.to_string());
+                    } else {
+                        write_check.insert(id.id_name.to_string(), true);
+                    }
+                }
+
+                None => {panic!("scalar lval not found in write_check");}
+            }
+        }
+
+        LValue::Field(id, field_name) => {
+
+            let a = format!("{}.{}", id.id_name.to_string(), field_name.id_name.to_string());
+            let my_option = write_check.get(&a);
+            match my_option {
+                Some(written) => {
+
+                    if *written {
+                        *name_count.get_mut(&a).unwrap() += 1;
+                        let new_var = format!("{}{}", field_name.id_name, name_count.get_mut(&a).unwrap());
+                        assign_table.insert(a.to_string(), new_var.to_string());
+                        my_statement.lvalue = LValue::Field(Identifier{
+                                       id_name: id.id_name}, 
+                                       Identifier{
+                                       id_name: Box::leak(new_var.to_string().into_boxed_str())});
+                        let b = format!("{}.{}", id.id_name.to_string(), new_var.to_string());
+                        return (a.to_string(), b.to_string());
+                    } else {
+                        write_check.insert(a.to_string(), true);
+                    }
+                }
+
+                None => {panic!("Field lval not found in write_check");}
+            }
+        }
+
+        LValue::Array(name, ind) => {
+
+            let my_option = write_check.get(name.id_name);
+            match my_option {
+                Some(written) => {
+
+                    if *written {
+                        *name_count.get_mut(name.id_name).unwrap() += 1;
+                        let new_var = format!("{}{}", name.id_name, name_count.get_mut(name.id_name).unwrap());
+                        assign_table.insert(name.id_name.to_string(), new_var.to_string());
+                        my_statement.lvalue = LValue::Array(Identifier { 
+                                        id_name: Box::leak(new_var.to_string().into_boxed_str())}, 
+                                        ind.clone());
+                        return (name.id_name.to_string(), new_var.to_string());
+                    } else {
+                        write_check.insert(name.id_name.to_string(), true);
+                    }
+                }
+
+                None => {panic!("Array lval not found in write_check");}
+            }
+        }
+    }
+
+    return ("".to_string(), "".to_string());
+}
+
+
+pub fn rename_read_operands<'a> (assign_table : &HashMap<String, String>, my_statement : &mut Statement<'a>) {
+
+    match &my_statement.lvalue {
+        LValue::Array(name, ind) => {
+            // rename_array_ind(&mut assign_table, &mut my_statement, ind);
+            my_statement.lvalue = LValue::Array(Identifier { id_name: name.id_name}, 
+                                    Box::new(rename_array_ind(assign_table, &ind)));
+        }
+
+        _ => {}
+    }
+
+    my_statement.expr.op1 = rename_operand(assign_table, &my_statement.expr.op1);    
+
+    match my_statement.expr.expr_right {
+        ExprRight::BinOp(bin_op_type, ref operand) => {
+            my_statement.expr.expr_right = ExprRight::BinOp(bin_op_type, rename_operand(assign_table, &operand));
+        }
+        ExprRight::Cond(ref operand1, ref operand2) => {
+            my_statement.expr.expr_right = ExprRight::Cond(rename_operand(assign_table, &operand1),
+                                                           rename_operand(assign_table, &operand2));
+        }
+        ExprRight::Empty() => {}
+    }
+}
+
+
+
+pub fn static_single_assignment<'a> (my_dag : &mut Dag<'a>) {
+
+    // let mut decl_map : HashMap<String, usize> = HashMap::new();
+
+    let mut decl_map : HashMap<String, VarType> = HashMap::new();
+
+
+    let mut assign_table : HashMap<String, String> = HashMap::new();
+    let mut write_check : HashMap<String, bool> = HashMap::new();
+    let mut name_count : HashMap<String, usize> = HashMap::new();
+
+    let mut i : usize = 0;
+    let mut last_decl_ind : usize = 0;
+    let mut write_var : usize = 0;
+    let mut read_vars : Vec<usize> = Vec::new();
+
+    for dagnode in my_dag.dag_vector.clone() {
+
+        match &dagnode.node_type {
+            // All vardecls will always be parsed first, before any other lines of code. If/else blocks follow
+            DagNodeType::Decl(var_decl) => {
+                decl_map.insert(var_decl.identifier.id_name.to_string(), var_decl.var_type.clone());
+                write_check.insert(var_decl.identifier.id_name.to_string(),false);
+                name_count.insert(var_decl.identifier.id_name.to_string(),0);
+                match var_decl.var_type.type_qualifier {
+                    TypeQualifier::Field => {
+                        let my_option = var_decl.identifier.id_name.find('.');
+                        match my_option {
+                            Some(ind) => {
+                                assign_table.insert(var_decl.identifier.id_name.to_string(), var_decl.identifier.id_name[ind+1..].to_string());
+                            }
+                            None => {}
+                        }
+                    }
+
+                    _ => {
+                        assign_table.insert(var_decl.identifier.id_name.to_string(), var_decl.identifier.id_name.to_string());
+                    }
+                }
+
+                i += 1;
+                last_decl_ind += 1;
+            }
+
+            DagNodeType::Stmt(my_statement) => {
+
+                let mut tmp_stmt = Statement {lvalue : my_statement.lvalue.clone(), expr : my_statement.expr.clone()};
+                rename_read_operands(&assign_table, &mut tmp_stmt);
+                // println!("{:?}\n", tmp_stmt);    
+                let (old_name, new_name) = rename_write_operand(&mut assign_table, &mut write_check, &mut name_count, &mut tmp_stmt);
+                
+                if new_name != "" {
+                // if rename_write_operand(&mut assign_table, &mut write_check, &mut name_count, &mut tmp_stmt) {
+                    // create new vardecl node
+                    let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                    let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                    let new_decl = VariableDecl {identifier : Identifier{id_name : Box::leak(new_name.into_boxed_str()) },
+                                initial_values : Vec::<Value>::new(),
+                                var_type : decl_map.get_mut(&old_name).unwrap().clone()};
+                    let mut new_decl_node = DagNode {node_type : DagNodeType::Decl(new_decl.clone()),
+                        p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+                    my_dag.dag_vector.insert(last_decl_ind, new_decl_node);
+                    last_decl_ind += 1;
+                    i += 1;
+                };
+
+                let dummyheader = P4Header{meta:String::new(), meta_init:String::new(), register:String::new(), define:String::new()};
+                let dummpyp4 = P4Code{p4_header: dummyheader, p4_control:String::new(), p4_actions:String::new(), p4_commons:String::new()};
+                let mut tmp_node = DagNode {node_type : DagNodeType::Stmt(tmp_stmt.clone()),
+                    p4_code : dummpyp4, next_nodes : Vec::new(), prev_nodes : Vec::new(), pre_condition : None};
+                let ans = std::mem::replace(&mut my_dag.dag_vector[i], tmp_node.clone());
+                i += 1;
+            }
+
+            _ => {}
+        }
+    }
+    // println!("DagVec  {:?}", my_dag.dag_vector);
+    // process::exit(1);
+}     
+
 
 // This func creates the snippet dag. It performs branch removal (to convert if/else
 // statements to single line ternary conditionals) and single-static assignment for each snippet 
@@ -1395,6 +1706,7 @@ pub fn create_dag_nodes<'a> (my_snippets : &'a Snippets, packet_map : &HashMap<S
 
         insert_packet_decls(&mut my_dag, my_packets, pkt_tree);
         branch_removal(&mut my_dag, &packet_map, my_snippet, &field_decls);
+        static_single_assignment(&mut my_dag);
         dag_map.insert(&my_snippet.snippet_id.id_name, my_dag);
     }
 
